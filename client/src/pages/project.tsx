@@ -4,7 +4,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { VersionCard } from "@/components/project/version-card"
 import { VersionSelector } from "@/components/project/version-selector"
+import { VersionStatusBadge } from "@/components/project/version-status-badge"
 import { VersionUpload } from "@/components/project/version-upload"
 import { VideoReview } from "@/components/video/video-review"
 import {
@@ -12,11 +14,12 @@ import {
   getProject,
   listComments,
   listVersions,
+  updateVersionStatus,
 } from "@/lib/api"
 import { sortVersionsByDate } from "@/lib/versions"
 import type { Comment } from "@/types/comment"
 import type { Project } from "@/types/project"
-import type { Version } from "@/types/version"
+import type { Version, VersionStatus } from "@/types/version"
 import { ArrowLeft, Film, GitCompare } from "lucide-react"
 
 export function ProjectPage() {
@@ -27,6 +30,7 @@ export function ProjectPage() {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
 
   const loadProjectData = useCallback(async () => {
     if (!projectId) {
@@ -117,6 +121,21 @@ export function ProjectPage() {
   const selectedVersion =
     versions.find((version) => version.label === selectedLabel) ?? null
 
+  async function handleStatusChange(versionId: string, status: VersionStatus) {
+    setUpdatingStatusId(versionId)
+
+    try {
+      const updated = await updateVersionStatus(versionId, status)
+      setVersions((current) =>
+        current.map((version) => (version.id === updated.id ? updated : version)),
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update version status")
+    } finally {
+      setUpdatingStatusId(null)
+    }
+  }
+
   useEffect(() => {
     if (!projectId || !selectedLabel) {
       return
@@ -198,6 +217,9 @@ export function ProjectPage() {
               <Badge variant="secondary">
                 {versions.length} {versions.length === 1 ? "version" : "versions"}
               </Badge>
+              {selectedVersion ? (
+                <VersionStatusBadge status={selectedVersion.status} />
+              ) : null}
             </div>
             <p className="text-muted-foreground">
               Upload new renders and switch between versions for review.
@@ -223,6 +245,31 @@ export function ProjectPage() {
           />
         </div>
       </div>
+
+      {versions.length > 0 ? (
+        <div className="space-y-3">
+          <div>
+            <h3 className="text-lg font-semibold">Versions</h3>
+            <p className="text-sm text-muted-foreground">
+              Review approval status and switch between uploaded renders.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {versions.map((version) => (
+              <VersionCard
+                key={version.id}
+                version={version}
+                selected={version.label === selectedLabel}
+                onSelect={setSelectedLabel}
+                onStatusChange={(versionId, status) =>
+                  void handleStatusChange(versionId, status)
+                }
+                updating={updatingStatusId === version.id}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {selectedVersion ? (
         <VideoReview

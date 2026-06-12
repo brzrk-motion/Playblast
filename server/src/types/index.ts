@@ -6,4 +6,9 @@ export type {
 } from "./project.js"
 export type { DataStore } from "./store.js"
 export type { UploadResponse } from "./upload.js"
-export type { CreateVersionInput, Version } from "./version.js"
+export type {
+  CreateVersionInput,
+  Version,
+  VersionStatus,
+} from "./version.js"
+export { isVersionStatus, VERSION_STATUSES } from "./version.js"

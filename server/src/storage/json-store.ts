@@ -2,6 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { EMPTY_STORE, type DataStore } from "../types/store.js"
+import type { Version, VersionStatus } from "../types/version.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DEFAULT_DATA_DIR = path.resolve(__dirname, "../../data")
@@ -13,6 +14,32 @@ export function getDataDir(): string {
 
 export function getStorePath(): string {
   return path.join(getDataDir(), STORE_FILENAME)
+}
+
+function normalizeVersionStatus(status: unknown): VersionStatus {
+  if (
+    status === "pending_review" ||
+    status === "needs_revision" ||
+    status === "approved"
+  ) {
+    return status
+  }
+
+  return "pending_review"
+}
+
+function normalizeVersion(version: Version): Version {
+  return {
+    ...version,
+    status: normalizeVersionStatus(version.status),
+  }
+}
+
+function normalizeStore(store: DataStore): DataStore {
+  return {
+    ...store,
+    versions: store.versions.map(normalizeVersion),
+  }
 }
 
 function isDataStore(value: unknown): value is DataStore {
@@ -42,7 +69,7 @@ export function readStore(): DataStore {
     throw new Error(`Invalid data store format at ${storePath}`)
   }
 
-  return parsed
+  return normalizeStore(parsed)
 }
 
 export function writeStore(store: DataStore): void {

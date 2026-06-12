@@ -18,6 +18,7 @@ import {
   listProjects,
   listVersions,
   updateComment,
+  updateVersionStatus,
 } from "./repository.js"
 import { getStorePath } from "./json-store.js"
 
@@ -148,6 +149,25 @@ describe("JSON data store", () => {
     assert.equal(listVersions(project.id).length, 0)
     assert.equal(listComments(version.id).length, 0)
     assert.equal(deleteProject(project.id), false)
+  })
+
+  it("defaults new versions to pending_review and updates status", () => {
+    const project = ensureProject("status-test")
+    const version = createVersion({
+      projectId: project.id,
+      label: "v1",
+      filename: "clip.mp4",
+    })
+
+    assert.equal(version.status, "pending_review")
+
+    const approved = updateVersionStatus(version.id, "approved")
+    assert.equal(approved?.status, "approved")
+    assert.equal(getVersionByLabel(project.id, "v1")?.status, "approved")
+
+    const revision = updateVersionStatus(version.id, "needs_revision")
+    assert.equal(revision?.status, "needs_revision")
+    assert.equal(updateVersionStatus("missing-id", "approved"), undefined)
   })
 
   it("looks up versions by project id and label", () => {

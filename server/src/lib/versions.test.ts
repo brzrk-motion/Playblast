@@ -14,6 +14,7 @@ const versions: Version[] = [
     label: "v1",
     filename: "a.mp4",
     uploadedAt: "2026-01-01T00:00:00.000Z",
+    status: "pending_review",
   },
   {
     id: "2",
@@ -21,6 +22,7 @@ const versions: Version[] = [
     label: "v2",
     filename: "b.mp4",
     uploadedAt: "2026-02-01T00:00:00.000Z",
+    status: "needs_revision",
   },
   {
     id: "3",
@@ -28,6 +30,7 @@ const versions: Version[] = [
     label: "v3",
     filename: "c.mp4",
     uploadedAt: "2026-03-01T00:00:00.000Z",
+    status: "approved",
   },
 ]
 

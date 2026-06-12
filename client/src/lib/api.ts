@@ -1,7 +1,7 @@
 import type { Comment } from "@/types/comment"
 import type { Project, ProjectSummary } from "@/types/project"
 import type { UploadProgress, UploadResponse } from "@/types/upload"
-import type { Version } from "@/types/version"
+import type { Version, VersionStatus } from "@/types/version"
 
 export function getVideoUrl(
   projectId: string,
@@ -120,6 +120,21 @@ export async function createCommentForVersion(
     },
   )
   return parseJsonResponse<Comment>(response)
+}
+
+export async function updateVersionStatus(
+  versionId: string,
+  status: VersionStatus,
+): Promise<Version> {
+  const response = await fetch(
+    `/api/versions/${encodeURIComponent(versionId)}/status`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    },
+  )
+  return parseJsonResponse<Version>(response)
 }
 
 export function uploadVersion(
