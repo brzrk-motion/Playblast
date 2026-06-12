@@ -6,8 +6,10 @@ import {
   useSliderPreview,
 } from "@vidstack/react"
 
+import { CommentMarkers } from "@/components/video/comment-markers"
 import { Slider } from "@/components/ui/slider"
 import { cn } from "@/lib/utils"
+import type { Comment } from "@/types/comment"
 
 export function VideoVolumeSlider({ className }: { className?: string }) {
   const volume = useMediaState("volume")
@@ -30,7 +32,13 @@ export function VideoVolumeSlider({ className }: { className?: string }) {
   )
 }
 
-export function VideoTimeSlider({ className }: { className?: string }) {
+export function VideoTimeSlider({
+  className,
+  comments = [],
+}: {
+  className?: string
+  comments?: Comment[]
+}) {
   const currentTime = useMediaState("currentTime")
   const canSeek = useMediaState("canSeek")
   const duration = useMediaState("duration")
@@ -64,6 +72,12 @@ export function VideoTimeSlider({ className }: { className?: string }) {
         max={100}
         step={0.1}
         aria-label="Seek"
+      />
+
+      <CommentMarkers
+        comments={comments}
+        duration={duration}
+        onSeek={(timestamp) => remote.seek(timestamp)}
       />
 
       <div

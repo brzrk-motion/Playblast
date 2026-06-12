@@ -8,8 +8,15 @@ import {
 import { VideoTimeSlider, VideoVolumeSlider } from "@/components/video/video-sliders"
 import { VideoTimeGroup } from "@/components/video/video-time"
 import { cn } from "@/lib/utils"
+import type { Comment } from "@/types/comment"
 
-export function VideoControls({ className }: { className?: string }) {
+export function VideoControls({
+  className,
+  comments = [],
+}: {
+  className?: string
+  comments?: Comment[]
+}) {
   return (
     <>
       <Gesture
@@ -40,7 +47,7 @@ export function VideoControls({ className }: { className?: string }) {
         )}
       >
         <Controls.Group className="flex w-full items-center gap-2">
-          <VideoTimeSlider />
+          <VideoTimeSlider comments={comments} />
         </Controls.Group>
 
         <Controls.Group className="mt-2 flex w-full items-center gap-2">
