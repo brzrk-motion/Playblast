@@ -7,6 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { VersionStatusBadge } from "@/components/project/version-status-badge"
 import { sortVersionsByDate } from "@/lib/versions"
 import type { Version } from "@/types/version"
 import { Check, ChevronDown, GitBranch } from "lucide-react"
@@ -65,8 +66,11 @@ export function VersionSelector({
             onClick={() => onSelect(version.label)}
             className="flex items-start justify-between gap-2"
           >
-            <div className="min-w-0 flex-1">
-              <p className="font-medium">{version.label}</p>
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex items-center gap-2">
+                <p className="font-medium">{version.label}</p>
+                <VersionStatusBadge status={version.status} className="text-[10px]" />
+              </div>
               <p className="truncate text-xs text-muted-foreground">
                 {version.filename}
               </p>

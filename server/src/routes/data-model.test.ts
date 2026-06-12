@@ -206,6 +206,71 @@ describe("projects, versions, and comments API", () => {
     assert.equal(deleteResponse.status, 204)
   })
 
+  it("updates version approval status via PATCH /api/versions/:id/status", async () => {
+    await fetch(`${baseUrl}/api/projects`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "spot-status", name: "Spot Status" }),
+    })
+
+    const { createVersion } = await import("../storage/repository.js")
+    const version = createVersion({
+      projectId: "spot-status",
+      label: "v1",
+      filename: "render.mp4",
+    })
+
+    assert.equal(version.status, "pending_review")
+
+    const approvedResponse = await fetch(
+      `${baseUrl}/api/versions/${version.id}/status`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "approved" }),
+      },
+    )
+
+    assert.equal(approvedResponse.status, 200)
+    const approved = (await approvedResponse.json()) as { status: string }
+    assert.equal(approved.status, "approved")
+
+    const revisionResponse = await fetch(
+      `${baseUrl}/api/versions/${version.id}/status`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "needs_revision" }),
+      },
+    )
+
+    assert.equal(revisionResponse.status, 200)
+    const revision = (await revisionResponse.json()) as { status: string }
+    assert.equal(revision.status, "needs_revision")
+
+    const invalidResponse = await fetch(
+      `${baseUrl}/api/versions/${version.id}/status`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "rejected" }),
+      },
+    )
+
+    assert.equal(invalidResponse.status, 400)
+
+    const missingResponse = await fetch(
+      `${baseUrl}/api/versions/missing-version-id/status`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "approved" }),
+      },
+    )
+
+    assert.equal(missingResponse.status, 404)
+  })
+
   it("lists and creates comments via flat /api/comments endpoints", async () => {
     await fetch(`${baseUrl}/api/projects`, {
       method: "POST",

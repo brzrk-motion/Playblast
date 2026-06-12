@@ -1,4 +1,16 @@
-import type { Version } from "@/types/version"
+import type { Version, VersionStatus } from "@/types/version"
+
+export const VERSION_STATUS_LABELS: Record<VersionStatus, string> = {
+  pending_review: "Pending Review",
+  needs_revision: "Needs Revision",
+  approved: "Approved",
+}
+
+export const VERSION_STATUS_ORDER: VersionStatus[] = [
+  "pending_review",
+  "needs_revision",
+  "approved",
+]
 
 export const VERSION_LABEL_PATTERN = /^[a-zA-Z0-9._-]+$/
 

@@ -8,6 +8,7 @@ import type {
   ProjectSummary,
   UpdateCommentInput,
   Version,
+  VersionStatus,
 } from "../types/index.js"
 import { readStore, withStore } from "./json-store.js"
 
@@ -131,9 +132,26 @@ export function createVersion(input: CreateVersionInput): Version {
       label: input.label,
       filename: input.filename,
       uploadedAt: new Date().toISOString(),
+      status: "pending_review",
     }
 
     store.versions.push(version)
+    return version
+  })
+}
+
+export function updateVersionStatus(
+  id: string,
+  status: VersionStatus,
+): Version | undefined {
+  return withStore((store) => {
+    const version = store.versions.find((item) => item.id === id)
+
+    if (!version) {
+      return undefined
+    }
+
+    version.status = status
     return version
   })
 }
