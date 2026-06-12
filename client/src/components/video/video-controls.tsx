@@ -1,6 +1,8 @@
 import { Controls, Gesture } from "@vidstack/react"
 
 import {
+  VideoFrameStepBackwardButton,
+  VideoFrameStepForwardButton,
   VideoFullscreenButton,
   VideoMuteButton,
   VideoPlayButton,
@@ -50,7 +52,9 @@ export function VideoControls({
         </Controls.Group>
 
         <Controls.Group className="mt-2.5 flex w-full items-center gap-1.5">
+          <VideoFrameStepBackwardButton />
           <VideoPlayButton />
+          <VideoFrameStepForwardButton />
           <VideoMuteButton />
           <VideoVolumeSlider />
           <VideoTimeGroup className="ml-auto" />
