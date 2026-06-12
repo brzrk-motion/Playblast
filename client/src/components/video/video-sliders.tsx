@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import {
   formatTime,
   useMediaRemote,
@@ -8,6 +8,7 @@ import {
 
 import { CommentMarkers } from "@/components/video/comment-markers"
 import { Slider } from "@/components/ui/slider"
+import { useVideoPlayer } from "@/hooks/use-video-player"
 import { cn } from "@/lib/utils"
 import type { Comment } from "@/types/comment"
 
@@ -43,7 +44,9 @@ export function VideoTimeSlider({
   const canSeek = useMediaState("canSeek")
   const duration = useMediaState("duration")
   const remote = useMediaRemote()
+  const { openComposer } = useVideoPlayer()
   const [dragValue, setDragValue] = useState<number | null>(null)
+  const changeCountRef = useRef(0)
   const { previewRootRef, previewRef, previewValue } = useSliderPreview({
     clamp: true,
     offset: 6,
@@ -61,13 +64,22 @@ export function VideoTimeSlider({
     <div ref={previewRootRef} className={cn("relative flex-1", className)}>
       <Slider
         value={[value]}
+        onPointerDown={() => {
+          changeCountRef.current = 0
+        }}
         onValueChange={([nextValue]) => {
+          changeCountRef.current += 1
           setDragValue(nextValue)
           remote.seeking((nextValue / 100) * duration)
         }}
         onValueCommit={([nextValue]) => {
+          const timestamp = (nextValue / 100) * duration
           setDragValue(null)
-          remote.seek((nextValue / 100) * duration)
+          remote.seek(timestamp)
+
+          if (changeCountRef.current <= 1) {
+            openComposer(timestamp)
+          }
         }}
         max={100}
         step={0.1}
@@ -77,7 +89,10 @@ export function VideoTimeSlider({
       <CommentMarkers
         comments={comments}
         duration={duration}
-        onSeek={(timestamp) => remote.seek(timestamp)}
+        onSeek={(timestamp) => {
+          remote.seek(timestamp)
+          remote.pause()
+        }}
       />
 
       <div

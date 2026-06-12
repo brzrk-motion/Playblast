@@ -205,4 +205,49 @@ describe("projects, versions, and comments API", () => {
     })
     assert.equal(deleteResponse.status, 204)
   })
+
+  it("lists and creates comments via flat /api/comments endpoints", async () => {
+    await fetch(`${baseUrl}/api/projects`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "spot-flat", name: "Spot Flat" }),
+    })
+
+    const { createVersion } = await import("../storage/repository.js")
+    const version = createVersion({
+      projectId: "spot-flat",
+      label: "v1",
+      filename: "render.mp4",
+    })
+
+    const createResponse = await fetch(`${baseUrl}/api/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        versionId: version.id,
+        timestamp: 3.5,
+        body: "Flat route comment",
+        author: "Alex",
+      }),
+    })
+
+    assert.equal(createResponse.status, 201)
+    const created = (await createResponse.json()) as {
+      id: string
+      versionId: string
+    }
+    assert.equal(created.versionId, version.id)
+
+    const listResponse = await fetch(
+      `${baseUrl}/api/comments?versionId=${encodeURIComponent(version.id)}`,
+    )
+    assert.equal(listResponse.status, 200)
+    const comments = (await listResponse.json()) as Array<{
+      id: string
+      timestamp: number
+    }>
+    assert.equal(comments.length, 1)
+    assert.equal(comments[0]?.id, created.id)
+    assert.equal(comments[0]?.timestamp, 3.5)
+  })
 })

@@ -4,11 +4,42 @@ import {
   deleteComment,
   getComment,
   getProject,
+  getVersion,
   getVersionByLabel,
   listComments,
   updateComment,
 } from "../storage/index.js"
 import { getParam, getVersionRouteParams } from "../utils/params.js"
+
+function parseCreateCommentBody(body: unknown): {
+  timestamp: number
+  text: string
+  author: string
+} | { error: string } {
+  const timestamp = (body as { timestamp?: unknown })?.timestamp
+  const text =
+    typeof (body as { body?: unknown })?.body === "string"
+      ? (body as { body: string }).body.trim()
+      : ""
+  const author =
+    typeof (body as { author?: unknown })?.author === "string"
+      ? (body as { author: string }).author.trim()
+      : ""
+
+  if (typeof timestamp !== "number" || Number.isNaN(timestamp) || timestamp < 0) {
+    return { error: "A non-negative numeric timestamp is required." }
+  }
+
+  if (!text) {
+    return { error: "Comment body is required." }
+  }
+
+  if (!author) {
+    return { error: "Comment author is required." }
+  }
+
+  return { timestamp, text, author }
+}
 
 const commentsRouter = Router({ mergeParams: true })
 
@@ -45,37 +76,72 @@ commentsRouter.post("/", (req, res) => {
     return
   }
 
-  const timestamp = req.body?.timestamp
-  const body = typeof req.body?.body === "string" ? req.body.body.trim() : ""
-  const author =
-    typeof req.body?.author === "string" ? req.body.author.trim() : ""
-
-  if (typeof timestamp !== "number" || Number.isNaN(timestamp) || timestamp < 0) {
-    res.status(400).json({ error: "A non-negative numeric timestamp is required." })
-    return
-  }
-
-  if (!body) {
-    res.status(400).json({ error: "Comment body is required." })
-    return
-  }
-
-  if (!author) {
-    res.status(400).json({ error: "Comment author is required." })
+  const parsed = parseCreateCommentBody(req.body)
+  if ("error" in parsed) {
+    res.status(400).json({ error: parsed.error })
     return
   }
 
   const comment = createComment({
     versionId: version.id,
-    timestamp,
-    body,
-    author,
+    timestamp: parsed.timestamp,
+    body: parsed.text,
+    author: parsed.author,
   })
 
   res.status(201).json(comment)
 })
 
 const commentByIdRouter = Router()
+
+commentByIdRouter.get("/", (req, res) => {
+  const versionId =
+    typeof req.query.versionId === "string" ? req.query.versionId.trim() : ""
+
+  if (!versionId) {
+    res.status(400).json({ error: "versionId query parameter is required." })
+    return
+  }
+
+  const version = getVersion(versionId)
+  if (!version) {
+    res.status(404).json({ error: "Version not found." })
+    return
+  }
+
+  res.json(listComments(versionId))
+})
+
+commentByIdRouter.post("/", (req, res) => {
+  const versionId =
+    typeof req.body?.versionId === "string" ? req.body.versionId.trim() : ""
+
+  if (!versionId) {
+    res.status(400).json({ error: "versionId is required." })
+    return
+  }
+
+  const version = getVersion(versionId)
+  if (!version) {
+    res.status(404).json({ error: "Version not found." })
+    return
+  }
+
+  const parsed = parseCreateCommentBody(req.body)
+  if ("error" in parsed) {
+    res.status(400).json({ error: parsed.error })
+    return
+  }
+
+  const comment = createComment({
+    versionId,
+    timestamp: parsed.timestamp,
+    body: parsed.text,
+    author: parsed.author,
+  })
+
+  res.status(201).json(comment)
+})
 
 commentByIdRouter.patch("/:commentId", (req, res) => {
   const commentId = getParam(req.params.commentId)

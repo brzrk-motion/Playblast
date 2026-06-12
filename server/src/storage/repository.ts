@@ -139,9 +139,9 @@ export function createVersion(input: CreateVersionInput): Version {
 }
 
 export function listComments(versionId: string): Comment[] {
-  return readStore().comments.filter(
-    (comment) => comment.versionId === versionId,
-  )
+  return readStore()
+    .comments.filter((comment) => comment.versionId === versionId)
+    .sort((a, b) => a.timestamp - b.timestamp)
 }
 
 export function getComment(id: string): Comment | undefined {

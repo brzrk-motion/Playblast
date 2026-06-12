@@ -6,8 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton"
 import { VersionSelector } from "@/components/project/version-selector"
 import { VersionUpload } from "@/components/project/version-upload"
-import { VideoPlayer } from "@/components/video/video-player"
-import { getProject, listComments, listVersions } from "@/lib/api"
+import { VideoReview } from "@/components/video/video-review"
+import {
+  createComment,
+  getProject,
+  listComments,
+  listVersions,
+} from "@/lib/api"
 import { sortVersionsByDate } from "@/lib/versions"
 import type { Comment } from "@/types/comment"
 import type { Project } from "@/types/project"
@@ -117,11 +122,13 @@ export function ProjectPage() {
       return
     }
 
+    const activeProjectId = projectId
+    const versionLabel = selectedLabel
     let cancelled = false
 
     async function fetchComments() {
       try {
-        const data = await listComments(projectId, selectedLabel)
+        const data = await listComments(activeProjectId, versionLabel)
         if (!cancelled) {
           setComments(data)
         }
@@ -206,13 +213,22 @@ export function ProjectPage() {
       </div>
 
       {selectedVersion ? (
-        <VideoPlayer
+        <VideoReview
           key={`${selectedVersion.id}-${selectedVersion.uploadedAt}`}
           projectId={project.id}
           version={selectedVersion.label}
           filename={selectedVersion.filename}
           title={selectedVersion.filename}
           comments={selectedLabel ? comments : []}
+          onCreateComment={async (input) => {
+            const comment = await createComment({
+              versionId: selectedVersion.id,
+              ...input,
+            })
+            setComments((current) =>
+              [...current, comment].sort((a, b) => a.timestamp - b.timestamp),
+            )
+          }}
         />
       ) : (
         <Card className="border-dashed">
