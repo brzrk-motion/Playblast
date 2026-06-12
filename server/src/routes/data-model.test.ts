@@ -350,6 +350,50 @@ describe("projects, versions, and comments API", () => {
     assert.equal(missingResponse.status, 404)
   })
 
+  it("renames a version label via PATCH /api/versions/:id/label", async () => {
+    await fetch(`${baseUrl}/api/projects`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "spot-rename", name: "Spot Rename" }),
+    })
+
+    const { createVersion } = await import("../storage/repository.js")
+    const version = createVersion({
+      projectId: "spot-rename",
+      label: "v1",
+      filename: "render.mp4",
+    })
+    createVersion({
+      projectId: "spot-rename",
+      label: "v2",
+      filename: "other.mp4",
+    })
+
+    const renamedResponse = await fetch(
+      `${baseUrl}/api/versions/${version.id}/label`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: "v1-review" }),
+      },
+    )
+
+    assert.equal(renamedResponse.status, 200)
+    const renamed = (await renamedResponse.json()) as { label: string }
+    assert.equal(renamed.label, "v1-review")
+
+    const conflictResponse = await fetch(
+      `${baseUrl}/api/versions/${version.id}/label`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: "v2" }),
+      },
+    )
+
+    assert.equal(conflictResponse.status, 409)
+  })
+
   it("lists and creates comments via flat /api/comments endpoints", async () => {
     await fetch(`${baseUrl}/api/projects`, {
       method: "POST",
