@@ -60,6 +60,95 @@ describe("projects, versions, and comments API", () => {
     assert.equal(versions.length, 0)
   })
 
+  it("gets a project by id and returns 404 when missing", async () => {
+    await fetch(`${baseUrl}/api/projects`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "spot-get", name: "Spot Get" }),
+    })
+
+    const getResponse = await fetch(`${baseUrl}/api/projects/spot-get`)
+    assert.equal(getResponse.status, 200)
+    const project = (await getResponse.json()) as { id: string; name: string }
+    assert.equal(project.id, "spot-get")
+    assert.equal(project.name, "Spot Get")
+
+    const missingResponse = await fetch(`${baseUrl}/api/projects/missing-id`)
+    assert.equal(missingResponse.status, 404)
+  })
+
+  it("lists projects with version count and updated date", async () => {
+    await fetch(`${baseUrl}/api/projects`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "spot-summary", name: "Spot Summary" }),
+    })
+
+    const { createVersion } = await import("../storage/repository.js")
+    createVersion({
+      projectId: "spot-summary",
+      label: "v1",
+      filename: "render.mp4",
+    })
+
+    const listResponse = await fetch(`${baseUrl}/api/projects`)
+    assert.equal(listResponse.status, 200)
+    const projects = (await listResponse.json()) as Array<{
+      id: string
+      versionCount: number
+      updatedAt: string
+    }>
+    const summary = projects.find((item) => item.id === "spot-summary")
+    assert.ok(summary)
+    assert.equal(summary.versionCount, 1)
+    assert.ok(summary.updatedAt)
+  })
+
+  it("deletes a project and cascades versions and comments", async () => {
+    await fetch(`${baseUrl}/api/projects`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "spot-delete", name: "Spot Delete" }),
+    })
+
+    const { createVersion } = await import("../storage/repository.js")
+    const version = createVersion({
+      projectId: "spot-delete",
+      label: "v1",
+      filename: "render.mp4",
+    })
+
+    const createCommentResponse = await fetch(
+      `${baseUrl}/api/projects/spot-delete/versions/v1/comments`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          timestamp: 1,
+          body: "Test comment",
+          author: "Sam",
+        }),
+      },
+    )
+    assert.equal(createCommentResponse.status, 201)
+
+    const deleteResponse = await fetch(`${baseUrl}/api/projects/spot-delete`, {
+      method: "DELETE",
+    })
+    assert.equal(deleteResponse.status, 204)
+
+    const getResponse = await fetch(`${baseUrl}/api/projects/spot-delete`)
+    assert.equal(getResponse.status, 404)
+
+    const versionsResponse = await fetch(
+      `${baseUrl}/api/projects/spot-delete/versions`,
+    )
+    assert.equal(versionsResponse.status, 404)
+
+    const { listComments } = await import("../storage/repository.js")
+    assert.equal(listComments(version.id).length, 0)
+  })
+
   it("creates and updates comments for a version", async () => {
     await fetch(`${baseUrl}/api/projects`, {
       method: "POST",

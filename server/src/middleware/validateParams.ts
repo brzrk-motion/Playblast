@@ -3,6 +3,24 @@ import { getParam } from "../utils/params.js"
 
 export const SAFE_SEGMENT = /^[a-zA-Z0-9._-]+$/
 
+export function validateProjectIdParam(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const projectId = getParam(req.params.projectId)
+
+  if (!SAFE_SEGMENT.test(projectId)) {
+    res.status(400).json({
+      error:
+        "projectId must contain only letters, numbers, dots, underscores, and hyphens",
+    })
+    return
+  }
+
+  next()
+}
+
 export function validateProjectParams(
   req: Request,
   res: Response,

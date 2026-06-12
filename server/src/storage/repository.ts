@@ -5,6 +5,7 @@ import type {
   CreateProjectInput,
   CreateVersionInput,
   Project,
+  ProjectSummary,
   UpdateCommentInput,
   Version,
 } from "../types/index.js"
@@ -12,6 +13,29 @@ import { readStore, withStore } from "./json-store.js"
 
 export function listProjects(): Project[] {
   return readStore().projects
+}
+
+export function listProjectSummaries(): ProjectSummary[] {
+  const store = readStore()
+
+  return store.projects.map((project) => {
+    const versions = store.versions.filter(
+      (version) => version.projectId === project.id,
+    )
+    const latestUpload = versions.reduce((max, version) => {
+      const uploadedAt = new Date(version.uploadedAt).getTime()
+      return uploadedAt > max ? uploadedAt : max
+    }, 0)
+
+    return {
+      ...project,
+      versionCount: versions.length,
+      updatedAt:
+        latestUpload > 0
+          ? new Date(latestUpload).toISOString()
+          : project.createdAt,
+    }
+  })
 }
 
 export function getProject(id: string): Project | undefined {
@@ -29,6 +53,31 @@ export function createProject(input: CreateProjectInput): Project {
 
     store.projects.push(project)
     return project
+  })
+}
+
+export function deleteProject(id: string): boolean {
+  return withStore((store) => {
+    const index = store.projects.findIndex((project) => project.id === id)
+
+    if (index === -1) {
+      return false
+    }
+
+    const versionIds = new Set(
+      store.versions
+        .filter((version) => version.projectId === id)
+        .map((version) => version.id),
+    )
+
+    store.comments = store.comments.filter(
+      (comment) => !versionIds.has(comment.versionId),
+    )
+    store.versions = store.versions.filter(
+      (version) => version.projectId !== id,
+    )
+    store.projects.splice(index, 1)
+    return true
   })
 }
 
