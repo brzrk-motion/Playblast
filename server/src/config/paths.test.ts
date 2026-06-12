@@ -3,7 +3,8 @@ import os from "node:os"
 import path from "node:path"
 import { afterEach, beforeEach, describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { ensureUploadDir, getProjectUploadDir, getUploadRoot } from "./paths.js"
+import { config } from "./env.js"
+import { ensureUploadDir, getProjectUploadDir } from "./paths.js"
 
 describe("upload directory configuration", () => {
   let tempDir: string
@@ -33,8 +34,8 @@ describe("upload directory configuration", () => {
 
     const resolved = ensureUploadDir()
 
-    assert.equal(resolved, getUploadRoot())
-    assert.equal(getUploadRoot(), path.resolve(nestedDir))
+    assert.equal(resolved, config.uploadDir)
+    assert.equal(config.uploadDir, path.resolve(nestedDir))
     assert.equal(fs.existsSync(nestedDir), true)
     assert.ok(fs.statSync(nestedDir).isDirectory())
   })

@@ -4,9 +4,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      UPLOAD_DIR: /app/server/uploads
+      UPLOAD_DIR: /app/uploads
     volumes:
-      - playblast_uploads:/app/server/uploads
+      - playblast_uploads:/app/uploads
     restart: unless-stopped
 
 volumes:

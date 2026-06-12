@@ -36,7 +36,7 @@ if ! curl -fsS "http://localhost:3000/api/projects" >/dev/null 2>&1; then
 fi
 
 echo "Writing persistence marker into the uploads volume..."
-$COMPOSE exec -T playblast sh -c "printf '%s' '$MARKER_CONTENT' > /app/server/uploads/$MARKER_FILE"
+$COMPOSE exec -T playblast sh -c "printf '%s' '$MARKER_CONTENT' > /app/uploads/$MARKER_FILE"
 
 echo "Stopping containers (volume should remain)..."
 $COMPOSE down
@@ -53,7 +53,7 @@ for _ in $(seq 1 30); do
 done
 
 echo "Checking persistence marker..."
-PERSISTED_CONTENT="$($COMPOSE exec -T playblast cat "/app/server/uploads/$MARKER_FILE")"
+PERSISTED_CONTENT="$($COMPOSE exec -T playblast cat "/app/uploads/$MARKER_FILE")"
 
 if [ "$PERSISTED_CONTENT" != "$MARKER_CONTENT" ]; then
   echo "error: upload volume persistence check failed" >&2

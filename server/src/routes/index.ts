@@ -7,10 +7,6 @@ import versionsRouter from "./versions.js"
 
 const apiRouter = Router()
 
-apiRouter.get("/health", (_req, res) => {
-  res.json({ status: "ok", service: "playblast-server" })
-})
-
 apiRouter.use("/projects", projectsRouter)
 apiRouter.use("/versions", versionsRouter)
 apiRouter.use("/comments", commentByIdRouter)
