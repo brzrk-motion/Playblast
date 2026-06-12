@@ -1,17 +1,18 @@
-import { useState } from "react"
-import { formatTime } from "@vidstack/react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   Check,
   ChevronDown,
   ChevronRight,
   MessageSquare,
   Pencil,
+  Play,
   RotateCcw,
   Trash2,
 } from "lucide-react"
 
 import { CommentComposerInline } from "@/components/video/comment-composer"
 import { CommentsPanelSkeleton } from "@/components/video/comments-panel-skeleton"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
@@ -28,6 +29,8 @@ import type { Comment } from "@/types/comment"
 import type { FrameAnnotation } from "@/types/annotation"
 
 type CommentFilter = "all" | "open" | "resolved"
+
+const ACTIVE_COMMENT_THRESHOLD = 1
 
 export interface CommentsPanelProps {
   comments: Comment[]
@@ -49,102 +52,245 @@ function sortByTimestamp(comments: Comment[]): Comment[] {
   return [...comments].sort((a, b) => a.timestamp - b.timestamp)
 }
 
+function formatCommentTimestamp(seconds: number): string {
+  const totalSeconds = Math.floor(seconds)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const secs = totalSeconds % 60
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+  }
+
+  return `${minutes}:${String(secs).padStart(2, "0")}`
+}
+
+function getAuthorInitial(author: string): string {
+  const trimmed = author.trim()
+  if (!trimmed) {
+    return "?"
+  }
+
+  const parts = trimmed.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    return `${parts[0]![0]}${parts[1]![0]}`.toUpperCase()
+  }
+
+  return trimmed.slice(0, 2).toUpperCase()
+}
+
+function isMultilineBody(body: string): boolean {
+  return body.includes("\n") || body.length > 120
+}
+
+function findActiveCommentId(
+  comments: Comment[],
+  currentTime: number,
+): string | null {
+  let closest: { id: string; distance: number } | null = null
+
+  for (const comment of comments) {
+    const distance = Math.abs(currentTime - comment.timestamp)
+    if (distance <= ACTIVE_COMMENT_THRESHOLD) {
+      if (!closest || distance < closest.distance) {
+        closest = { id: comment.id, distance }
+      }
+    }
+  }
+
+  return closest?.id ?? null
+}
+
 interface CommentRowProps {
   comment: Comment
-  expanded?: boolean
+  isActive?: boolean
   onResolveComment?: (commentId: string, resolved: boolean) => void
   onDeleteComment?: (commentId: string) => void
   resolving?: boolean
   deleting?: boolean
+  confirmingDelete?: boolean
+  onRequestDelete?: () => void
+  onConfirmDelete?: () => void
+  onCancelDelete?: () => void
+  rowRef?: (element: HTMLLIElement | null) => void
 }
 
 function CommentRow({
   comment,
-  expanded = true,
+  isActive = false,
   onResolveComment,
   onDeleteComment,
   resolving = false,
   deleting = false,
+  confirmingDelete = false,
+  onRequestDelete,
+  onConfirmDelete,
+  onCancelDelete,
+  rowRef,
 }: CommentRowProps) {
   const { seek } = useVideoPlayer()
+  const [bodyExpanded, setBodyExpanded] = useState(false)
+  const showExpandToggle = isMultilineBody(comment.body) && !bodyExpanded
+
+  function handleRowActivate() {
+    seek(comment.timestamp)
+  }
 
   return (
     <li
+      ref={rowRef}
       className={cn(
-        "group border-b last:border-b-0",
+        "group border-b last:border-b-0 transition-colors duration-150",
         comment.resolved && "opacity-60",
+        isActive && "border-l-2 border-l-primary bg-primary/5",
       )}
     >
-      <div className="flex items-start gap-1 px-3 py-2.5">
-        <button
-          type="button"
-          className="interactive-row -m-1 min-w-0 flex-1 p-1 text-left"
-          onClick={() => seek(comment.timestamp)}
-        >
-          <div className="flex items-center gap-2">
-            <span className="type-timestamp text-primary">
-              {formatTime(comment.timestamp)}
+      <div
+        role="button"
+        tabIndex={0}
+        className={cn(
+          "interactive-row flex cursor-pointer items-start gap-2.5 px-3 py-2.5 text-left",
+          isActive && "bg-transparent hover:bg-primary/10",
+        )}
+        onClick={handleRowActivate}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault()
+            handleRowActivate()
+          }
+        }}
+      >
+        <Avatar size="sm" className="mt-0.5">
+          <AvatarFallback className="text-[10px] font-medium">
+            {getAuthorInitial(comment.author)}
+          </AvatarFallback>
+        </Avatar>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                "group/pill type-timestamp inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-primary transition-colors hover:bg-primary/15",
+                isActive && "bg-primary/15",
+              )}
+            >
+              <Play className="size-3 shrink-0 opacity-0 transition-opacity group-hover/pill:opacity-100" />
+              {formatCommentTimestamp(comment.timestamp)}
             </span>
-            <span className="text-xs text-muted-foreground">{comment.author}</span>
+
+            <span className="text-xs font-medium text-foreground">{comment.author}</span>
+
             {comment.annotation ? (
               <Badge variant="outline" className="type-micro gap-1">
                 <Pencil className="size-2.5" />
                 Frame
               </Badge>
             ) : null}
+
             {comment.resolved ? (
               <Badge variant="outline" className="type-micro ml-auto">
                 Resolved
               </Badge>
             ) : null}
           </div>
-          {expanded ? (
-            <p className="mt-1 text-sm text-foreground">{comment.body}</p>
+
+          <p
+            className={cn(
+              "mt-1 text-sm text-foreground",
+              !bodyExpanded && "line-clamp-2",
+            )}
+          >
+            {comment.body}
+          </p>
+
+          {showExpandToggle ? (
+            <button
+              type="button"
+              className="mt-0.5 text-xs font-medium text-primary hover:underline"
+              onClick={(event) => {
+                event.stopPropagation()
+                setBodyExpanded(true)
+              }}
+            >
+              Show more
+            </button>
+          ) : bodyExpanded && isMultilineBody(comment.body) ? (
+            <button
+              type="button"
+              className="mt-0.5 text-xs font-medium text-primary hover:underline"
+              onClick={(event) => {
+                event.stopPropagation()
+                setBodyExpanded(false)
+              }}
+            >
+              Show less
+            </button>
+          ) : null}
+        </div>
+
+        <div
+          className="flex shrink-0 flex-col gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          {confirmingDelete ? (
+            <div className="flex flex-col gap-1">
+              <Button
+                type="button"
+                variant="destructive"
+                size="xs"
+                disabled={deleting}
+                onClick={onConfirmDelete}
+              >
+                {deleting ? <Spinner className="size-3" /> : "Delete"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                disabled={deleting}
+                onClick={onCancelDelete}
+              >
+                Cancel
+              </Button>
+            </div>
           ) : (
-            <p className="mt-1 truncate text-sm text-muted-foreground">{comment.body}</p>
+            <>
+              {onResolveComment ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={resolving || deleting}
+                  aria-label={comment.resolved ? "Unresolve comment" : "Resolve comment"}
+                  title={comment.resolved ? "Unresolve" : "Resolve"}
+                  onClick={() => onResolveComment(comment.id, !comment.resolved)}
+                >
+                  {resolving ? (
+                    <Spinner className="size-3" />
+                  ) : comment.resolved ? (
+                    <RotateCcw />
+                  ) : (
+                    <Check />
+                  )}
+                </Button>
+              ) : null}
+
+              {onDeleteComment ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={resolving || deleting}
+                  aria-label="Delete comment"
+                  title="Delete"
+                  onClick={onRequestDelete}
+                >
+                  <Trash2 />
+                </Button>
+              ) : null}
+            </>
           )}
-        </button>
-
-        <div className="flex shrink-0 flex-col gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100">
-          {onResolveComment ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              disabled={resolving || deleting}
-              aria-label={comment.resolved ? "Unresolve comment" : "Resolve comment"}
-              title={comment.resolved ? "Unresolve" : "Resolve"}
-              onClick={(event) => {
-                event.stopPropagation()
-                onResolveComment(comment.id, !comment.resolved)
-              }}
-            >
-              {resolving ? (
-                <Spinner className="size-3" />
-              ) : comment.resolved ? (
-                <RotateCcw />
-              ) : (
-                <Check />
-              )}
-            </Button>
-          ) : null}
-
-          {onDeleteComment ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              disabled={resolving || deleting}
-              aria-label="Delete comment"
-              title="Delete"
-              onClick={(event) => {
-                event.stopPropagation()
-                onDeleteComment(comment.id)
-              }}
-            >
-              {deleting ? <Spinner className="size-3" /> : <Trash2 />}
-            </Button>
-          ) : null}
         </div>
       </div>
     </li>
@@ -161,9 +307,12 @@ export function CommentsPanel({
   deletingCommentId = null,
   className,
 }: CommentsPanelProps) {
-  const { openComposer } = useVideoPlayer()
+  const { openComposer, currentTime } = useVideoPlayer()
   const [filter, setFilter] = useState<CommentFilter>("all")
   const [resolvedExpanded, setResolvedExpanded] = useState(false)
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
+  const rowRefs = useRef(new Map<string, HTMLLIElement>())
+  const lastScrolledActiveId = useRef<string | null>(null)
 
   const sortedComments = sortByTimestamp(comments)
   const openComments = sortedComments.filter((comment) => !comment.resolved)
@@ -176,6 +325,28 @@ export function CommentsPanel({
         ? resolvedComments
         : sortedComments
 
+  const activeCommentId = useMemo(
+    () => findActiveCommentId(filteredComments, currentTime),
+    [filteredComments, currentTime],
+  )
+
+  useEffect(() => {
+    if (!activeCommentId) {
+      lastScrolledActiveId.current = null
+      return
+    }
+
+    if (activeCommentId === lastScrolledActiveId.current) {
+      return
+    }
+
+    const element = rowRefs.current.get(activeCommentId)
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      lastScrolledActiveId.current = activeCommentId
+    }
+  }, [activeCommentId])
+
   const showResolvedSection = filter === "all" && resolvedComments.length > 0
   const showOpenList = filter !== "resolved"
   const showResolvedList = filter === "resolved" || (filter === "all" && resolvedExpanded)
@@ -186,6 +357,38 @@ export function CommentsPanel({
       : filter === "resolved"
         ? "No resolved comments."
         : "No comments yet."
+
+  function setRowRef(commentId: string) {
+    return (element: HTMLLIElement | null) => {
+      if (element) {
+        rowRefs.current.set(commentId, element)
+      } else {
+        rowRefs.current.delete(commentId)
+      }
+    }
+  }
+
+  function renderCommentRow(comment: Comment) {
+    return (
+      <CommentRow
+        key={comment.id}
+        comment={comment}
+        isActive={activeCommentId === comment.id}
+        rowRef={setRowRef(comment.id)}
+        onResolveComment={onResolveComment}
+        onDeleteComment={onDeleteComment}
+        resolving={resolvingCommentId === comment.id}
+        deleting={deletingCommentId === comment.id}
+        confirmingDelete={confirmingDeleteId === comment.id}
+        onRequestDelete={() => setConfirmingDeleteId(comment.id)}
+        onConfirmDelete={() => {
+          onDeleteComment?.(comment.id)
+          setConfirmingDeleteId(null)
+        }}
+        onCancelDelete={() => setConfirmingDeleteId(null)}
+      />
+    )
+  }
 
   return (
     <Card className={cn("flex h-full min-h-0 flex-col overflow-hidden", className)}>
@@ -237,31 +440,13 @@ export function CommentsPanel({
           <ScrollArea className="min-h-0 flex-1">
             {showOpenList && (filter === "open" || filter === "all") ? (
               <ul className="divide-y">
-                {openComments.map((comment) => (
-                  <CommentRow
-                    key={comment.id}
-                    comment={comment}
-                    onResolveComment={onResolveComment}
-                    onDeleteComment={onDeleteComment}
-                    resolving={resolvingCommentId === comment.id}
-                    deleting={deletingCommentId === comment.id}
-                  />
-                ))}
+                {openComments.map(renderCommentRow)}
               </ul>
             ) : null}
 
             {filter === "resolved" ? (
               <ul className="divide-y">
-                {resolvedComments.map((comment) => (
-                  <CommentRow
-                    key={comment.id}
-                    comment={comment}
-                    onResolveComment={onResolveComment}
-                    onDeleteComment={onDeleteComment}
-                    resolving={resolvingCommentId === comment.id}
-                    deleting={deletingCommentId === comment.id}
-                  />
-                ))}
+                {resolvedComments.map(renderCommentRow)}
               </ul>
             ) : null}
 
@@ -286,17 +471,7 @@ export function CommentsPanel({
                 <CollapsibleContent>
                   {showResolvedList ? (
                     <ul className="divide-y border-t">
-                      {resolvedComments.map((comment) => (
-                        <CommentRow
-                          key={comment.id}
-                          comment={comment}
-                          expanded={resolvedExpanded}
-                          onResolveComment={onResolveComment}
-                          onDeleteComment={onDeleteComment}
-                          resolving={resolvingCommentId === comment.id}
-                          deleting={deletingCommentId === comment.id}
-                        />
-                      ))}
+                      {resolvedComments.map(renderCommentRow)}
                     </ul>
                   ) : null}
                 </CollapsibleContent>
