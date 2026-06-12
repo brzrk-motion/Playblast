@@ -45,29 +45,50 @@ export function CommentComposerForm({
 }) {
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const authorRef = useRef<HTMLInputElement>(null)
+  const [body, setBody] = useState("")
+  const [author, setAuthor] = useState(getStoredAuthor)
+  const [fieldErrors, setFieldErrors] = useState<{
+    body?: string
+    author?: string
+  }>({})
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  const trimmedBody = body.trim()
+  const trimmedAuthor = author.trim()
+  const canSubmit = Boolean(trimmedBody && trimmedAuthor) && !submitting
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
 
-    const form = event.currentTarget
-    const body = (form.elements.namedItem("body") as HTMLTextAreaElement).value.trim()
-    const author = (form.elements.namedItem("author") as HTMLInputElement).value.trim()
+    const nextFieldErrors: { body?: string; author?: string } = {}
+    if (!trimmedBody) {
+      nextFieldErrors.body = "Comment can't be empty"
+    }
+    if (!trimmedAuthor) {
+      nextFieldErrors.author = "Name is required"
+    }
 
-    if (!body || !author) {
+    if (nextFieldErrors.body || nextFieldErrors.author) {
+      setFieldErrors(nextFieldErrors)
+      if (nextFieldErrors.body) {
+        bodyRef.current?.focus()
+      } else {
+        authorRef.current?.focus()
+      }
       return
     }
 
-    window.localStorage.setItem(AUTHOR_STORAGE_KEY, author)
+    setFieldErrors({})
+    window.localStorage.setItem(AUTHOR_STORAGE_KEY, trimmedAuthor)
     setSubmitting(true)
 
     try {
       await onSubmit({
         timestamp,
-        body,
-        author,
+        body: trimmedBody,
+        author: trimmedAuthor,
         annotation: draftAnnotation ?? undefined,
       })
       onClose()
@@ -106,38 +127,66 @@ export function CommentComposerForm({
       </div>
 
       <div className={cn("flex gap-2", isInline ? "flex-col sm:flex-row" : "flex-col")}>
-        <Input
-          ref={authorRef}
-          name="author"
-          defaultValue={getStoredAuthor()}
-          placeholder="Your name"
-          aria-label="Author name"
-          disabled={submitting}
-          className={isInline ? "sm:w-32" : undefined}
-        />
+        <div className={cn("space-y-1", isInline && "sm:w-32")}>
+          <Input
+            ref={authorRef}
+            name="author"
+            value={author}
+            onChange={(event) => {
+              setAuthor(event.target.value)
+              if (fieldErrors.author) {
+                setFieldErrors((current) => ({ ...current, author: undefined }))
+              }
+            }}
+            placeholder="Your name"
+            aria-label="Author name"
+            aria-invalid={fieldErrors.author ? true : undefined}
+            disabled={submitting}
+          />
+          {fieldErrors.author ? (
+            <p role="alert" className="text-xs text-destructive">
+              {fieldErrors.author}
+            </p>
+          ) : null}
+        </div>
 
-        <textarea
-          ref={bodyRef}
-          name="body"
-          autoFocus
-          placeholder="Leave feedback at this timestamp…"
-          aria-label="Comment body"
-          rows={isInline ? 2 : 3}
-          className="w-full flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] duration-150 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
-          disabled={submitting}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault()
-              onClose()
-              return
-            }
+        <div className="min-w-0 flex-1 space-y-1">
+          <textarea
+            ref={bodyRef}
+            name="body"
+            value={body}
+            onChange={(event) => {
+              setBody(event.target.value)
+              if (fieldErrors.body) {
+                setFieldErrors((current) => ({ ...current, body: undefined }))
+              }
+            }}
+            autoFocus
+            placeholder="Leave feedback at this timestamp…"
+            aria-label="Comment body"
+            aria-invalid={fieldErrors.body ? true : undefined}
+            rows={isInline ? 2 : 3}
+            className="w-full flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] duration-150 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:aria-invalid:ring-destructive/40"
+            disabled={submitting}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault()
+                onClose()
+                return
+              }
 
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault()
-              event.currentTarget.form?.requestSubmit()
-            }
-          }}
-        />
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault()
+                event.currentTarget.form?.requestSubmit()
+              }
+            }}
+          />
+          {fieldErrors.body ? (
+            <p role="alert" className="text-xs text-destructive">
+              {fieldErrors.body}
+            </p>
+          ) : null}
+        </div>
       </div>
 
       {draftAnnotation ? (
@@ -177,7 +226,7 @@ export function CommentComposerForm({
         >
           Cancel
         </Button>
-        <Button type="submit" size="sm" disabled={submitting}>
+        <Button type="submit" size="sm" disabled={!canSubmit}>
           {submitting ? (
             <>
               <Spinner className="size-3.5" />
