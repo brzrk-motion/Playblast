@@ -139,6 +139,7 @@ export function createVersion(input: CreateVersionInput): Version {
     if (existing) {
       existing.filename = input.filename
       existing.uploadedAt = new Date().toISOString()
+      existing.status = "pending_review"
       return existing
     }
 

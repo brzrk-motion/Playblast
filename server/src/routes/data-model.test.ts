@@ -193,6 +193,15 @@ describe("projects, versions, and comments API", () => {
     assert.equal(listComments(version.id).length, 0)
   })
 
+  it("returns 404 when uploading to a non-existent project", async () => {
+    const response = await fetch(
+      `${baseUrl}/api/projects/does-not-exist/versions/v1/upload`,
+      { method: "POST" },
+    )
+
+    assert.equal(response.status, 404)
+  })
+
   it("creates and updates comments for a version", async () => {
     await fetch(`${baseUrl}/api/projects`, {
       method: "POST",

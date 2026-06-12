@@ -86,6 +86,27 @@ describe("JSON data store", () => {
     assert.equal(listVersions(project.id).length, 1)
   })
 
+  it("resets version status to pending_review when re-uploading", () => {
+    const project = ensureProject("reupload-status-test")
+    const version = createVersion({
+      projectId: project.id,
+      label: "v1",
+      filename: "first.mp4",
+    })
+
+    updateVersionStatus(version.id, "approved")
+    assert.equal(getVersionByLabel(project.id, "v1")?.status, "approved")
+
+    const reuploaded = createVersion({
+      projectId: project.id,
+      label: "v1",
+      filename: "second.mp4",
+    })
+
+    assert.equal(reuploaded.id, version.id)
+    assert.equal(reuploaded.status, "pending_review")
+  })
+
   it("updates and deletes comments", () => {
     const project = ensureProject("comment-test")
     const version = createVersion({

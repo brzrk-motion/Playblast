@@ -8,6 +8,7 @@ import {
 } from "@vidstack/react"
 
 import { VideoControls } from "@/components/video/video-controls"
+import { VideoPlayerProvider } from "@/context/video-player-provider"
 import { getVideoUrl } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import type { Comment } from "@/types/comment"
@@ -56,8 +57,10 @@ export function VideoPlayer({
         playsInline
         crossOrigin
       >
-        <MediaProvider />
-        <VideoControls comments={comments} />
+        <VideoPlayerProvider>
+          <MediaProvider />
+          <VideoControls comments={comments} />
+        </VideoPlayerProvider>
       </MediaPlayer>
     </div>
   )

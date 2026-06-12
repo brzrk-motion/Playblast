@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -13,13 +13,21 @@ import { ArrowLeft, GitCompare } from "lucide-react"
 
 export function ComparePage() {
   const { projectId = "" } = useParams()
-  const [, setSearchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [project, setProject] = useState<Project | null>(null)
   const [versions, setVersions] = useState<Version[]>([])
-  const [leftLabel, setLeftLabel] = useState<string | null>(null)
-  const [rightLabel, setRightLabel] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const { left: leftLabel, right: rightLabel } = useMemo(
+    () =>
+      pickCompareVersionLabels(
+        versions,
+        searchParams.get("left"),
+        searchParams.get("right"),
+      ),
+    [versions, searchParams],
+  )
 
   const loadProjectData = useCallback(async () => {
     if (!projectId) {
@@ -36,23 +44,13 @@ export function ComparePage() {
       ])
 
       const sortedVersions = sortVersionsByDate(versionData)
-      const urlParams = new URLSearchParams(window.location.search)
-      const defaults = pickCompareVersionLabels(
-        sortedVersions,
-        urlParams.get("left"),
-        urlParams.get("right"),
-      )
 
       setProject(projectData)
       setVersions(sortedVersions)
-      setLeftLabel(defaults.left)
-      setRightLabel(defaults.right)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load project")
       setProject(null)
       setVersions([])
-      setLeftLabel(null)
-      setRightLabel(null)
     } finally {
       setLoading(false)
     }
@@ -80,24 +78,14 @@ export function ComparePage() {
         }
 
         const sortedVersions = sortVersionsByDate(versionData)
-        const urlParams = new URLSearchParams(window.location.search)
-        const defaults = pickCompareVersionLabels(
-          sortedVersions,
-          urlParams.get("left"),
-          urlParams.get("right"),
-        )
 
         setProject(projectData)
         setVersions(sortedVersions)
-        setLeftLabel(defaults.left)
-        setRightLabel(defaults.right)
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Failed to load project")
           setProject(null)
           setVersions([])
-          setLeftLabel(null)
-          setRightLabel(null)
         }
       } finally {
         if (!cancelled) {
@@ -115,21 +103,28 @@ export function ComparePage() {
 
   const updateSearchParam = useCallback(
     (pane: "left" | "right", label: string) => {
+      const otherPane = pane === "left" ? "right" : "left"
+      const previousLabel = pane === "left" ? leftLabel : rightLabel
+
       setSearchParams(
         (current) => {
           const next = new URLSearchParams(current)
           next.set(pane, label)
+          // Keep the two panes on different versions: if the chosen version is
+          // already shown in the other pane, swap them instead of duplicating.
+          if (next.get(otherPane) === label && previousLabel) {
+            next.set(otherPane, previousLabel)
+          }
           return next
         },
         { replace: true },
       )
     },
-    [setSearchParams],
+    [setSearchParams, leftLabel, rightLabel],
   )
 
   const handleLeftLabelChange = useCallback(
     (label: string) => {
-      setLeftLabel(label)
       updateSearchParam("left", label)
     },
     [updateSearchParam],
@@ -137,7 +132,6 @@ export function ComparePage() {
 
   const handleRightLabelChange = useCallback(
     (label: string) => {
-      setRightLabel(label)
       updateSearchParam("right", label)
     },
     [updateSearchParam],

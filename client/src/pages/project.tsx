@@ -179,10 +179,13 @@ export function ProjectPage() {
           setComments(data)
           setCommentsLabel(versionLabel)
         }
-      } catch {
+      } catch (err) {
         if (!cancelled) {
           setComments([])
           setCommentsLabel(versionLabel)
+          setActionError(
+            err instanceof Error ? err.message : "Failed to load comments",
+          )
         }
       }
     }

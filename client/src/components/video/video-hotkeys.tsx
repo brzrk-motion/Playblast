@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useMediaRemote, useMediaState } from "@vidstack/react"
 
 import { KeyboardShortcutsPanel } from "@/components/video/keyboard-shortcuts-panel"
@@ -8,17 +8,30 @@ import {
   SKIP_SECONDS,
 } from "@/lib/video-shortcuts"
 
-function isEditableTarget(target: EventTarget | null) {
+/**
+ * Skip player shortcuts when the user is interacting with a form field or any
+ * other interactive control (buttons, links, menus, sliders). Otherwise keys
+ * like Space and the arrows would hijack normal keyboard navigation.
+ */
+function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
     return false
   }
 
   const tagName = target.tagName
-  return (
+  if (
     tagName === "INPUT" ||
     tagName === "TEXTAREA" ||
     tagName === "SELECT" ||
     target.isContentEditable
+  ) {
+    return true
+  }
+
+  return Boolean(
+    target.closest(
+      'button, a[href], [role="button"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="slider"], [role="menu"], [role="dialog"]',
+    ),
   )
 }
 
@@ -28,12 +41,19 @@ function isHelpKey(event: KeyboardEvent) {
 
 export interface VideoHotkeysProps {
   enableCommentShortcut?: boolean
+  /**
+   * Whether this instance registers the global (window-level) keyboard
+   * listener. On the compare page only one pane should capture shortcuts so a
+   * single key press does not toggle both players independently.
+   */
+  captureShortcuts?: boolean
   onMarkNeedsRevision?: () => void
   onMarkApproved?: () => void
 }
 
 export function VideoHotkeys({
   enableCommentShortcut = true,
+  captureShortcuts = true,
   onMarkNeedsRevision,
   onMarkApproved,
 }: VideoHotkeysProps) {
@@ -43,16 +63,28 @@ export function VideoHotkeys({
   const { openComposer } = useVideoPlayer()
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
+  const currentTimeRef = useRef(currentTime)
+  const durationRef = useRef(duration)
+
+  useEffect(() => {
+    currentTimeRef.current = currentTime
+    durationRef.current = duration
+  }, [currentTime, duration])
+
   const showReviewShortcuts =
     enableCommentShortcut || Boolean(onMarkNeedsRevision || onMarkApproved)
 
   useEffect(() => {
+    if (!captureShortcuts) {
+      return
+    }
+
     function handleKeyDown(event: KeyboardEvent) {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
         return
       }
 
-      if (isEditableTarget(event.target)) {
+      if (isInteractiveTarget(event.target)) {
         return
       }
 
@@ -66,6 +98,9 @@ export function VideoHotkeys({
         return
       }
 
+      const time = currentTimeRef.current
+      const total = durationRef.current
+
       switch (event.key) {
         case " ":
           event.preventDefault()
@@ -74,27 +109,25 @@ export function VideoHotkeys({
         case "j":
         case "J":
           event.preventDefault()
-          remote.seek(Math.max(0, currentTime - SKIP_SECONDS))
+          remote.seek(Math.max(0, time - SKIP_SECONDS))
           return
         case "l":
         case "L":
           event.preventDefault()
           remote.seek(
-            duration > 0
-              ? Math.min(duration, currentTime + SKIP_SECONDS)
-              : currentTime + SKIP_SECONDS,
+            total > 0 ? Math.min(total, time + SKIP_SECONDS) : time + SKIP_SECONDS,
           )
           return
         case "ArrowLeft":
           event.preventDefault()
-          remote.seek(Math.max(0, currentTime - FRAME_DURATION_SECONDS))
+          remote.seek(Math.max(0, time - FRAME_DURATION_SECONDS))
           return
         case "ArrowRight":
           event.preventDefault()
           remote.seek(
-            duration > 0
-              ? Math.min(duration, currentTime + FRAME_DURATION_SECONDS)
-              : currentTime + FRAME_DURATION_SECONDS,
+            total > 0
+              ? Math.min(total, time + FRAME_DURATION_SECONDS)
+              : time + FRAME_DURATION_SECONDS,
           )
           return
         case "c":
@@ -103,7 +136,7 @@ export function VideoHotkeys({
             return
           }
           event.preventDefault()
-          openComposer(currentTime)
+          openComposer(time)
           return
         case "r":
         case "R":
@@ -129,8 +162,7 @@ export function VideoHotkeys({
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [
-    currentTime,
-    duration,
+    captureShortcuts,
     enableCommentShortcut,
     onMarkApproved,
     onMarkNeedsRevision,
@@ -138,6 +170,10 @@ export function VideoHotkeys({
     remote,
     shortcutsOpen,
   ])
+
+  if (!captureShortcuts) {
+    return null
+  }
 
   return (
     <KeyboardShortcutsPanel
