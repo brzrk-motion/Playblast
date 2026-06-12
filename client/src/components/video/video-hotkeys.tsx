@@ -3,10 +3,8 @@ import { useMediaRemote, useMediaState } from "@vidstack/react"
 
 import { KeyboardShortcutsPanel } from "@/components/video/keyboard-shortcuts-panel"
 import { useVideoPlayer } from "@/hooks/use-video-player"
-import {
-  FRAME_DURATION_SECONDS,
-  SKIP_SECONDS,
-} from "@/lib/video-shortcuts"
+import { useFrameDuration } from "@/hooks/use-video-fps"
+import { SKIP_SECONDS } from "@/lib/video-shortcuts"
 
 /**
  * Skip player shortcuts when the user is interacting with a form field or any
@@ -66,16 +64,19 @@ export function VideoHotkeys({
   const remote = useMediaRemote()
   const currentTime = useMediaState("currentTime")
   const duration = useMediaState("duration")
+  const frameDuration = useFrameDuration()
   const { openComposer } = useVideoPlayer()
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
   const currentTimeRef = useRef(currentTime)
   const durationRef = useRef(duration)
+  const frameDurationRef = useRef(frameDuration)
 
   useEffect(() => {
     currentTimeRef.current = currentTime
     durationRef.current = duration
-  }, [currentTime, duration])
+    frameDurationRef.current = frameDuration
+  }, [currentTime, duration, frameDuration])
 
   const showReviewShortcuts =
     enableCommentShortcut || Boolean(onMarkNeedsRevision || onMarkApproved)
@@ -126,14 +127,14 @@ export function VideoHotkeys({
           return
         case "ArrowLeft":
           event.preventDefault()
-          remote.seek(Math.max(0, time - FRAME_DURATION_SECONDS))
+          remote.seek(Math.max(0, time - frameDurationRef.current))
           return
         case "ArrowRight":
           event.preventDefault()
           remote.seek(
             total > 0
-              ? Math.min(total, time + FRAME_DURATION_SECONDS)
-              : time + FRAME_DURATION_SECONDS,
+              ? Math.min(total, time + frameDurationRef.current)
+              : time + frameDurationRef.current,
           )
           return
         case "c":

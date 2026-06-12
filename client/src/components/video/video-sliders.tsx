@@ -1,6 +1,5 @@
 import { useRef, useState } from "react"
 import {
-  formatTime,
   useMediaRemote,
   useMediaState,
   useSliderPreview,
@@ -9,8 +8,13 @@ import {
 import { CommentMarkers } from "@/components/video/comment-markers"
 import { Slider } from "@/components/ui/slider"
 import { useVideoPlayer } from "@/hooks/use-video-player"
+import { useVideoFps } from "@/hooks/use-video-fps"
+import { formatTimecode, timeToFrame } from "@/lib/timecode"
 import { cn } from "@/lib/utils"
 import type { Comment } from "@/types/comment"
+
+const hudSliderClass =
+  "[&_[data-slot=slider-track]]:h-1 [&_[data-slot=slider-track]]:bg-white/20 [&_[data-slot=slider-range]]:bg-white [&_[data-slot=slider-thumb]]:size-3 [&_[data-slot=slider-thumb]]:border-white [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-[0_0_0_2px_rgba(0,0,0,0.35)]"
 
 export function VideoVolumeSlider({ className }: { className?: string }) {
   const volume = useMediaState("volume")
@@ -21,7 +25,7 @@ export function VideoVolumeSlider({ className }: { className?: string }) {
 
   return (
     <Slider
-      className={cn("w-24", className)}
+      className={cn("w-20", hudSliderClass, className)}
       value={[volume * 100]}
       onValueChange={([value]) => {
         remote.changeVolume(value / 100)
@@ -47,11 +51,12 @@ export function VideoTimeSlider({
   const duration = useMediaState("duration")
   const remote = useMediaRemote()
   const videoPlayer = useVideoPlayer()
+  const fps = useVideoFps()
   const [dragValue, setDragValue] = useState<number | null>(null)
   const changeCountRef = useRef(0)
   const { previewRootRef, previewRef, previewValue } = useSliderPreview({
     clamp: true,
-    offset: 6,
+    offset: 8,
     orientation: "horizontal",
   })
   const previewTime = (previewValue / 100) * duration
@@ -59,12 +64,20 @@ export function VideoTimeSlider({
     dragValue ?? (duration > 0 ? (currentTime / duration) * 100 : 0)
 
   if (!canSeek || !duration) {
-    return <div className={cn("h-1.5 flex-1 rounded-full bg-muted", className)} />
+    return (
+      <div
+        className={cn("h-1 flex-1 rounded-full bg-white/15", className)}
+      />
+    )
   }
 
+  const previewFrame =
+    fps && previewTime >= 0 ? timeToFrame(previewTime, fps) : null
+
   return (
-    <div ref={previewRootRef} className={cn("relative flex-1", className)}>
+    <div ref={previewRootRef} className={cn("relative flex-1 py-1", className)}>
       <Slider
+        className={cn("w-full", hudSliderClass)}
         value={[value]}
         onPointerDown={() => {
           changeCountRef.current = 0
@@ -84,7 +97,7 @@ export function VideoTimeSlider({
           }
         }}
         max={100}
-        step={0.1}
+        step={0.05}
         aria-label="Seek"
       />
 
@@ -99,9 +112,12 @@ export function VideoTimeSlider({
 
       <div
         ref={previewRef}
-        className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 -translate-x-1/2 rounded-md bg-popover px-2 py-1 text-xs text-popover-foreground opacity-0 shadow-md transition-opacity data-[visible]:opacity-100"
+        className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 -translate-x-1/2 rounded-md bg-black/90 px-2 py-1 font-mono text-xs text-white opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity data-[visible]:opacity-100"
       >
-        {formatTime(previewTime)}
+        {formatTimecode(previewTime)}
+        {previewFrame !== null ? (
+          <span className="ml-1.5 text-white/60">f{previewFrame}</span>
+        ) : null}
       </div>
     </div>
   )

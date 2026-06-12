@@ -5,10 +5,13 @@ import {
   VideoMuteButton,
   VideoPlayButton,
 } from "@/components/video/video-buttons"
+import { VideoPlaybackSpeed } from "@/components/video/video-playback-speed"
 import { VideoTimeSlider, VideoVolumeSlider } from "@/components/video/video-sliders"
 import { VideoTimeGroup } from "@/components/video/video-time"
 import { cn } from "@/lib/utils"
 import type { Comment } from "@/types/comment"
+
+const CONTROLS_HIDE_DELAY_MS = 2000
 
 export function VideoControls({
   className,
@@ -31,20 +34,11 @@ export function VideoControls({
         event="dblpointerup"
         action="toggle:fullscreen"
       />
-      <Gesture
-        className="absolute inset-x-0 top-0 z-10 block h-1/5 w-full"
-        event="pointerup"
-        action="toggle:controls"
-      />
-      <Gesture
-        className="absolute inset-x-0 bottom-0 z-10 block h-2/5 w-full"
-        event="pointerup"
-        action="toggle:controls"
-      />
 
       <Controls.Root
+        hideDelay={CONTROLS_HIDE_DELAY_MS}
         className={cn(
-          "video-controls absolute inset-x-0 bottom-0 z-20 flex flex-col bg-gradient-to-t from-black/80 via-black/50 to-transparent px-3 pt-12 pb-3",
+          "video-controls absolute inset-x-0 bottom-0 z-20 flex flex-col bg-gradient-to-t from-black/90 via-black/55 to-transparent px-3 pt-14 pb-3",
           className,
         )}
       >
@@ -55,11 +49,12 @@ export function VideoControls({
           />
         </Controls.Group>
 
-        <Controls.Group className="mt-2 flex w-full items-center gap-2">
+        <Controls.Group className="mt-2.5 flex w-full items-center gap-1.5">
           <VideoPlayButton />
           <VideoMuteButton />
           <VideoVolumeSlider />
           <VideoTimeGroup className="ml-auto" />
+          <VideoPlaybackSpeed />
           <VideoFullscreenButton />
         </Controls.Group>
       </Controls.Root>

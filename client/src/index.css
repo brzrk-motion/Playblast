@@ -309,4 +309,29 @@
   .interactive-row {
     @apply rounded-sm transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-muted/80;
   }
+
+  /* Video player HUD controls — auto-hide with reduced-motion support */
+  .video-controls {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 200ms ease-out,
+      visibility 200ms ease-out;
+  }
+
+  .video-controls[data-visible] {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .video-controls {
+      transition: none;
+    }
+
+    .video-controls .transition-interactive,
+    .video-controls [data-slot="slider-thumb"] {
+      transition: none;
+    }
+  }
 }

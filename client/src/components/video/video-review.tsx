@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react"
 import {
   MediaPlayer,
   MediaProvider,
+  useMediaState,
   type MediaPlayerInstance,
 } from "@vidstack/react"
 import { Focus, PanelRightClose, PanelRightOpen } from "lucide-react"
@@ -73,6 +74,7 @@ function VideoReviewLayout({
 }: VideoReviewLayoutProps) {
   const [commentsPanelOpenInternal, setCommentsPanelOpenInternal] = useState(true)
   const [focusModeInternal, setFocusModeInternal] = useState(false)
+  const isFullscreen = useMediaState("fullscreen")
   const { composer } = useVideoPlayer()
 
   const commentsPanelOpen = commentsPanelOpenProp ?? commentsPanelOpenInternal
@@ -103,8 +105,10 @@ function VideoReviewLayout({
   const toggleCommentsPanel = () => setCommentsPanelOpen(!commentsPanelOpen)
   const toggleFocusMode = () => setFocusMode(!focusMode)
 
-  const showCommentsPanel = (commentsPanelOpen || Boolean(composer)) && !focusMode
+  const showCommentsPanel =
+    (commentsPanelOpen || Boolean(composer)) && !focusMode && !isFullscreen
   const displayTitle = title ?? filename
+  const immersive = focusMode || isFullscreen
 
   return (
     <div
@@ -122,8 +126,15 @@ function VideoReviewLayout({
             : "grid-cols-1",
         )}
       >
-        <div className="relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-          {!focusMode ? (
+        <div
+          className={cn(
+            "relative flex min-h-0 min-w-0 flex-col overflow-hidden bg-card shadow-sm",
+            immersive
+              ? "rounded-none border-0 bg-black"
+              : "rounded-xl border border-border",
+          )}
+        >
+          {!immersive ? (
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2">
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-sm font-medium text-foreground">
@@ -193,10 +204,10 @@ function VideoReviewLayout({
             />
             <VideoControls
               comments={comments}
-              className={focusMode ? "pb-2" : undefined}
+              className={immersive ? "pb-2" : undefined}
             />
 
-            {focusMode ? (
+            {focusMode && !isFullscreen ? (
               <div className="pointer-events-none absolute inset-x-0 top-3 z-30 flex justify-center">
                 <p className="rounded-full bg-black/60 px-3 py-1 text-xs text-white/80 backdrop-blur-sm">
                   Focus mode — press <kbd className="font-mono">Z</kbd> to exit
@@ -264,6 +275,7 @@ export function VideoReview({
       src={src}
       playsInline
       crossOrigin
+      controlsDelay={2000}
     >
       <VideoPlayerProvider>
         <VideoReviewLayout
