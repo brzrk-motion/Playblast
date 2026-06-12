@@ -40,7 +40,7 @@ export function CommentComposerForm({
   timestamp: number
   draftAnnotation: FrameAnnotation | null
   onSubmit: CommentComposerProps["onSubmit"]
-  onClose: () => void
+  onClose: (options?: { resumePlayback?: boolean }) => void
   variant?: "inline" | "overlay"
 }) {
   const bodyRef = useRef<HTMLTextAreaElement>(null)
@@ -91,7 +91,7 @@ export function CommentComposerForm({
         author: trimmedAuthor,
         annotation: draftAnnotation ?? undefined,
       })
-      onClose()
+      onClose({ resumePlayback: true })
     } catch (err) {
       const message = humanizeApiError(err, "Failed to add comment")
       setError(message)
@@ -119,7 +119,7 @@ export function CommentComposerForm({
           variant="ghost"
           size="icon-xs"
           className="shrink-0"
-          onClick={onClose}
+          onClick={() => onClose()}
           aria-label="Close comment composer"
         >
           <X />
@@ -221,7 +221,7 @@ export function CommentComposerForm({
           type="button"
           variant="outline"
           size="sm"
-          onClick={onClose}
+          onClick={() => onClose()}
           disabled={submitting}
         >
           Cancel
