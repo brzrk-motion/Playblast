@@ -11,7 +11,7 @@ import { Focus, PanelRightClose, PanelRightOpen } from "lucide-react"
 
 import { AnnotationOverlay } from "@/components/video/annotation-overlay"
 import { CommentsPanel } from "@/components/video/comments-panel"
-import { VideoApprovalActions } from "@/components/video/video-approval-actions"
+import { VersionStatusBadge } from "@/components/project/version-status-badge"
 import { VideoControls } from "@/components/video/video-controls"
 import { VideoHotkeys } from "@/components/video/video-hotkeys"
 import { VideoLoadingOverlay } from "@/components/video/video-loading-overlay"
@@ -22,6 +22,7 @@ import { getVideoUrl } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import type { FrameAnnotation } from "@/types/annotation"
 import type { Comment } from "@/types/comment"
+import type { VersionStatus } from "@/types/version"
 
 export interface VideoReviewProps {
   projectId: string
@@ -40,6 +41,7 @@ export interface VideoReviewProps {
   onDeleteComment?: (commentId: string) => Promise<void>
   onMarkNeedsRevision?: () => void
   onMarkApproved?: () => void
+  versionStatus?: VersionStatus
   resolvingCommentId?: string | null
   deletingCommentId?: string | null
   statusUpdating?: boolean
@@ -63,6 +65,7 @@ function VideoReviewLayout({
   onDeleteComment,
   onMarkNeedsRevision,
   onMarkApproved,
+  versionStatus,
   resolvingCommentId = null,
   deletingCommentId = null,
   statusUpdating = false,
@@ -146,17 +149,9 @@ function VideoReviewLayout({
               </div>
 
               <div className="flex shrink-0 items-center gap-1">
-                <VideoApprovalActions
-                  onMarkNeedsRevision={
-                    onMarkNeedsRevision
-                      ? () => onMarkNeedsRevision()
-                      : undefined
-                  }
-                  onMarkApproved={
-                    onMarkApproved ? () => onMarkApproved() : undefined
-                  }
-                  statusUpdating={statusUpdating}
-                />
+                {versionStatus ? (
+                  <VersionStatusBadge status={versionStatus} />
+                ) : null}
 
                 <Button
                   type="button"
@@ -255,6 +250,7 @@ export function VideoReview({
   onDeleteComment,
   onMarkNeedsRevision,
   onMarkApproved,
+  versionStatus,
   resolvingCommentId = null,
   deletingCommentId = null,
   statusUpdating = false,
@@ -290,6 +286,7 @@ export function VideoReview({
           onDeleteComment={onDeleteComment}
           onMarkNeedsRevision={onMarkNeedsRevision}
           onMarkApproved={onMarkApproved}
+          versionStatus={versionStatus}
           resolvingCommentId={resolvingCommentId}
           deletingCommentId={deletingCommentId}
           statusUpdating={statusUpdating}

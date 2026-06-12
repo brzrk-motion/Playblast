@@ -506,6 +506,7 @@ export function ProjectPage() {
             onMarkApproved={() =>
               void handleStatusChange(selectedVersion.id, "approved")
             }
+            versionStatus={selectedVersion.status}
             statusUpdating={updatingStatusId === selectedVersion.id}
             resolvingCommentId={resolvingCommentId}
             focusMode={focusMode}
