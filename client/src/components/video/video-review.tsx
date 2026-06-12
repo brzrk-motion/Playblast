@@ -10,8 +10,10 @@ import {
 import { AnnotationOverlay } from "@/components/video/annotation-overlay"
 import { CommentComposer } from "@/components/video/comment-composer"
 import { CommentsPanel } from "@/components/video/comments-panel"
+import { VideoApprovalActions } from "@/components/video/video-approval-actions"
 import { VideoControls } from "@/components/video/video-controls"
 import { VideoHotkeys } from "@/components/video/video-hotkeys"
+import { VideoLoadingOverlay } from "@/components/video/video-loading-overlay"
 import { VideoPlayerProvider } from "@/context/video-player-provider"
 import { getVideoUrl } from "@/lib/api"
 import { cn } from "@/lib/utils"
@@ -24,6 +26,7 @@ export interface VideoReviewProps {
   filename: string
   title?: string
   comments: Comment[]
+  commentsLoading?: boolean
   onCreateComment: (input: {
     timestamp: number
     body: string
@@ -34,6 +37,7 @@ export interface VideoReviewProps {
   onMarkNeedsRevision?: () => void
   onMarkApproved?: () => void
   resolvingCommentId?: string | null
+  statusUpdating?: boolean
   className?: string
 }
 
@@ -43,11 +47,13 @@ export function VideoReview({
   filename,
   title,
   comments,
+  commentsLoading = false,
   onCreateComment,
   onResolveComment,
   onMarkNeedsRevision,
   onMarkApproved,
   resolvingCommentId = null,
+  statusUpdating = false,
   className,
 }: VideoReviewProps) {
   const playerRef = useRef<MediaPlayerInstance>(null)
@@ -68,20 +74,36 @@ export function VideoReview({
       <VideoPlayerProvider>
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           {title ? (
-            <div className="border-b border-border px-4 py-3">
-              <h3 className="truncate text-sm font-medium text-foreground">{title}</h3>
-              <p className="truncate text-xs text-muted-foreground">
-                {projectId} / {version}
-              </p>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-medium text-foreground">{title}</h3>
+                <p className="truncate text-xs text-muted-foreground">
+                  {projectId} / {version}
+                </p>
+              </div>
+              <VideoApprovalActions
+                onMarkNeedsRevision={
+                  onMarkNeedsRevision
+                    ? () => onMarkNeedsRevision()
+                    : undefined
+                }
+                onMarkApproved={
+                  onMarkApproved ? () => onMarkApproved() : undefined
+                }
+                statusUpdating={statusUpdating}
+              />
             </div>
           ) : null}
 
           <div className="relative aspect-video w-full overflow-hidden bg-black text-white">
             <MediaProvider />
+            <VideoLoadingOverlay />
             <AnnotationOverlay comments={comments} />
             <VideoHotkeys
-              onMarkNeedsRevision={onMarkNeedsRevision}
-              onMarkApproved={onMarkApproved}
+              onMarkNeedsRevision={
+                statusUpdating ? undefined : onMarkNeedsRevision
+              }
+              onMarkApproved={statusUpdating ? undefined : onMarkApproved}
             />
             <VideoControls comments={comments} />
             <CommentComposer onSubmit={onCreateComment} />
@@ -90,6 +112,7 @@ export function VideoReview({
 
         <CommentsPanel
           comments={comments}
+          loading={commentsLoading}
           onResolveComment={
             onResolveComment
               ? (commentId, resolved) => void onResolveComment(commentId, resolved)

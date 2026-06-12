@@ -9,8 +9,10 @@ import {
   RotateCcw,
 } from "lucide-react"
 
+import { CommentsPanelSkeleton } from "@/components/video/comments-panel-skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Collapsible,
@@ -26,6 +28,7 @@ type CommentFilter = "all" | "open" | "resolved"
 
 export interface CommentsPanelProps {
   comments: Comment[]
+  loading?: boolean
   onResolveComment?: (commentId: string, resolved: boolean) => void
   resolvingCommentId?: string | null
   className?: string
@@ -60,7 +63,7 @@ function CommentRow({
       <div className="flex items-start gap-1 px-4 py-3">
         <button
           type="button"
-          className="min-w-0 flex-1 text-left transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none rounded-sm -m-1 p-1"
+          className="interactive-row -m-1 min-w-0 flex-1 p-1 text-left"
           onClick={() => seek(comment.timestamp)}
         >
           <div className="flex items-center gap-2">
@@ -92,7 +95,7 @@ function CommentRow({
             type="button"
             variant="ghost"
             size="icon-xs"
-            className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+            className="shrink-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-visible:opacity-100"
             disabled={resolving}
             aria-label={comment.resolved ? "Unresolve comment" : "Resolve comment"}
             title={comment.resolved ? "Unresolve" : "Resolve"}
@@ -101,7 +104,13 @@ function CommentRow({
               onResolveComment(comment.id, !comment.resolved)
             }}
           >
-            {comment.resolved ? <RotateCcw /> : <Check />}
+            {resolving ? (
+              <Spinner className="size-3" />
+            ) : comment.resolved ? (
+              <RotateCcw />
+            ) : (
+              <Check />
+            )}
           </Button>
         ) : null}
       </div>
@@ -111,6 +120,7 @@ function CommentRow({
 
 export function CommentsPanel({
   comments,
+  loading = false,
   onResolveComment,
   resolvingCommentId = null,
   className,
@@ -170,7 +180,11 @@ export function CommentsPanel({
       </CardHeader>
 
       <CardContent className="min-h-0 flex-1 p-0">
-        {filteredComments.length === 0 ? (
+        {loading ? (
+          <ScrollArea className="h-full max-h-[min(70vh,640px)]">
+            <CommentsPanelSkeleton />
+          </ScrollArea>
+        ) : filteredComments.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-6 py-12 text-center text-muted-foreground">
             <MessageSquare className="size-8 opacity-50" />
             <p className="text-sm">{emptyMessage}</p>
@@ -214,7 +228,7 @@ export function CommentsPanel({
                 <CollapsibleTrigger asChild>
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 border-t bg-muted/30 px-4 py-2.5 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/50"
+                    className="focus-ring flex w-full items-center gap-2 border-t bg-muted/30 px-4 py-2.5 text-left text-xs text-muted-foreground transition-interactive hover:bg-muted/50 active:bg-muted/70"
                   >
                     {resolvedExpanded ? (
                       <ChevronDown className="size-3.5 shrink-0" />

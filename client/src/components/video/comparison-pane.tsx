@@ -9,6 +9,7 @@ import {
 
 import { VersionSelector } from "@/components/project/version-selector"
 import { VideoControls } from "@/components/video/video-controls"
+import { VideoLoadingOverlay } from "@/components/video/video-loading-overlay"
 import { VideoHotkeys } from "@/components/video/video-hotkeys"
 import { VideoPlayerProvider } from "@/context/video-player-provider"
 import type { ComparePane } from "@/context/synced-playback-context"
@@ -110,6 +111,7 @@ export function ComparisonPane({
         >
           <VideoPlayerProvider>
             <MediaProvider />
+            <VideoLoadingOverlay />
             <VideoHotkeys
               enableCommentShortcut={false}
               captureShortcuts={pane === "left"}

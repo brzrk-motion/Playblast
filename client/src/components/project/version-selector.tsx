@@ -10,6 +10,7 @@ import {
 import { VersionStatusBadge } from "@/components/project/version-status-badge"
 import { sortVersionsByDate } from "@/lib/versions"
 import type { Version } from "@/types/version"
+import { cn } from "@/lib/utils"
 import { Check, ChevronDown, GitBranch } from "lucide-react"
 
 interface VersionSelectorProps {
@@ -64,7 +65,10 @@ export function VersionSelector({
           <DropdownMenuItem
             key={version.id}
             onClick={() => onSelect(version.label)}
-            className="flex items-start justify-between gap-2"
+            className={cn(
+              "flex items-start justify-between gap-2",
+              version.label === selectedVersion?.label && "bg-accent/60",
+            )}
           >
             <div className="min-w-0 flex-1 space-y-1">
               <div className="flex items-center gap-2">

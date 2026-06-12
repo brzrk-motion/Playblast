@@ -289,4 +289,24 @@
   .status-pending {
     @apply border-status-pending-border bg-status-pending-muted text-status-pending-foreground;
   }
+
+  .transition-interactive {
+    @apply transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out;
+  }
+
+  .transition-panel {
+    @apply transition-[transform,opacity] duration-200 ease-out;
+  }
+
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .interactive-card {
+    @apply transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out hover:border-primary/40 hover:bg-muted/20 hover:shadow-sm active:scale-[0.99] active:bg-muted/30;
+  }
+
+  .interactive-row {
+    @apply rounded-sm transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-out hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-muted/80;
+  }
 }

@@ -22,24 +22,24 @@ export function ThemeToggle() {
       <DropdownMenuContent align="end">
         <DropdownMenuItem
           onClick={() => setTheme("light")}
-          data-active={theme === "light"}
-          className="data-[active=true]:bg-accent"
+          data-active={theme === "light" ? "" : undefined}
+          className="data-active:bg-accent data-active:font-medium"
         >
           <Sun className="mr-2 size-4" />
           Light
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => setTheme("dark")}
-          data-active={theme === "dark"}
-          className="data-[active=true]:bg-accent"
+          data-active={theme === "dark" ? "" : undefined}
+          className="data-active:bg-accent data-active:font-medium"
         >
           <Moon className="mr-2 size-4" />
           Dark
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => setTheme("system")}
-          data-active={theme === "system"}
-          className="data-[active=true]:bg-accent"
+          data-active={theme === "system" ? "" : undefined}
+          className="data-active:bg-accent data-active:font-medium"
         >
           <Monitor className="mr-2 size-4" />
           System

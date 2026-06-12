@@ -47,7 +47,7 @@ export function CommentMarkers({
             <button
               type="button"
               className={cn(
-                "block rounded-full ring-1 transition-transform hover:scale-125 focus-visible:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "block rounded-full ring-1 transition-interactive hover:scale-125 focus-visible:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-110",
                 comment.annotation ? "size-2.5 ring-2" : "size-2",
                 markerColorClass(index),
               )}

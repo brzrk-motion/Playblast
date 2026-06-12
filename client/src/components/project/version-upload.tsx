@@ -10,6 +10,7 @@ import {
 } from "@/lib/versions"
 import type { UploadProgress } from "@/types/upload"
 import type { Version } from "@/types/version"
+import { Spinner } from "@/components/ui/spinner"
 import { FileVideo, Upload, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -149,10 +150,10 @@ export function VersionUpload({
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
           className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-8 text-center transition-colors",
+            "focus-ring flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-8 text-center transition-interactive",
             dragActive
               ? "border-primary bg-primary/5"
-              : "border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/30",
+              : "border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/30 active:bg-muted/40",
             uploading && "pointer-events-none opacity-60",
           )}
         >
@@ -270,7 +271,14 @@ export function VersionUpload({
           onClick={() => void handleUpload()}
           className="w-full sm:w-auto"
         >
-          {uploading ? "Uploading..." : "Upload Version"}
+          {uploading ? (
+            <>
+              <Spinner className="size-4" />
+              Uploading…
+            </>
+          ) : (
+            "Upload Version"
+          )}
         </Button>
       </CardContent>
     </Card>

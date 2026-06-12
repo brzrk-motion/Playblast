@@ -35,6 +35,7 @@ export function ProjectPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const [resolvingCommentId, setResolvingCommentId] = useState<string | null>(null)
+  const [commentsLoading, setCommentsLoading] = useState(false)
 
   const loadProjectData = useCallback(async () => {
     if (!projectId) {
@@ -173,6 +174,8 @@ export function ProjectPage() {
     let cancelled = false
 
     async function fetchComments() {
+      setCommentsLoading(true)
+
       try {
         const data = await listComments(activeProjectId, versionLabel)
         if (!cancelled) {
@@ -186,6 +189,10 @@ export function ProjectPage() {
           setActionError(
             err instanceof Error ? err.message : "Failed to load comments",
           )
+        }
+      } finally {
+        if (!cancelled) {
+          setCommentsLoading(false)
         }
       }
     }
@@ -327,6 +334,7 @@ export function ProjectPage() {
           comments={
             selectedLabel && commentsLabel === selectedLabel ? comments : []
           }
+          commentsLoading={commentsLoading}
           onCreateComment={async (input) => {
             const comment = await createComment({
               versionId: selectedVersion.id,
@@ -343,6 +351,7 @@ export function ProjectPage() {
           onMarkApproved={() =>
             void handleStatusChange(selectedVersion.id, "approved")
           }
+          statusUpdating={updatingStatusId === selectedVersion.id}
           resolvingCommentId={resolvingCommentId}
         />
       ) : (
