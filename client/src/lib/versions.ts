@@ -43,10 +43,14 @@ export function pickCompareVersionLabels(
   }
 
   const left = resolveLabel(leftLabel, sorted[0]?.label ?? null)
-  const right = resolveLabel(
+  let right = resolveLabel(
     rightLabel,
     sorted.find((version) => version.label !== left)?.label ?? left,
   )
+
+  if (right !== null && right === left) {
+    right = sorted.find((version) => version.label !== left)?.label ?? right
+  }
 
   return { left, right }
 }

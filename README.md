@@ -31,7 +31,7 @@ npm run dev
 ```
 
 - Client: http://localhost:5173
-- Server: http://localhost:3001
+- Server: http://localhost:3000
 
 ## Scripts
 

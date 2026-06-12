@@ -110,7 +110,10 @@ export function ComparisonPane({
         >
           <VideoPlayerProvider>
             <MediaProvider />
-            <VideoHotkeys enableCommentShortcut={false} />
+            <VideoHotkeys
+              enableCommentShortcut={false}
+              captureShortcuts={pane === "left"}
+            />
             <VideoControls enableCommentComposer={false} />
           </VideoPlayerProvider>
         </MediaPlayer>

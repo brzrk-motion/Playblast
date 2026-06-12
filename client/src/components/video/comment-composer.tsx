@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import { formatTime } from "@vidstack/react"
 import { MessageSquarePlus, Pencil, X } from "lucide-react"
 
@@ -41,9 +41,11 @@ function CommentComposerForm({
 }) {
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const authorRef = useRef<HTMLInputElement>(null)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setError(null)
 
     const form = event.currentTarget
     const body = (form.elements.namedItem("body") as HTMLTextAreaElement).value.trim()
@@ -71,7 +73,8 @@ function CommentComposerForm({
         annotation: draftAnnotation ?? undefined,
       })
       onClose()
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add comment")
       if (submitButton) {
         submitButton.disabled = false
         submitButton.textContent = "Add comment"
@@ -132,6 +135,12 @@ function CommentComposerForm({
             : "Draw on the paused frame with the toolbar above the video"}
         </span>
       </div>
+
+      {error ? (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      ) : null}
 
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
