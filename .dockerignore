@@ -1,11 +1,33 @@
+# Dependencies (installed in container)
 node_modules
-client/node_modules
-server/node_modules
+**/node_modules
+
+# Build output (built in container)
 client/dist
 server/dist
+
+# Version control
+.git
+
+# Environment and secrets
+.env*
+
+# Runtime data (mounted as volumes, not baked into image)
 server/uploads
 server/data
-.git
+
+# Logs
 *.log
-.env
-.env.*
+
+# Documentation (not needed in image)
+README.md
+DEPLOY.md
+
+# Local dev config and tooling
+docker-compose.yml
+.vscode
+.idea
+.DS_Store
+*.local
+AGENTS.md
+client/eslint.config.js
