@@ -79,6 +79,49 @@ export async function listComments(
   return parseJsonResponse<Comment[]>(response)
 }
 
+export async function listCommentsByVersionId(
+  versionId: string,
+): Promise<Comment[]> {
+  const response = await fetch(
+    `/api/comments?versionId=${encodeURIComponent(versionId)}`,
+  )
+  return parseJsonResponse<Comment[]>(response)
+}
+
+export async function createComment(input: {
+  versionId: string
+  timestamp: number
+  body: string
+  author: string
+}): Promise<Comment> {
+  const response = await fetch("/api/comments", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  })
+  return parseJsonResponse<Comment>(response)
+}
+
+export async function createCommentForVersion(
+  projectId: string,
+  versionLabel: string,
+  input: {
+    timestamp: number
+    body: string
+    author: string
+  },
+): Promise<Comment> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/versions/${encodeURIComponent(versionLabel)}/comments`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  )
+  return parseJsonResponse<Comment>(response)
+}
+
 export function uploadVersion(
   projectId: string,
   label: string,
