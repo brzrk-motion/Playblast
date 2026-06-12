@@ -10,4 +10,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      "/video": "http://localhost:3001",
+      "/api": "http://localhost:3001",
+    },
+  },
 })
