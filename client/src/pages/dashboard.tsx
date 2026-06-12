@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sheet"
 import { createProject, listProjects } from "@/lib/api"
 import type { ProjectSummary } from "@/types/project"
-import { Film, FolderOpen, GitCompare, Plus, Users } from "lucide-react"
+import { Film, FolderOpen, GitCompare, MessageSquare, Plus, Users } from "lucide-react"
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString(undefined, {
@@ -200,10 +200,22 @@ export function DashboardPage() {
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2">
                         <CardTitle className="text-base leading-snug">{project.name}</CardTitle>
-                        <Badge variant="secondary">
-                          {project.versionCount}{" "}
-                          {project.versionCount === 1 ? "version" : "versions"}
-                        </Badge>
+                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                          {project.openCommentCount > 0 ? (
+                            <Badge
+                              variant="default"
+                              className="gap-1"
+                              title={`${project.openCommentCount} open ${project.openCommentCount === 1 ? "comment" : "comments"}`}
+                            >
+                              <MessageSquare className="size-3" />
+                              {project.openCommentCount}
+                            </Badge>
+                          ) : null}
+                          <Badge variant="secondary">
+                            {project.versionCount}{" "}
+                            {project.versionCount === 1 ? "version" : "versions"}
+                          </Badge>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="text-sm text-muted-foreground">

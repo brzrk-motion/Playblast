@@ -14,6 +14,7 @@ import {
   getProject,
   listComments,
   listVersions,
+  resolveComment,
   updateVersionStatus,
 } from "@/lib/api"
 import { sortVersionsByDate } from "@/lib/versions"
@@ -31,6 +32,7 @@ export function ProjectPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
+  const [resolvingCommentId, setResolvingCommentId] = useState<string | null>(null)
 
   const loadProjectData = useCallback(async () => {
     if (!projectId) {
@@ -120,6 +122,21 @@ export function ProjectPage() {
 
   const selectedVersion =
     versions.find((version) => version.label === selectedLabel) ?? null
+
+  async function handleResolveComment(commentId: string, resolved: boolean) {
+    setResolvingCommentId(commentId)
+
+    try {
+      const updated = await resolveComment(commentId, resolved)
+      setComments((current) =>
+        current.map((comment) => (comment.id === updated.id ? updated : comment)),
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update comment")
+    } finally {
+      setResolvingCommentId(null)
+    }
+  }
 
   async function handleStatusChange(versionId: string, status: VersionStatus) {
     setUpdatingStatusId(versionId)
@@ -288,6 +305,8 @@ export function ProjectPage() {
               [...current, comment].sort((a, b) => a.timestamp - b.timestamp),
             )
           }}
+          onResolveComment={handleResolveComment}
+          resolvingCommentId={resolvingCommentId}
         />
       ) : (
         <Card className="border-dashed">

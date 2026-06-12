@@ -128,6 +128,34 @@ describe("JSON data store", () => {
     assert.ok(summary)
     assert.equal(summary.versionCount, 1)
     assert.ok(summary.updatedAt >= project.createdAt)
+    assert.equal(summary.openCommentCount, 0)
+  })
+
+  it("counts open comments across all project versions", () => {
+    const project = createProject({ id: "open-count-test", name: "Open Count Test" })
+    const version = createVersion({
+      projectId: project.id,
+      label: "v1",
+      filename: "clip.mp4",
+    })
+    const openComment = createComment({
+      versionId: version.id,
+      timestamp: 1,
+      body: "Open",
+      author: "Alex",
+    })
+    const resolvedComment = createComment({
+      versionId: version.id,
+      timestamp: 2,
+      body: "Done",
+      author: "Sam",
+    })
+    updateComment(resolvedComment.id, { resolved: true })
+
+    const summary = listProjectSummaries().find((item) => item.id === project.id)
+    assert.ok(summary)
+    assert.equal(summary.openCommentCount, 1)
+    assert.equal(openComment.resolved, false)
   })
 
   it("deletes a project and cascades versions and comments", () => {

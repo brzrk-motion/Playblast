@@ -102,6 +102,21 @@ export async function createComment(input: {
   return parseJsonResponse<Comment>(response)
 }
 
+export async function resolveComment(
+  commentId: string,
+  resolved: boolean,
+): Promise<Comment> {
+  const response = await fetch(
+    `/api/comments/${encodeURIComponent(commentId)}/resolve`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resolved }),
+    },
+  )
+  return parseJsonResponse<Comment>(response)
+}
+
 export async function createCommentForVersion(
   projectId: string,
   versionLabel: string,

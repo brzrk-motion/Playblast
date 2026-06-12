@@ -143,6 +143,24 @@ commentByIdRouter.post("/", (req, res) => {
   res.status(201).json(comment)
 })
 
+commentByIdRouter.patch("/:commentId/resolve", (req, res) => {
+  const commentId = getParam(req.params.commentId)
+  const existing = getComment(commentId)
+
+  if (!existing) {
+    res.status(404).json({ error: "Comment not found." })
+    return
+  }
+
+  if (typeof req.body?.resolved !== "boolean") {
+    res.status(400).json({ error: "resolved must be a boolean." })
+    return
+  }
+
+  const comment = updateComment(commentId, { resolved: req.body.resolved })
+  res.json(comment)
+})
+
 commentByIdRouter.patch("/:commentId", (req, res) => {
   const commentId = getParam(req.params.commentId)
   const existing = getComment(commentId)
