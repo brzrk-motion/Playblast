@@ -12,8 +12,8 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/video": "http://localhost:3001",
-      "/api": "http://localhost:3001",
+      "/video": "http://localhost:3000",
+      "/api": "http://localhost:3000",
     },
   },
 })

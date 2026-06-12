@@ -29,8 +29,10 @@ export function ProjectPage() {
   const [versions, setVersions] = useState<Version[]>([])
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
+  const [commentsLabel, setCommentsLabel] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const [resolvingCommentId, setResolvingCommentId] = useState<string | null>(null)
 
@@ -125,6 +127,7 @@ export function ProjectPage() {
 
   async function handleResolveComment(commentId: string, resolved: boolean) {
     setResolvingCommentId(commentId)
+    setActionError(null)
 
     try {
       const updated = await resolveComment(commentId, resolved)
@@ -132,7 +135,9 @@ export function ProjectPage() {
         current.map((comment) => (comment.id === updated.id ? updated : comment)),
       )
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update comment")
+      setActionError(
+        err instanceof Error ? err.message : "Failed to update comment",
+      )
     } finally {
       setResolvingCommentId(null)
     }
@@ -140,6 +145,7 @@ export function ProjectPage() {
 
   async function handleStatusChange(versionId: string, status: VersionStatus) {
     setUpdatingStatusId(versionId)
+    setActionError(null)
 
     try {
       const updated = await updateVersionStatus(versionId, status)
@@ -147,7 +153,11 @@ export function ProjectPage() {
         current.map((version) => (version.id === updated.id ? updated : version)),
       )
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update version status")
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : "Failed to update version status",
+      )
     } finally {
       setUpdatingStatusId(null)
     }
@@ -167,10 +177,12 @@ export function ProjectPage() {
         const data = await listComments(activeProjectId, versionLabel)
         if (!cancelled) {
           setComments(data)
+          setCommentsLabel(versionLabel)
         }
       } catch {
         if (!cancelled) {
           setComments([])
+          setCommentsLabel(versionLabel)
         }
       }
     }
@@ -220,6 +232,20 @@ export function ProjectPage() {
 
   return (
     <div className="space-y-6">
+      {actionError ? (
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="flex items-center justify-between gap-4 py-3">
+            <p className="text-sm text-destructive">{actionError}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setActionError(null)}
+            >
+              Dismiss
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-3">
           <Button variant="ghost" size="sm" className="-ml-2 w-fit" asChild>
@@ -295,7 +321,9 @@ export function ProjectPage() {
           version={selectedVersion.label}
           filename={selectedVersion.filename}
           title={selectedVersion.filename}
-          comments={selectedLabel ? comments : []}
+          comments={
+            selectedLabel && commentsLabel === selectedLabel ? comments : []
+          }
           onCreateComment={async (input) => {
             const comment = await createComment({
               versionId: selectedVersion.id,
