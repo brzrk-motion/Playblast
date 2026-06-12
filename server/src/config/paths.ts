@@ -1,3 +1,4 @@
+import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { config } from "./env.js"
@@ -7,6 +8,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export const SERVER_ROOT = path.resolve(__dirname, "../..")
 
 export const CLIENT_DIST = path.resolve(SERVER_ROOT, "../client/dist")
+
+export function ensureUploadDir(): string {
+  const uploadDir = config.uploadDir
+  fs.mkdirSync(uploadDir, { recursive: true })
+  return uploadDir
+}
 
 export function getProjectUploadDir(projectId: string): string {
   return path.join(config.uploadDir, projectId)
