@@ -3,6 +3,8 @@ services:
     build: .
     ports:
       - "3000:3000"
+    environment:
+      UPLOAD_DIR: /app/server/uploads
     volumes:
       - playblast_uploads:/app/server/uploads
     restart: unless-stopped
