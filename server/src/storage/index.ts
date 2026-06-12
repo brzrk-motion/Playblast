@@ -21,5 +21,6 @@ export {
   listProjects,
   listVersions,
   updateComment,
+  updateVersionLabel,
   updateVersionStatus,
 } from "./repository.js"

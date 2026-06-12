@@ -18,6 +18,7 @@ import {
   listProjects,
   listVersions,
   updateComment,
+  updateVersionLabel,
   updateVersionStatus,
 } from "./repository.js"
 import { getStorePath } from "./json-store.js"
@@ -252,5 +253,31 @@ describe("JSON data store", () => {
     const version = getVersionByLabel(project.id, "v3")
     assert.ok(version)
     assert.equal(version.projectId, project.id)
+  })
+
+  it("renames a version label and rejects conflicts", () => {
+    const project = ensureProject("rename-test")
+    const version = createVersion({
+      projectId: project.id,
+      label: "v1",
+      filename: "clip.mp4",
+    })
+    createVersion({
+      projectId: project.id,
+      label: "v2",
+      filename: "other.mp4",
+    })
+
+    const renamed = updateVersionLabel(version.id, "v1-final")
+    assert.notEqual(renamed, "not_found")
+    assert.notEqual(renamed, "conflict")
+    if (typeof renamed === "string") {
+      assert.fail("expected version object")
+    }
+
+    assert.equal(renamed.label, "v1-final")
+    assert.equal(getVersionByLabel(project.id, "v1-final")?.id, version.id)
+    assert.equal(updateVersionLabel(version.id, "v2"), "conflict")
+    assert.equal(updateVersionLabel("missing-id", "v9"), "not_found")
   })
 })

@@ -179,6 +179,21 @@ export async function createCommentForVersion(
   return parseJsonResponse<Comment>(response)
 }
 
+export async function updateVersionLabel(
+  versionId: string,
+  label: string,
+): Promise<Version> {
+  const response = await fetch(
+    `/api/versions/${encodeURIComponent(versionId)}/label`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label }),
+    },
+  )
+  return parseJsonResponse<Version>(response)
+}
+
 export async function updateVersionStatus(
   versionId: string,
   status: VersionStatus,

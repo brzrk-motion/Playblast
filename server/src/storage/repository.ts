@@ -1,4 +1,7 @@
+import fs from "node:fs"
+import path from "node:path"
 import { randomUUID } from "node:crypto"
+import { getUploadDir } from "../config/paths.js"
 import type {
   Comment,
   CreateCommentInput,
@@ -169,6 +172,49 @@ export function updateVersionStatus(
     }
 
     version.status = status
+    return version
+  })
+}
+
+export function updateVersionLabel(
+  id: string,
+  label: string,
+): Version | "not_found" | "conflict" {
+  return withStore((store) => {
+    const version = store.versions.find((item) => item.id === id)
+
+    if (!version) {
+      return "not_found"
+    }
+
+    if (version.label === label) {
+      return version
+    }
+
+    const conflict = store.versions.find(
+      (item) =>
+        item.projectId === version.projectId &&
+        item.label === label &&
+        item.id !== id,
+    )
+
+    if (conflict) {
+      return "conflict"
+    }
+
+    const oldDir = getUploadDir(version.projectId, version.label)
+    const newDir = getUploadDir(version.projectId, label)
+
+    if (fs.existsSync(oldDir)) {
+      if (fs.existsSync(newDir)) {
+        return "conflict"
+      }
+
+      fs.mkdirSync(path.dirname(newDir), { recursive: true })
+      fs.renameSync(oldDir, newDir)
+    }
+
+    version.label = label
     return version
   })
 }
