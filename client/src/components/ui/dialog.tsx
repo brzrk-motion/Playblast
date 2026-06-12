@@ -4,10 +4,42 @@ import * as React from "react"
 import { XIcon } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
+import { OverlayContext } from "@/components/ui/overlay-context"
+import { useEscapeKey } from "@/hooks/use-escape-key"
 import { cn } from "@/lib/utils"
 
-function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+function Dialog({
+  open,
+  onOpenChange,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Root>) {
+  const restoreFocusRef = React.useRef<HTMLElement | null>(null)
+
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      if (nextOpen) {
+        restoreFocusRef.current = document.activeElement as HTMLElement | null
+      }
+      onOpenChange?.(nextOpen)
+    },
+    [onOpenChange],
+  )
+
+  const contextValue = React.useMemo(
+    () => ({ onOpenChange: handleOpenChange, restoreFocusRef }),
+    [handleOpenChange],
+  )
+
+  return (
+    <OverlayContext.Provider value={contextValue}>
+      <DialogPrimitive.Root
+        data-slot="dialog"
+        open={open}
+        onOpenChange={handleOpenChange}
+        {...props}
+      />
+    </OverlayContext.Provider>
+  )
 }
 
 function DialogTrigger({
@@ -48,15 +80,38 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onEscapeKeyDown,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  const { onOpenChange, restoreFocusRef } = React.useContext(OverlayContext)
+
+  const dismiss = React.useCallback(() => {
+    onOpenChange?.(false)
+  }, [onOpenChange])
+
+  useEscapeKey(dismiss, Boolean(onOpenChange))
+
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        onEscapeKeyDown={(event) => {
+          onEscapeKeyDown?.(event)
+          if (!event.defaultPrevented) {
+            dismiss()
+          }
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event)
+          if (!event.defaultPrevented && restoreFocusRef.current) {
+            event.preventDefault()
+            restoreFocusRef.current.focus()
+          }
+        }}
         className={cn(
           "fixed top-[50%] left-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           className,

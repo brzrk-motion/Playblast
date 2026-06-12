@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { useEscapeKey } from "@/hooks/use-escape-key"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -51,6 +52,19 @@ export function ProjectPage() {
   const [focusMode, setFocusMode] = useState(false)
   const [versionsOpen, setVersionsOpen] = useState(false)
   const [uploadOpen, setUploadOpen] = useState(false)
+
+  const dismissOpenPanels = useCallback(() => {
+    if (uploadOpen) {
+      setUploadOpen(false)
+      return
+    }
+
+    if (versionsOpen) {
+      setVersionsOpen(false)
+    }
+  }, [uploadOpen, versionsOpen])
+
+  useEscapeKey(dismissOpenPanels, !focusMode && (uploadOpen || versionsOpen))
 
   const loadProjectData = useCallback(async () => {
     if (!projectId) {
