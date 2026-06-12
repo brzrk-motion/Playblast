@@ -100,6 +100,7 @@ export function ComparisonPane({
           playsInline
           crossOrigin
           controlsDelay={2000}
+          keyDisabled
           onPlay={() => {
             handlePlayerEvent(pane, "play")
           }}

@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react"
 import { useMediaRemote, useMediaState } from "@vidstack/react"
 
 import { KeyboardShortcutsPanel } from "@/components/video/keyboard-shortcuts-panel"
+import { useFrameStep } from "@/hooks/use-frame-step"
 import { useVideoPlayer } from "@/hooks/use-video-player"
-import { useFrameDuration } from "@/hooks/use-video-fps"
 import { SKIP_SECONDS } from "@/lib/video-shortcuts"
 
 /**
@@ -64,19 +64,21 @@ export function VideoHotkeys({
   const remote = useMediaRemote()
   const currentTime = useMediaState("currentTime")
   const duration = useMediaState("duration")
-  const frameDuration = useFrameDuration()
+  const { stepBackward, stepForward } = useFrameStep()
   const { openComposer } = useVideoPlayer()
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
   const currentTimeRef = useRef(currentTime)
   const durationRef = useRef(duration)
-  const frameDurationRef = useRef(frameDuration)
+  const stepBackwardRef = useRef(stepBackward)
+  const stepForwardRef = useRef(stepForward)
 
   useEffect(() => {
     currentTimeRef.current = currentTime
     durationRef.current = duration
-    frameDurationRef.current = frameDuration
-  }, [currentTime, duration, frameDuration])
+    stepBackwardRef.current = stepBackward
+    stepForwardRef.current = stepForward
+  }, [currentTime, duration, stepBackward, stepForward])
 
   const showReviewShortcuts =
     enableCommentShortcut ||
@@ -131,16 +133,18 @@ export function VideoHotkeys({
           )
           return
         case "ArrowLeft":
+          if (event.repeat) {
+            return
+          }
           event.preventDefault()
-          remote.seek(Math.max(0, time - frameDurationRef.current))
+          stepBackwardRef.current()
           return
         case "ArrowRight":
+          if (event.repeat) {
+            return
+          }
           event.preventDefault()
-          remote.seek(
-            total > 0
-              ? Math.min(total, time + frameDurationRef.current)
-              : time + frameDurationRef.current,
-          )
+          stepForwardRef.current()
           return
         case "c":
         case "C":

@@ -5,6 +5,8 @@ import {
   useMediaState,
 } from "@vidstack/react"
 import {
+  ChevronLeft,
+  ChevronRight,
   Maximize,
   Minimize,
   Pause,
@@ -20,6 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useFrameStep } from "@/hooks/use-frame-step"
 import { cn } from "@/lib/utils"
 
 const controlButtonClass =
@@ -61,6 +64,29 @@ export function VideoPlayButton() {
         {isPaused ? <Play className="size-4" /> : <Pause className="size-4" />}
       </VideoControlButton>
     </PlayButton>
+  )
+}
+
+export function VideoFrameStepBackwardButton() {
+  const { stepBackward } = useFrameStep()
+
+  return (
+    <VideoControlButton
+      label="Previous frame (←)"
+      onClick={() => stepBackward()}
+    >
+      <ChevronLeft className="size-4" />
+    </VideoControlButton>
+  )
+}
+
+export function VideoFrameStepForwardButton() {
+  const { stepForward } = useFrameStep()
+
+  return (
+    <VideoControlButton label="Next frame (→)" onClick={() => stepForward()}>
+      <ChevronRight className="size-4" />
+    </VideoControlButton>
   )
 }
 

@@ -38,3 +38,27 @@ export function timeToFrame(seconds: number, fps: number): number {
 export function frameDuration(fps: number): number {
   return fps > 0 ? 1 / fps : 1 / 24
 }
+
+/**
+ * Returns the playback time for a single-frame step from the current position.
+ * Snaps to discrete frame boundaries to avoid floating-point drift.
+ */
+export function stepFrameTime(
+  currentTime: number,
+  fps: number,
+  direction: -1 | 1,
+  duration = 0,
+): number {
+  if (!Number.isFinite(currentTime) || fps <= 0) {
+    return 0
+  }
+
+  const nextFrame = Math.max(0, timeToFrame(currentTime, fps) + direction)
+  const nextTime = nextFrame / fps
+
+  if (duration > 0) {
+    return Math.min(duration, nextTime)
+  }
+
+  return nextTime
+}
