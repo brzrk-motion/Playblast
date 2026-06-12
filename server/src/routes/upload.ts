@@ -1,7 +1,8 @@
 import { Router } from "express"
 import { createUploadMiddleware } from "../middleware/upload.js"
+import { createVersion, ensureProject } from "../storage/index.js"
 import type { UploadResponse } from "../types/upload.js"
-import { getParam } from "../utils/params.js"
+import { getVersionRouteParams } from "../utils/params.js"
 
 const uploadRouter = Router({ mergeParams: true })
 
@@ -11,12 +12,23 @@ uploadRouter.post("/", createUploadMiddleware(), (req, res) => {
     return
   }
 
+  const { projectId, version: versionLabel } = getVersionRouteParams(req)
+
+  ensureProject(projectId)
+
+  const version = createVersion({
+    projectId,
+    label: versionLabel,
+    filename: req.file.filename,
+  })
+
   const response: UploadResponse = {
     filename: req.file.filename,
     size: req.file.size,
     duration: null,
-    projectId: getParam(req.params.projectId),
-    version: getParam(req.params.version),
+    projectId,
+    version: versionLabel,
+    versionId: version.id,
   }
 
   res.status(201).json(response)

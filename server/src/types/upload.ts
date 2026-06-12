@@ -4,4 +4,5 @@ export interface UploadResponse {
   duration: null
   projectId: string
   version: string
+  versionId: string
 }
