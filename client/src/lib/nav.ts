@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import { FolderKanban, LayoutDashboard, Settings, Users } from "lucide-react"
+import { FolderKanban, LayoutDashboard, Settings } from "lucide-react"
 
 export type NavSubItem = {
   title: string
@@ -26,12 +26,6 @@ export const navMain: NavItem[] = [
     icon: FolderKanban,
     url: "/projects",
   },
-  {
-    title: "Team",
-    icon: Users,
-    url: "/team",
-    comingSoon: true,
-  },
 ]
 
 export const navSecondary: NavItem[] = [
@@ -49,10 +43,6 @@ export type ComingSoonPageConfig = {
 }
 
 export const comingSoonPages: Record<string, ComingSoonPageConfig> = {
-  "/team": {
-    title: "Team",
-    description: "Invite collaborators and manage workspace members.",
-  },
   "/settings": {
     title: "Settings",
     description: "Configure workspace preferences, notifications, and integrations.",
