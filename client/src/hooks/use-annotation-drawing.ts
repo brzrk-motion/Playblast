@@ -39,9 +39,11 @@ export function useAnnotationDrawing({
   }, [])
 
   const clearShapes = useCallback(() => {
-    setShapes([])
-    setDraftShape(null)
-    setPendingTextPoint(null)
+    // Preserve identities when already empty so consumers that depend on
+    // `shapes` in an effect don't loop (setting a fresh [] is a new reference).
+    setShapes((current) => (current.length === 0 ? current : []))
+    setDraftShape((current) => (current === null ? current : null))
+    setPendingTextPoint((current) => (current === null ? current : null))
   }, [])
 
   const undoLastShape = useCallback(() => {
