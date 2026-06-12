@@ -13,9 +13,11 @@ import type { Comment } from "@/types/comment"
 export function VideoControls({
   className,
   comments = [],
+  enableCommentComposer = true,
 }: {
   className?: string
   comments?: Comment[]
+  enableCommentComposer?: boolean
 }) {
   return (
     <>
@@ -47,7 +49,10 @@ export function VideoControls({
         )}
       >
         <Controls.Group className="flex w-full items-center gap-2">
-          <VideoTimeSlider comments={comments} />
+          <VideoTimeSlider
+            comments={comments}
+            enableCommentComposer={enableCommentComposer}
+          />
         </Controls.Group>
 
         <Controls.Group className="mt-2 flex w-full items-center gap-2">

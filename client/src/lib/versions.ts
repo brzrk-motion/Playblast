@@ -12,6 +12,33 @@ export function sortVersionsByDate(versions: Version[]): Version[] {
   )
 }
 
+export function pickCompareVersionLabels(
+  versions: Version[],
+  leftLabel?: string | null,
+  rightLabel?: string | null,
+): { left: string | null; right: string | null } {
+  const sorted = sortVersionsByDate(versions)
+
+  const resolveLabel = (
+    label: string | null | undefined,
+    fallback: string | null,
+  ) => {
+    if (label && sorted.some((version) => version.label === label)) {
+      return label
+    }
+
+    return fallback
+  }
+
+  const left = resolveLabel(leftLabel, sorted[0]?.label ?? null)
+  const right = resolveLabel(
+    rightLabel,
+    sorted.find((version) => version.label !== left)?.label ?? left,
+  )
+
+  return { left, right }
+}
+
 export function suggestNextVersionLabel(versions: Version[]): string {
   const numericVersions = versions
     .map((version) => {

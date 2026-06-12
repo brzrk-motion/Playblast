@@ -17,7 +17,7 @@ import { sortVersionsByDate } from "@/lib/versions"
 import type { Comment } from "@/types/comment"
 import type { Project } from "@/types/project"
 import type { Version } from "@/types/version"
-import { ArrowLeft, Film } from "lucide-react"
+import { ArrowLeft, Film, GitCompare } from "lucide-react"
 
 export function ProjectPage() {
   const { projectId = "" } = useParams()
@@ -205,11 +205,23 @@ export function ProjectPage() {
           </div>
         </div>
 
-        <VersionSelector
-          versions={versions}
-          selectedLabel={selectedLabel}
-          onSelect={setSelectedLabel}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {versions.length >= 2 ? (
+            <Button variant="secondary" asChild>
+              <Link
+                to={`/projects/${project.id}/compare?left=${encodeURIComponent(selectedLabel ?? versions[0]?.label ?? "")}&right=${encodeURIComponent(versions.find((version) => version.label !== selectedLabel)?.label ?? versions[1]?.label ?? "")}`}
+              >
+                <GitCompare />
+                Compare versions
+              </Link>
+            </Button>
+          ) : null}
+          <VersionSelector
+            versions={versions}
+            selectedLabel={selectedLabel}
+            onSelect={setSelectedLabel}
+          />
+        </div>
       </div>
 
       {selectedVersion ? (

@@ -36,15 +36,17 @@ export function VideoVolumeSlider({ className }: { className?: string }) {
 export function VideoTimeSlider({
   className,
   comments = [],
+  enableCommentComposer = true,
 }: {
   className?: string
   comments?: Comment[]
+  enableCommentComposer?: boolean
 }) {
   const currentTime = useMediaState("currentTime")
   const canSeek = useMediaState("canSeek")
   const duration = useMediaState("duration")
   const remote = useMediaRemote()
-  const { openComposer } = useVideoPlayer()
+  const videoPlayer = useVideoPlayer()
   const [dragValue, setDragValue] = useState<number | null>(null)
   const changeCountRef = useRef(0)
   const { previewRootRef, previewRef, previewValue } = useSliderPreview({
@@ -77,8 +79,8 @@ export function VideoTimeSlider({
           setDragValue(null)
           remote.seek(timestamp)
 
-          if (changeCountRef.current <= 1) {
-            openComposer(timestamp)
+          if (enableCommentComposer && changeCountRef.current <= 1) {
+            videoPlayer.openComposer(timestamp)
           }
         }}
         max={100}
