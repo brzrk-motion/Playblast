@@ -31,6 +31,8 @@ export interface VideoReviewProps {
     annotation?: FrameAnnotation
   }) => Promise<void>
   onResolveComment?: (commentId: string, resolved: boolean) => Promise<void>
+  onMarkNeedsRevision?: () => void
+  onMarkApproved?: () => void
   resolvingCommentId?: string | null
   className?: string
 }
@@ -43,6 +45,8 @@ export function VideoReview({
   comments,
   onCreateComment,
   onResolveComment,
+  onMarkNeedsRevision,
+  onMarkApproved,
   resolvingCommentId = null,
   className,
 }: VideoReviewProps) {
@@ -75,7 +79,10 @@ export function VideoReview({
           <div className="relative aspect-video w-full overflow-hidden bg-black text-white">
             <MediaProvider />
             <AnnotationOverlay comments={comments} />
-            <VideoHotkeys />
+            <VideoHotkeys
+              onMarkNeedsRevision={onMarkNeedsRevision}
+              onMarkApproved={onMarkApproved}
+            />
             <VideoControls comments={comments} />
             <CommentComposer onSubmit={onCreateComment} />
           </div>

@@ -306,6 +306,12 @@ export function ProjectPage() {
             )
           }}
           onResolveComment={handleResolveComment}
+          onMarkNeedsRevision={() =>
+            void handleStatusChange(selectedVersion.id, "needs_revision")
+          }
+          onMarkApproved={() =>
+            void handleStatusChange(selectedVersion.id, "approved")
+          }
           resolvingCommentId={resolvingCommentId}
         />
       ) : (
