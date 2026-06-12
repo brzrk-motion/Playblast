@@ -27,6 +27,8 @@ export interface VideoReviewProps {
     body: string
     author: string
   }) => Promise<void>
+  onResolveComment?: (commentId: string, resolved: boolean) => Promise<void>
+  resolvingCommentId?: string | null
   className?: string
 }
 
@@ -37,6 +39,8 @@ export function VideoReview({
   title,
   comments,
   onCreateComment,
+  onResolveComment,
+  resolvingCommentId = null,
   className,
 }: VideoReviewProps) {
   const playerRef = useRef<MediaPlayerInstance>(null)
@@ -73,7 +77,16 @@ export function VideoReview({
           </div>
         </div>
 
-        <CommentsPanel comments={comments} className="lg:sticky lg:top-4" />
+        <CommentsPanel
+          comments={comments}
+          onResolveComment={
+            onResolveComment
+              ? (commentId, resolved) => void onResolveComment(commentId, resolved)
+              : undefined
+          }
+          resolvingCommentId={resolvingCommentId}
+          className="lg:sticky lg:top-4"
+        />
       </VideoPlayerProvider>
     </MediaPlayer>
   )

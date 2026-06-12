@@ -7,6 +7,7 @@ export interface Project {
 export interface ProjectSummary extends Project {
   versionCount: number
   updatedAt: string
+  openCommentCount: number
 }
 
 export interface CreateProjectInput {

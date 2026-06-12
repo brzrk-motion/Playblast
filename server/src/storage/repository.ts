@@ -23,6 +23,10 @@ export function listProjectSummaries(): ProjectSummary[] {
     const versions = store.versions.filter(
       (version) => version.projectId === project.id,
     )
+    const versionIds = new Set(versions.map((version) => version.id))
+    const openCommentCount = store.comments.filter(
+      (comment) => versionIds.has(comment.versionId) && !comment.resolved,
+    ).length
     const latestUpload = versions.reduce((max, version) => {
       const uploadedAt = new Date(version.uploadedAt).getTime()
       return uploadedAt > max ? uploadedAt : max
@@ -35,6 +39,7 @@ export function listProjectSummaries(): ProjectSummary[] {
         latestUpload > 0
           ? new Date(latestUpload).toISOString()
           : project.createdAt,
+      openCommentCount,
     }
   })
 }

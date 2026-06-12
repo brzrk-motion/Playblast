@@ -102,6 +102,48 @@ describe("projects, versions, and comments API", () => {
     assert.ok(summary)
     assert.equal(summary.versionCount, 1)
     assert.ok(summary.updatedAt)
+    assert.equal(summary.openCommentCount, 0)
+  })
+
+  it("lists projects with open comment count across versions", async () => {
+    await fetch(`${baseUrl}/api/projects`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "spot-open-count", name: "Spot Open Count" }),
+    })
+
+    const { createVersion, createComment } = await import("../storage/repository.js")
+    const version = createVersion({
+      projectId: "spot-open-count",
+      label: "v1",
+      filename: "render.mp4",
+    })
+
+    const openComment = createComment({
+      versionId: version.id,
+      timestamp: 1,
+      body: "Needs fix",
+      author: "Sam",
+    })
+    const resolvedComment = createComment({
+      versionId: version.id,
+      timestamp: 2,
+      body: "Already fixed",
+      author: "Alex",
+    })
+    const { updateComment } = await import("../storage/repository.js")
+    updateComment(resolvedComment.id, { resolved: true })
+
+    const listResponse = await fetch(`${baseUrl}/api/projects`)
+    assert.equal(listResponse.status, 200)
+    const projects = (await listResponse.json()) as Array<{
+      id: string
+      openCommentCount: number
+    }>
+    const summary = projects.find((item) => item.id === "spot-open-count")
+    assert.ok(summary)
+    assert.equal(summary.openCommentCount, 1)
+    assert.equal(openComment.resolved, false)
   })
 
   it("deletes a project and cascades versions and comments", async () => {
@@ -190,15 +232,41 @@ describe("projects, versions, and comments API", () => {
     const comments = (await listResponse.json()) as Array<{ id: string }>
     assert.equal(comments.length, 1)
 
-    const patchResponse = await fetch(`${baseUrl}/api/comments/${comment.id}`, {
+    const patchResponse = await fetch(
+      `${baseUrl}/api/comments/${comment.id}/resolve`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolved: true }),
+      },
+    )
+
+    assert.equal(patchResponse.status, 200)
+    const updated = (await patchResponse.json()) as { resolved: boolean }
+    assert.equal(updated.resolved, true)
+
+    const unresolveResponse = await fetch(
+      `${baseUrl}/api/comments/${comment.id}/resolve`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolved: false }),
+      },
+    )
+
+    assert.equal(unresolveResponse.status, 200)
+    const unresolved = (await unresolveResponse.json()) as { resolved: boolean }
+    assert.equal(unresolved.resolved, false)
+
+    const legacyPatchResponse = await fetch(`${baseUrl}/api/comments/${comment.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ resolved: true }),
     })
 
-    assert.equal(patchResponse.status, 200)
-    const updated = (await patchResponse.json()) as { resolved: boolean }
-    assert.equal(updated.resolved, true)
+    assert.equal(legacyPatchResponse.status, 200)
+    const legacyUpdated = (await legacyPatchResponse.json()) as { resolved: boolean }
+    assert.equal(legacyUpdated.resolved, true)
 
     const deleteResponse = await fetch(`${baseUrl}/api/comments/${comment.id}`, {
       method: "DELETE",
