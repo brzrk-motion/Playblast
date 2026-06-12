@@ -4,10 +4,42 @@ import * as React from "react"
 import { XIcon } from "lucide-react"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
+import { OverlayContext } from "@/components/ui/overlay-context"
+import { useEscapeKey } from "@/hooks/use-escape-key"
 import { cn } from "@/lib/utils"
 
-function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />
+function Sheet({
+  open,
+  onOpenChange,
+  ...props
+}: React.ComponentProps<typeof SheetPrimitive.Root>) {
+  const restoreFocusRef = React.useRef<HTMLElement | null>(null)
+
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      if (nextOpen) {
+        restoreFocusRef.current = document.activeElement as HTMLElement | null
+      }
+      onOpenChange?.(nextOpen)
+    },
+    [onOpenChange],
+  )
+
+  const contextValue = React.useMemo(
+    () => ({ onOpenChange: handleOpenChange, restoreFocusRef }),
+    [handleOpenChange],
+  )
+
+  return (
+    <OverlayContext.Provider value={contextValue}>
+      <SheetPrimitive.Root
+        data-slot="sheet"
+        open={open}
+        onOpenChange={handleOpenChange}
+        {...props}
+      />
+    </OverlayContext.Provider>
+  )
 }
 
 function SheetTrigger({
@@ -49,16 +81,39 @@ function SheetContent({
   children,
   side = "right",
   showCloseButton = true,
+  onEscapeKeyDown,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left"
   showCloseButton?: boolean
 }) {
+  const { onOpenChange, restoreFocusRef } = React.useContext(OverlayContext)
+
+  const dismiss = React.useCallback(() => {
+    onOpenChange?.(false)
+  }, [onOpenChange])
+
+  useEscapeKey(dismiss, Boolean(onOpenChange))
+
   return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content
         data-slot="sheet-content"
+        onEscapeKeyDown={(event) => {
+          onEscapeKeyDown?.(event)
+          if (!event.defaultPrevented) {
+            dismiss()
+          }
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event)
+          if (!event.defaultPrevented && restoreFocusRef.current) {
+            event.preventDefault()
+            restoreFocusRef.current.focus()
+          }
+        }}
         className={cn(
           "fixed z-50 flex flex-col gap-4 bg-background shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500",
           side === "right" &&

@@ -102,6 +102,10 @@ export function VideoHotkeys({
       }
 
       if (shortcutsOpen) {
+        if (event.key === "Escape") {
+          event.preventDefault()
+          setShortcutsOpen(false)
+        }
         return
       }
 
