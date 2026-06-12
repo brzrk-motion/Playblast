@@ -10,6 +10,14 @@ import videoRouter from "./routes/video.js"
 export function createApp() {
   const app = express()
 
+  app.get("/health", (_req, res) => {
+    res.json({
+      status: "ok",
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    })
+  })
+
   app.use(cors())
   app.use(express.json())
   app.use("/api", apiRouter)
