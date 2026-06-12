@@ -8,10 +8,13 @@ import {
   createProject,
   createVersion,
   deleteComment,
+  deleteProject,
   ensureProject,
   getComment,
+  getProject,
   getVersionByLabel,
   listComments,
+  listProjectSummaries,
   listProjects,
   listVersions,
   updateComment,
@@ -108,6 +111,43 @@ describe("JSON data store", () => {
     assert.equal(deleteComment(comment.id), true)
     assert.equal(listComments(version.id).length, 0)
     assert.equal(deleteComment(comment.id), false)
+  })
+
+  it("summarizes projects with version counts and updated dates", () => {
+    const project = createProject({ id: "summary-test", name: "Summary Test" })
+    createVersion({
+      projectId: project.id,
+      label: "v1",
+      filename: "clip.mp4",
+    })
+
+    const summaries = listProjectSummaries()
+    const summary = summaries.find((item) => item.id === "summary-test")
+
+    assert.ok(summary)
+    assert.equal(summary.versionCount, 1)
+    assert.ok(summary.updatedAt >= project.createdAt)
+  })
+
+  it("deletes a project and cascades versions and comments", () => {
+    const project = createProject({ id: "delete-test", name: "Delete Test" })
+    const version = createVersion({
+      projectId: project.id,
+      label: "v1",
+      filename: "clip.mp4",
+    })
+    createComment({
+      versionId: version.id,
+      timestamp: 2,
+      body: "Remove me",
+      author: "Alex",
+    })
+
+    assert.equal(deleteProject(project.id), true)
+    assert.equal(getProject(project.id), undefined)
+    assert.equal(listVersions(project.id).length, 0)
+    assert.equal(listComments(version.id).length, 0)
+    assert.equal(deleteProject(project.id), false)
   })
 
   it("looks up versions by project id and label", () => {

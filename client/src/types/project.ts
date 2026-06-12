@@ -3,3 +3,8 @@ export interface Project {
   name: string
   createdAt: string
 }
+
+export interface ProjectSummary extends Project {
+  versionCount: number
+  updatedAt: string
+}
