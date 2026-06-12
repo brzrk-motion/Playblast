@@ -31,6 +31,7 @@ import {
   showErrorToast,
   showSuccessToast,
 } from "@/lib/toast"
+import { getTimeOfDayGreeting } from "@/lib/greeting"
 import {
   countProjectsByStatus,
   filterProjectsByName,
@@ -233,7 +234,11 @@ export function DashboardPage() {
 
   const statusCounts = useMemo(() => countProjectsByStatus(projects), [projects])
   const openCommentTotal = useMemo(() => totalOpenComments(projects), [projects])
-  const recentProjects = useMemo(() => recentlyUpdatedProjects(projects), [projects])
+  const greeting = useMemo(() => getTimeOfDayGreeting(), [])
+  const recentProjects = useMemo(
+    () => recentlyUpdatedProjects(filterProjectsByName(projects, searchQuery)),
+    [projects, searchQuery],
+  )
   const filteredProjects = useMemo(
     () => sortProjects(filterProjectsByName(projects, searchQuery), sortField),
     [projects, searchQuery, sortField],
@@ -243,7 +248,7 @@ export function DashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="type-page-title">Good morning</h2>
+          <h2 className="type-page-title">{greeting}</h2>
           <p className="text-muted-foreground">
             Your home for reviews, revisions, and approvals.
           </p>
@@ -302,7 +307,7 @@ export function DashboardPage() {
             ))}
           </div>
 
-          {projects.length > 0 ? (
+          {recentProjects.length > 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle>Recently Updated</CardTitle>
@@ -337,6 +342,12 @@ export function DashboardPage() {
                 <Input
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      event.preventDefault()
+                      setSearchQuery("")
+                    }
+                  }}
                   placeholder="Search projects..."
                   className="pl-9"
                   aria-label="Search projects by name"
