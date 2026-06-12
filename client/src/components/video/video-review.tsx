@@ -117,14 +117,14 @@ function VideoReviewLayout({
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 flex-col",
+        "flex min-h-0 w-full flex-1 flex-col",
         focusMode && "fixed inset-0 z-50 bg-black",
         className,
       )}
     >
       <div
         className={cn(
-          "grid min-h-0 flex-1 gap-2",
+          "grid min-h-0 w-full flex-1 gap-2",
           showCommentsPanel
             ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(300px,32vw)]"
             : "grid-cols-1",
@@ -270,7 +270,7 @@ export function VideoReview({
   return (
     <MediaPlayer
       ref={playerRef}
-      className={cn("flex min-h-0 flex-1 flex-col text-foreground", className)}
+      className={cn("video-review-shell min-h-0 flex-1 flex-col text-foreground", className)}
       title={title ?? filename}
       src={src}
       playsInline

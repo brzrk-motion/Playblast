@@ -23,7 +23,7 @@ function AppLayoutContent() {
       <SidebarInset className="min-h-svh">
         <AppHeader title={title} subtitle={headerSubtitle} />
         {isReviewLayout ? (
-          <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 md:p-4">
+          <main className="flex min-h-0 w-full flex-1 flex-col overflow-hidden p-3 md:p-4">
             <Outlet />
           </main>
         ) : (

@@ -365,7 +365,7 @@ export function DeliverablePage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 w-full flex-1 flex-col">
       {actionError && !focusMode ? (
         <Card className="mb-2 shrink-0 border-destructive/30 bg-destructive/5">
           <CardContent className="flex items-center justify-between gap-4 py-2">
@@ -510,7 +510,7 @@ export function DeliverablePage() {
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 w-full flex-1 flex-col">
         {selectedVersion ? (
           <VideoReview
             key={`${selectedVersion.id}-${selectedVersion.uploadedAt}`}
