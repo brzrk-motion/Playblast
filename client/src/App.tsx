@@ -1,14 +1,14 @@
 import { ThemeProvider } from "@/components/layout/theme-provider"
 import { AppLayout } from "@/components/layout/app-layout"
-import { DashboardPage } from "@/pages/dashboard"
+import { ReviewPage } from "@/pages/review"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="system">
+    <ThemeProvider defaultTheme="dark">
       <TooltipProvider>
-        <AppLayout title="Dashboard">
-          <DashboardPage />
+        <AppLayout title="Review">
+          <ReviewPage />
         </AppLayout>
       </TooltipProvider>
     </ThemeProvider>
