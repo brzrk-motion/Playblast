@@ -10,6 +10,7 @@ import { humanizeApiError, showErrorToast } from "@/lib/toast"
 import { pickCompareVersionLabels, sortVersionsByDate } from "@/lib/versions"
 import type { Project } from "@/types/project"
 import type { Version } from "@/types/version"
+import { useProjectPageHeader } from "@/hooks/use-project-page-header"
 import { ArrowLeft, GitCompare } from "lucide-react"
 
 export function ComparePage() {
@@ -19,6 +20,8 @@ export function ComparePage() {
   const [versions, setVersions] = useState<Version[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  useProjectPageHeader(projectId, project)
 
   const { left: leftLabel, right: rightLabel } = useMemo(
     () =>
