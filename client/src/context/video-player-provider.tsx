@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react"
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react"
 import { useMediaRemote, useMediaState } from "@vidstack/react"
 
 import {
@@ -10,6 +10,8 @@ import type { FrameAnnotation } from "@/types/annotation"
 export function VideoPlayerProvider({ children }: { children: ReactNode }) {
   const remote = useMediaRemote()
   const currentTime = useMediaState("currentTime")
+  const paused = useMediaState("paused")
+  const wasPlayingBeforeComposerRef = useRef(false)
   const [composer, setComposer] = useState<ComposerState | null>(null)
   const [draftAnnotation, setDraftAnnotation] = useState<FrameAnnotation | null>(
     null,
@@ -28,17 +30,33 @@ export function VideoPlayerProvider({ children }: { children: ReactNode }) {
 
   const openComposer = useCallback(
     (timestamp: number) => {
+      wasPlayingBeforeComposerRef.current = !paused
       remote.pause()
       remote.seek(timestamp)
       setComposer({ timestamp })
     },
-    [remote],
+    [paused, remote],
   )
 
-  const closeComposer = useCallback(() => {
-    setComposer(null)
-    setDraftAnnotation(null)
-  }, [])
+  const closeComposer = useCallback(
+    (options?: { resumePlayback?: boolean }) => {
+      const shouldResume =
+        options?.resumePlayback && wasPlayingBeforeComposerRef.current
+      wasPlayingBeforeComposerRef.current = false
+
+      setComposer(null)
+      setDraftAnnotation(null)
+
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur()
+      }
+
+      if (shouldResume) {
+        remote.play()
+      }
+    },
+    [remote],
+  )
 
   const value = useMemo(
     () => ({

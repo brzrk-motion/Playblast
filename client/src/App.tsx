@@ -30,7 +30,6 @@ function App() {
                 path="projects/:projectId/deliverables/:deliverableId/compare"
                 element={<ComparePage />}
               />
-              <Route path="team" element={<ComingSoonPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="profile" element={<ComingSoonPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
