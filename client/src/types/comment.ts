@@ -1,3 +1,5 @@
+import type { FrameAnnotation } from "@/types/annotation"
+
 export interface Comment {
   id: string
   versionId: string
@@ -7,4 +9,6 @@ export interface Comment {
   author: string
   createdAt: string
   resolved: boolean
+  /** Optional frame-level drawing annotation tied to this timestamp */
+  annotation?: FrameAnnotation
 }

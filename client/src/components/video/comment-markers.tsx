@@ -58,10 +58,11 @@ export function CommentMarkers({
             <button
               type="button"
               className={cn(
-                "block size-2 rounded-full ring-1 transition-transform hover:scale-125 focus-visible:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "block rounded-full ring-1 transition-transform hover:scale-125 focus-visible:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                comment.annotation ? "size-2.5 ring-2" : "size-2",
                 markerColor(index),
               )}
-              aria-label={`Comment at ${formatTime(comment.timestamp)} by ${comment.author}`}
+              aria-label={`${comment.annotation ? "Annotated comment" : "Comment"} at ${formatTime(comment.timestamp)} by ${comment.author}`}
               onClick={(event) => {
                 event.stopPropagation()
                 onSeek?.(comment.timestamp)

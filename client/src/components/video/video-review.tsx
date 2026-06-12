@@ -7,6 +7,7 @@ import {
   type MediaPlayerInstance,
 } from "@vidstack/react"
 
+import { AnnotationOverlay } from "@/components/video/annotation-overlay"
 import { CommentComposer } from "@/components/video/comment-composer"
 import { CommentsPanel } from "@/components/video/comments-panel"
 import { VideoControls } from "@/components/video/video-controls"
@@ -14,6 +15,7 @@ import { VideoHotkeys } from "@/components/video/video-hotkeys"
 import { VideoPlayerProvider } from "@/context/video-player-provider"
 import { getVideoUrl } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import type { FrameAnnotation } from "@/types/annotation"
 import type { Comment } from "@/types/comment"
 
 export interface VideoReviewProps {
@@ -26,6 +28,7 @@ export interface VideoReviewProps {
     timestamp: number
     body: string
     author: string
+    annotation?: FrameAnnotation
   }) => Promise<void>
   onResolveComment?: (commentId: string, resolved: boolean) => Promise<void>
   resolvingCommentId?: string | null
@@ -71,6 +74,7 @@ export function VideoReview({
 
           <div className="relative aspect-video w-full overflow-hidden bg-black text-white">
             <MediaProvider />
+            <AnnotationOverlay comments={comments} />
             <VideoHotkeys />
             <VideoControls comments={comments} />
             <CommentComposer onSubmit={onCreateComment} />

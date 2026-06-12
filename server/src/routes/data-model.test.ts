@@ -383,4 +383,133 @@ describe("projects, versions, and comments API", () => {
     assert.equal(comments[0]?.id, created.id)
     assert.equal(comments[0]?.timestamp, 3.5)
   })
+
+  it("creates comments with frame annotations", async () => {
+    await fetch(`${baseUrl}/api/projects`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "spot-annotate", name: "Spot Annotate" }),
+    })
+
+    const { createVersion } = await import("../storage/repository.js")
+    const version = createVersion({
+      projectId: "spot-annotate",
+      label: "v1",
+      filename: "render.mp4",
+    })
+
+    const annotation = {
+      timestamp: 4.25,
+      viewportWidth: 1280,
+      viewportHeight: 720,
+      shapes: [
+        {
+          id: "shape-1",
+          type: "arrow",
+          color: "#f97316",
+          strokeWidth: 0.004,
+          points: [0.2, 0.3, 0.7, 0.6],
+        },
+        {
+          id: "shape-2",
+          type: "text",
+          color: "#f97316",
+          strokeWidth: 0.004,
+          points: [0.5, 0.5],
+          text: "Fix lighting",
+          fontSize: 0.04,
+        },
+      ],
+    }
+
+    const createResponse = await fetch(`${baseUrl}/api/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        versionId: version.id,
+        timestamp: 4.25,
+        body: "Highlight this area",
+        author: "Sam",
+        annotation,
+      }),
+    })
+
+    assert.equal(createResponse.status, 201)
+    const created = (await createResponse.json()) as {
+      annotation?: { shapes: Array<{ type: string }> }
+    }
+    assert.equal(created.annotation?.shapes.length, 2)
+    assert.equal(created.annotation?.shapes[0]?.type, "arrow")
+
+    const listResponse = await fetch(
+      `${baseUrl}/api/comments?versionId=${encodeURIComponent(version.id)}`,
+    )
+    assert.equal(listResponse.status, 200)
+    const comments = (await listResponse.json()) as Array<{
+      annotation?: { shapes: unknown[] }
+    }>
+    assert.equal(comments.length, 1)
+    assert.equal(comments[0]?.annotation?.shapes.length, 2)
+  })
+
+  it("rejects invalid frame annotations", async () => {
+    await fetch(`${baseUrl}/api/projects`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "spot-annotate-invalid", name: "Spot Invalid" }),
+    })
+
+    const { createVersion } = await import("../storage/repository.js")
+    const version = createVersion({
+      projectId: "spot-annotate-invalid",
+      label: "v1",
+      filename: "render.mp4",
+    })
+
+    const mismatchResponse = await fetch(`${baseUrl}/api/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        versionId: version.id,
+        timestamp: 2,
+        body: "Mismatch",
+        author: "Sam",
+        annotation: {
+          timestamp: 5,
+          viewportWidth: 1280,
+          viewportHeight: 720,
+          shapes: [
+            {
+              id: "shape-1",
+              type: "arrow",
+              color: "#f97316",
+              strokeWidth: 0.004,
+              points: [0.1, 0.2, 0.3, 0.4],
+            },
+          ],
+        },
+      }),
+    })
+
+    assert.equal(mismatchResponse.status, 400)
+
+    const emptyShapesResponse = await fetch(`${baseUrl}/api/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        versionId: version.id,
+        timestamp: 2,
+        body: "Empty shapes",
+        author: "Sam",
+        annotation: {
+          timestamp: 2,
+          viewportWidth: 1280,
+          viewportHeight: 720,
+          shapes: [],
+        },
+      }),
+    })
+
+    assert.equal(emptyShapesResponse.status, 400)
+  })
 })
