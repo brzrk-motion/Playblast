@@ -33,7 +33,9 @@ export function SyncedVideoComparison({
       <div className={cn("space-y-4", className)}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
-            Drag either scrubber or play one pane to control both when sync is locked.
+            {syncLocked
+              ? "Playback and scrubbing are synced across both panes."
+              : "Panes are independent — lock sync to control both together."}
           </p>
           <Button
             type="button"

@@ -11,7 +11,7 @@ import { Focus, PanelRightClose, PanelRightOpen } from "lucide-react"
 
 import { AnnotationOverlay } from "@/components/video/annotation-overlay"
 import { CommentsPanel } from "@/components/video/comments-panel"
-import { VideoApprovalActions } from "@/components/video/video-approval-actions"
+import { VersionStatusBadge } from "@/components/project/version-status-badge"
 import { VideoControls } from "@/components/video/video-controls"
 import { VideoHotkeys } from "@/components/video/video-hotkeys"
 import { VideoLoadingOverlay } from "@/components/video/video-loading-overlay"
@@ -22,6 +22,7 @@ import { getVideoUrl } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import type { FrameAnnotation } from "@/types/annotation"
 import type { Comment } from "@/types/comment"
+import type { VersionStatus } from "@/types/version"
 
 export interface VideoReviewProps {
   projectId: string
@@ -39,7 +40,8 @@ export interface VideoReviewProps {
   onResolveComment?: (commentId: string, resolved: boolean) => Promise<void>
   onDeleteComment?: (commentId: string) => Promise<void>
   onMarkNeedsRevision?: () => void
-  onMarkApproved?: () => void
+  onRequestApproveConfirm?: () => void
+  versionStatus?: VersionStatus
   resolvingCommentId?: string | null
   deletingCommentId?: string | null
   statusUpdating?: boolean
@@ -62,7 +64,8 @@ function VideoReviewLayout({
   onResolveComment,
   onDeleteComment,
   onMarkNeedsRevision,
-  onMarkApproved,
+  onRequestApproveConfirm,
+  versionStatus,
   resolvingCommentId = null,
   deletingCommentId = null,
   statusUpdating = false,
@@ -74,7 +77,6 @@ function VideoReviewLayout({
 }: VideoReviewLayoutProps) {
   const [commentsPanelOpenInternal, setCommentsPanelOpenInternal] = useState(true)
   const [focusModeInternal, setFocusModeInternal] = useState(false)
-  const [approveConfirmOpen, setApproveConfirmOpen] = useState(false)
   const isFullscreen = useMediaState("fullscreen")
   const { composer } = useVideoPlayer()
 
@@ -147,19 +149,9 @@ function VideoReviewLayout({
               </div>
 
               <div className="flex shrink-0 items-center gap-1">
-                <VideoApprovalActions
-                  onMarkNeedsRevision={
-                    onMarkNeedsRevision
-                      ? () => onMarkNeedsRevision()
-                      : undefined
-                  }
-                  onMarkApproved={
-                    onMarkApproved ? () => onMarkApproved() : undefined
-                  }
-                  approveConfirmOpen={approveConfirmOpen}
-                  onApproveConfirmOpenChange={setApproveConfirmOpen}
-                  statusUpdating={statusUpdating}
-                />
+                {versionStatus ? (
+                  <VersionStatusBadge status={versionStatus} />
+                ) : null}
 
                 <Button
                   type="button"
@@ -201,9 +193,7 @@ function VideoReviewLayout({
                 statusUpdating ? undefined : onMarkNeedsRevision
               }
               onRequestApproveConfirm={
-                statusUpdating || !onMarkApproved
-                  ? undefined
-                  : () => setApproveConfirmOpen(true)
+                statusUpdating ? undefined : onRequestApproveConfirm
               }
               onToggleCommentsPanel={focusMode ? undefined : toggleCommentsPanel}
               onToggleFocusMode={toggleFocusMode}
@@ -261,7 +251,8 @@ export function VideoReview({
   onResolveComment,
   onDeleteComment,
   onMarkNeedsRevision,
-  onMarkApproved,
+  onRequestApproveConfirm,
+  versionStatus,
   resolvingCommentId = null,
   deletingCommentId = null,
   statusUpdating = false,
@@ -296,7 +287,8 @@ export function VideoReview({
           onResolveComment={onResolveComment}
           onDeleteComment={onDeleteComment}
           onMarkNeedsRevision={onMarkNeedsRevision}
-          onMarkApproved={onMarkApproved}
+          onRequestApproveConfirm={onRequestApproveConfirm}
+          versionStatus={versionStatus}
           resolvingCommentId={resolvingCommentId}
           deletingCommentId={deletingCommentId}
           statusUpdating={statusUpdating}
