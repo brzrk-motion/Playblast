@@ -1,0 +1,85 @@
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { sortVersionsByDate } from "@/lib/versions"
+import type { Version } from "@/types/version"
+import { Check, ChevronDown, GitBranch } from "lucide-react"
+
+interface VersionSelectorProps {
+  versions: Version[]
+  selectedLabel: string | null
+  onSelect: (label: string) => void
+  disabled?: boolean
+}
+
+function formatUploadedAt(value: string): string {
+  return new Date(value).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
+export function VersionSelector({
+  versions,
+  selectedLabel,
+  onSelect,
+  disabled = false,
+}: VersionSelectorProps) {
+  const sortedVersions = sortVersionsByDate(versions)
+  const selectedVersion =
+    sortedVersions.find((version) => version.label === selectedLabel) ??
+    sortedVersions[0]
+
+  if (versions.length === 0) {
+    return (
+      <Button variant="outline" disabled>
+        <GitBranch />
+        No versions
+      </Button>
+    )
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" disabled={disabled}>
+          <GitBranch />
+          {selectedVersion?.label ?? "Select version"}
+          <ChevronDown className="opacity-60" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-64">
+        <DropdownMenuLabel>Versions</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {sortedVersions.map((version) => (
+          <DropdownMenuItem
+            key={version.id}
+            onClick={() => onSelect(version.label)}
+            className="flex items-start justify-between gap-2"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">{version.label}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {version.filename}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {formatUploadedAt(version.uploadedAt)}
+              </p>
+            </div>
+            {version.label === selectedVersion?.label ? (
+              <Check className="mt-0.5 size-4 shrink-0" />
+            ) : null}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -190,19 +191,26 @@ export function DashboardPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {projects.map((project) => (
-                <Card key={project.id} className="border-muted">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-base leading-snug">{project.name}</CardTitle>
-                      <Badge variant="secondary">
-                        {project.versionCount} {project.versionCount === 1 ? "version" : "versions"}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="text-sm text-muted-foreground">
-                    <p>Updated {formatDate(project.updatedAt)}</p>
-                  </CardContent>
-                </Card>
+                <Link
+                  key={project.id}
+                  to={`/projects/${encodeURIComponent(project.id)}`}
+                  className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Card className="h-full border-muted transition-colors hover:border-primary/40 hover:bg-muted/20">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="text-base leading-snug">{project.name}</CardTitle>
+                        <Badge variant="secondary">
+                          {project.versionCount}{" "}
+                          {project.versionCount === 1 ? "version" : "versions"}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="text-sm text-muted-foreground">
+                      <p>Updated {formatDate(project.updatedAt)}</p>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
           )}
