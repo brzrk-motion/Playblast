@@ -67,35 +67,45 @@ export function VersionSelector({
           <ChevronDown className={cn("opacity-60", compact && "size-3.5")} />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64">
-        <DropdownMenuLabel>Versions</DropdownMenuLabel>
+      <DropdownMenuContent align="start" className="w-56">
+        <DropdownMenuLabel className="type-caption py-1">Versions</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {sortedVersions.map((version) => (
-          <DropdownMenuItem
-            key={version.id}
-            onClick={() => onSelect(version.label)}
-            className={cn(
-              "flex items-start justify-between gap-2",
-              version.label === selectedVersion?.label && "bg-accent/60",
-            )}
-          >
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex items-center gap-2">
-                <p className="font-medium">{version.label}</p>
-                <VersionStatusBadge status={version.status} className="type-micro" />
+        {sortedVersions.map((version) => {
+          const isSelected = version.label === selectedVersion?.label
+
+          return (
+            <DropdownMenuItem
+              key={version.id}
+              onClick={() => onSelect(version.label)}
+              className={cn(
+                "relative items-center gap-2 py-1 pr-8",
+                isSelected && "bg-accent/60",
+              )}
+            >
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className="truncate text-sm leading-tight font-medium">
+                    {version.label}
+                  </span>
+                  <VersionStatusBadge
+                    status={version.status}
+                    className="type-micro shrink-0 px-1.5"
+                  />
+                </div>
+                <p className="type-caption truncate leading-tight">
+                  <span>{formatUploadedAt(version.uploadedAt)}</span>
+                  <span aria-hidden="true" className="mx-1 text-muted-foreground/60">
+                    ·
+                  </span>
+                  <span>{version.filename}</span>
+                </p>
               </div>
-              <p className="truncate text-xs text-muted-foreground">
-                {version.filename}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {formatUploadedAt(version.uploadedAt)}
-              </p>
-            </div>
-            {version.label === selectedVersion?.label ? (
-              <Check className="mt-0.5 size-4 shrink-0" />
-            ) : null}
-          </DropdownMenuItem>
-        ))}
+              {isSelected ? (
+                <Check className="absolute right-2 size-3.5 shrink-0" />
+              ) : null}
+            </DropdownMenuItem>
+          )
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   )
