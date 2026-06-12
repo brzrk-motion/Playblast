@@ -91,7 +91,12 @@ export function ensureProject(id: string, name?: string): Project {
 }
 
 export function listVersions(projectId: string): Version[] {
-  return readStore().versions.filter((version) => version.projectId === projectId)
+  return readStore()
+    .versions.filter((version) => version.projectId === projectId)
+    .sort(
+      (a, b) =>
+        new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
+    )
 }
 
 export function getVersion(id: string): Version | undefined {
