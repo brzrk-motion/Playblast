@@ -126,17 +126,17 @@ const STATUS_OVERVIEW: Array<{
   {
     status: "pending_review",
     icon: Clock,
-    accentClass: "text-muted-foreground",
+    accentClass: "text-status-pending-foreground",
   },
   {
     status: "needs_revision",
     icon: RotateCcw,
-    accentClass: "text-amber-600 dark:text-amber-400",
+    accentClass: "text-status-warning-foreground",
   },
   {
     status: "approved",
     icon: CheckCircle2,
-    accentClass: "text-emerald-600 dark:text-emerald-400",
+    accentClass: "text-status-success-foreground",
   },
 ]
 
@@ -229,7 +229,7 @@ export function DashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Good morning</h2>
+          <h2 className="type-page-title">Good morning</h2>
           <p className="text-muted-foreground">
             Your home for reviews, revisions, and approvals.
           </p>

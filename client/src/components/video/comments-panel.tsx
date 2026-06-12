@@ -64,18 +64,18 @@ function CommentRow({
           onClick={() => seek(comment.timestamp)}
         >
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-medium text-primary">
+            <span className="type-timestamp text-primary">
               {formatTime(comment.timestamp)}
             </span>
             <span className="text-xs text-muted-foreground">{comment.author}</span>
             {comment.annotation ? (
-              <Badge variant="outline" className="gap-1 text-[10px]">
+              <Badge variant="outline" className="type-micro gap-1">
                 <Pencil className="size-2.5" />
                 Frame
               </Badge>
             ) : null}
             {comment.resolved ? (
-              <Badge variant="outline" className="ml-auto text-[10px]">
+              <Badge variant="outline" className="type-micro ml-auto">
                 Resolved
               </Badge>
             ) : null}

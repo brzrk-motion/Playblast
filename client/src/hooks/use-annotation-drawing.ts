@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react"
 
 import { createShapeId, normalizePointer } from "@/lib/annotation"
+import { getAnnotationAccentColor } from "@/lib/design-tokens"
 import type {
   AnnotationShape,
   AnnotationTool,
@@ -9,7 +10,6 @@ import type {
   TextShape,
 } from "@/types/annotation"
 
-const DEFAULT_COLOR = "#f97316"
 const DEFAULT_STROKE_WIDTH = 0.004
 const DEFAULT_FONT_SIZE = 0.04
 
@@ -23,7 +23,7 @@ interface UseAnnotationDrawingOptions {
 export function useAnnotationDrawing({
   enabled,
   tool,
-  color = DEFAULT_COLOR,
+  color = getAnnotationAccentColor(),
   strokeWidth = DEFAULT_STROKE_WIDTH,
 }: UseAnnotationDrawingOptions) {
   const overlayRef = useRef<SVGSVGElement>(null)

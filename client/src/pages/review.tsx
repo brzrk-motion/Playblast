@@ -12,7 +12,7 @@ export function ReviewPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Review</h2>
+          <h2 className="type-page-title">Review</h2>
           <p className="text-muted-foreground">
             Preview and proof video assets with custom playback controls.
           </p>

@@ -32,7 +32,7 @@ export function AnnotationToolbar({
   return (
     <div
       className={cn(
-        "flex items-center gap-1 rounded-lg border border-border/80 bg-card/95 p-1 shadow-lg backdrop-blur-sm",
+        "flex items-center gap-1 rounded-lg border border-border/80 bg-surface-overlay p-1 shadow-lg backdrop-blur-sm",
         className,
       )}
       role="toolbar"

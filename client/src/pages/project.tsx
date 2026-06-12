@@ -259,7 +259,7 @@ export function ProjectPage() {
           </Button>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-2xl font-bold tracking-tight">{project.name}</h2>
+              <h2 className="type-page-title">{project.name}</h2>
               <Badge variant="secondary">
                 {versions.length} {versions.length === 1 ? "version" : "versions"}
               </Badge>
@@ -295,7 +295,7 @@ export function ProjectPage() {
       {versions.length > 0 ? (
         <div className="space-y-3">
           <div>
-            <h3 className="text-lg font-semibold">Versions</h3>
+            <h3 className="type-section-title">Versions</h3>
             <p className="text-sm text-muted-foreground">
               Review approval status and switch between uploaded renders.
             </p>

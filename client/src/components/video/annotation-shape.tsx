@@ -69,7 +69,7 @@ export function AnnotationShapeView({ shape }: { shape: AnnotationShape }) {
       fontWeight="600"
       dominantBaseline="hanging"
       style={{ userSelect: "none", paintOrder: "stroke fill" }}
-      stroke="rgba(0,0,0,0.65)"
+      stroke="var(--annotation-text-stroke)"
       strokeWidth={shape.strokeWidth * 0.75}
     >
       {shape.text}

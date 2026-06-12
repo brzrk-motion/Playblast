@@ -1,20 +1,9 @@
 import { useState } from "react"
 import { formatTime } from "@vidstack/react"
 
+import { markerColorClass } from "@/lib/design-tokens"
 import { cn } from "@/lib/utils"
 import type { Comment } from "@/types/comment"
-
-const MARKER_COLORS = [
-  "bg-sky-400 ring-sky-500/60",
-  "bg-amber-400 ring-amber-500/60",
-  "bg-emerald-400 ring-emerald-500/60",
-  "bg-violet-400 ring-violet-500/60",
-  "bg-rose-400 ring-rose-500/60",
-] as const
-
-function markerColor(index: number) {
-  return MARKER_COLORS[index % MARKER_COLORS.length]
-}
 
 export interface CommentMarkersProps {
   comments: Comment[]
@@ -60,7 +49,7 @@ export function CommentMarkers({
               className={cn(
                 "block rounded-full ring-1 transition-transform hover:scale-125 focus-visible:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 comment.annotation ? "size-2.5 ring-2" : "size-2",
-                markerColor(index),
+                markerColorClass(index),
               )}
               aria-label={`${comment.annotation ? "Annotated comment" : "Comment"} at ${formatTime(comment.timestamp)} by ${comment.author}`}
               onClick={(event) => {
@@ -76,7 +65,7 @@ export function CommentMarkers({
                 isHovered ? "opacity-100" : "opacity-0",
               )}
             >
-              <p className="text-[10px] font-medium text-muted-foreground">
+              <p className="type-micro font-medium text-muted-foreground">
                 {formatTime(comment.timestamp)} · {comment.author}
               </p>
               <p className="mt-0.5 line-clamp-2 text-xs">{comment.body}</p>

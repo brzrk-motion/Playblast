@@ -170,7 +170,7 @@ export function CommentComposer({ onSubmit, className }: CommentComposerProps) {
   return (
     <div
       className={cn(
-        "absolute inset-x-0 bottom-20 z-30 mx-3 rounded-lg border border-border bg-card/95 p-4 shadow-lg backdrop-blur-sm",
+        "absolute inset-x-0 bottom-20 z-30 mx-3 rounded-lg border border-border bg-surface-overlay p-4 shadow-lg backdrop-blur-sm",
         className,
       )}
     >
