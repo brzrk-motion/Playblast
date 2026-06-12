@@ -129,6 +129,12 @@ export function CommentComposerForm({
             if (event.key === "Escape") {
               event.preventDefault()
               onClose()
+              return
+            }
+
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault()
+              event.currentTarget.form?.requestSubmit()
             }
           }}
         />
