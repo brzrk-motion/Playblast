@@ -1,0 +1,11 @@
+services:
+  playblast:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - playblast_uploads:/app/server/uploads
+    restart: unless-stopped
+
+volumes:
+  playblast_uploads:
