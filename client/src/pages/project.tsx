@@ -53,6 +53,7 @@ export function ProjectPage() {
   const [focusMode, setFocusMode] = useState(false)
   const [versionsOpen, setVersionsOpen] = useState(false)
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [approveConfirmOpen, setApproveConfirmOpen] = useState(false)
 
   const dismissOpenPanels = useCallback(() => {
     if (uploadOpen) {
@@ -376,6 +377,8 @@ export function ProjectPage() {
               onMarkApproved={() =>
                 void handleStatusChange(selectedVersion.id, "approved")
               }
+              approveConfirmOpen={approveConfirmOpen}
+              onApproveConfirmOpenChange={setApproveConfirmOpen}
               statusUpdating={updatingStatusId === selectedVersion.id}
               className="ml-auto"
             />
@@ -503,9 +506,7 @@ export function ProjectPage() {
             onMarkNeedsRevision={() =>
               void handleStatusChange(selectedVersion.id, "needs_revision")
             }
-            onMarkApproved={() =>
-              void handleStatusChange(selectedVersion.id, "approved")
-            }
+            onRequestApproveConfirm={() => setApproveConfirmOpen(true)}
             versionStatus={selectedVersion.status}
             statusUpdating={updatingStatusId === selectedVersion.id}
             resolvingCommentId={resolvingCommentId}

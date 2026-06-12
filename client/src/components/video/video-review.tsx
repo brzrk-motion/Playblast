@@ -40,7 +40,7 @@ export interface VideoReviewProps {
   onResolveComment?: (commentId: string, resolved: boolean) => Promise<void>
   onDeleteComment?: (commentId: string) => Promise<void>
   onMarkNeedsRevision?: () => void
-  onMarkApproved?: () => void
+  onRequestApproveConfirm?: () => void
   versionStatus?: VersionStatus
   resolvingCommentId?: string | null
   deletingCommentId?: string | null
@@ -64,7 +64,7 @@ function VideoReviewLayout({
   onResolveComment,
   onDeleteComment,
   onMarkNeedsRevision,
-  onMarkApproved,
+  onRequestApproveConfirm,
   versionStatus,
   resolvingCommentId = null,
   deletingCommentId = null,
@@ -192,7 +192,9 @@ function VideoReviewLayout({
               onMarkNeedsRevision={
                 statusUpdating ? undefined : onMarkNeedsRevision
               }
-              onMarkApproved={statusUpdating ? undefined : onMarkApproved}
+              onRequestApproveConfirm={
+                statusUpdating ? undefined : onRequestApproveConfirm
+              }
               onToggleCommentsPanel={focusMode ? undefined : toggleCommentsPanel}
               onToggleFocusMode={toggleFocusMode}
               focusMode={focusMode}
@@ -249,7 +251,7 @@ export function VideoReview({
   onResolveComment,
   onDeleteComment,
   onMarkNeedsRevision,
-  onMarkApproved,
+  onRequestApproveConfirm,
   versionStatus,
   resolvingCommentId = null,
   deletingCommentId = null,
@@ -285,7 +287,7 @@ export function VideoReview({
           onResolveComment={onResolveComment}
           onDeleteComment={onDeleteComment}
           onMarkNeedsRevision={onMarkNeedsRevision}
-          onMarkApproved={onMarkApproved}
+          onRequestApproveConfirm={onRequestApproveConfirm}
           versionStatus={versionStatus}
           resolvingCommentId={resolvingCommentId}
           deletingCommentId={deletingCommentId}
