@@ -1,5 +1,8 @@
+import fs from "node:fs"
 import cors from "cors"
 import express from "express"
+import path from "node:path"
+import { CLIENT_DIST } from "./config/paths.js"
 import { validateVideoParams } from "./middleware/validateParams.js"
 import apiRouter from "./routes/index.js"
 import videoRouter from "./routes/video.js"
@@ -15,6 +18,15 @@ export function createApp() {
     validateVideoParams,
     videoRouter,
   )
+
+  if (fs.existsSync(CLIENT_DIST)) {
+    app.use(express.static(CLIENT_DIST))
+    app.use((_req, res, next) => {
+      res.sendFile(path.join(CLIENT_DIST, "index.html"), (err) => {
+        if (err) next(err)
+      })
+    })
+  }
 
   return app
 }
