@@ -97,12 +97,14 @@ describe("projects, versions, and comments API", () => {
       id: string
       versionCount: number
       updatedAt: string
+      status: string
     }>
     const summary = projects.find((item) => item.id === "spot-summary")
     assert.ok(summary)
     assert.equal(summary.versionCount, 1)
     assert.ok(summary.updatedAt)
     assert.equal(summary.openCommentCount, 0)
+    assert.equal(summary.status, "pending_review")
   })
 
   it("lists projects with open comment count across versions", async () => {

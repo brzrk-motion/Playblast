@@ -4,10 +4,14 @@ export interface Project {
   createdAt: string
 }
 
+import type { VersionStatus } from "./version.js"
+
 export interface ProjectSummary extends Project {
   versionCount: number
   updatedAt: string
   openCommentCount: number
+  /** Latest version status, or pending_review when the project has no versions yet. */
+  status: VersionStatus
 }
 
 export interface CreateProjectInput {

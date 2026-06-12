@@ -129,6 +129,28 @@ describe("JSON data store", () => {
     assert.equal(summary.versionCount, 1)
     assert.ok(summary.updatedAt >= project.createdAt)
     assert.equal(summary.openCommentCount, 0)
+    assert.equal(summary.status, "pending_review")
+  })
+
+  it("derives project status from the latest version", () => {
+    const project = createProject({ id: "status-summary-test", name: "Status Summary" })
+    const older = createVersion({
+      projectId: project.id,
+      label: "v1",
+      filename: "first.mp4",
+    })
+    const newer = createVersion({
+      projectId: project.id,
+      label: "v2",
+      filename: "second.mp4",
+    })
+
+    updateVersionStatus(older.id, "approved")
+    updateVersionStatus(newer.id, "needs_revision")
+
+    const summary = listProjectSummaries().find((item) => item.id === project.id)
+    assert.ok(summary)
+    assert.equal(summary.status, "needs_revision")
   })
 
   it("counts open comments across all project versions", () => {

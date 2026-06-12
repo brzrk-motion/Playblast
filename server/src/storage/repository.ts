@@ -27,19 +27,30 @@ export function listProjectSummaries(): ProjectSummary[] {
     const openCommentCount = store.comments.filter(
       (comment) => versionIds.has(comment.versionId) && !comment.resolved,
     ).length
-    const latestUpload = versions.reduce((max, version) => {
-      const uploadedAt = new Date(version.uploadedAt).getTime()
-      return uploadedAt > max ? uploadedAt : max
-    }, 0)
+    let latestVersion: Version | undefined
+    for (const version of versions) {
+      if (!latestVersion) {
+        latestVersion = version
+        continue
+      }
+
+      const versionTime = new Date(version.uploadedAt).getTime()
+      const latestTime = new Date(latestVersion.uploadedAt).getTime()
+
+      if (
+        versionTime > latestTime ||
+        (versionTime === latestTime && version.label > latestVersion.label)
+      ) {
+        latestVersion = version
+      }
+    }
 
     return {
       ...project,
       versionCount: versions.length,
-      updatedAt:
-        latestUpload > 0
-          ? new Date(latestUpload).toISOString()
-          : project.createdAt,
+      updatedAt: latestVersion?.uploadedAt ?? project.createdAt,
       openCommentCount,
+      status: latestVersion?.status ?? "pending_review",
     }
   })
 }
