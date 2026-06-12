@@ -10,6 +10,7 @@ import {
 import { VideoControls } from "@/components/video/video-controls"
 import { getVideoUrl } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import type { Comment } from "@/types/comment"
 
 export interface VideoPlayerProps {
   projectId: string
@@ -17,6 +18,7 @@ export interface VideoPlayerProps {
   filename: string
   title?: string
   className?: string
+  comments?: Comment[]
 }
 
 export function VideoPlayer({
@@ -25,6 +27,7 @@ export function VideoPlayer({
   filename,
   title,
   className,
+  comments = [],
 }: VideoPlayerProps) {
   const playerRef = useRef<MediaPlayerInstance>(null)
   const src = getVideoUrl(projectId, version, filename)
@@ -54,7 +57,7 @@ export function VideoPlayer({
         crossOrigin
       >
         <MediaProvider />
-        <VideoControls />
+        <VideoControls comments={comments} />
       </MediaPlayer>
     </div>
   )

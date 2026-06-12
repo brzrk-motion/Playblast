@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { VideoPlayer } from "@/components/video/video-player"
+import { DEMO_COMMENTS } from "@/lib/demo-comments"
 
 const DEMO_PROJECT_ID = "demo-project"
 const DEMO_VERSION = "v1"
@@ -24,6 +25,7 @@ export function ReviewPage() {
         version={DEMO_VERSION}
         filename={DEMO_FILENAME}
         title={DEMO_FILENAME}
+        comments={DEMO_COMMENTS}
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -48,12 +50,23 @@ export function ReviewPage() {
         <Card>
           <CardHeader>
             <CardTitle>Comments</CardTitle>
-            <CardDescription>Timestamped feedback will appear here</CardDescription>
+            <CardDescription>
+              {DEMO_COMMENTS.length} timestamped comments shown as markers on the scrub bar
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Comment threads and approval workflows are coming in a future update.
-            </p>
+          <CardContent className="space-y-3">
+            {DEMO_COMMENTS.map((comment) => (
+              <div key={comment.id} className="space-y-0.5">
+                <p className="text-xs font-medium text-foreground">
+                  {comment.author}
+                  <span className="ml-2 font-normal text-muted-foreground">
+                    {Math.floor(comment.timestamp / 60)}:
+                    {String(Math.floor(comment.timestamp % 60)).padStart(2, "0")}
+                  </span>
+                </p>
+                <p className="text-sm text-muted-foreground">{comment.body}</p>
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>
