@@ -9,6 +9,7 @@ import {
 
 import { VersionSelector } from "@/components/project/version-selector"
 import { VideoControls } from "@/components/video/video-controls"
+import { VideoHotkeys } from "@/components/video/video-hotkeys"
 import { VideoPlayerProvider } from "@/context/video-player-provider"
 import type { ComparePane } from "@/context/synced-playback-context"
 import { useSyncedPlayback } from "@/hooks/use-synced-playback"
@@ -109,6 +110,7 @@ export function ComparisonPane({
         >
           <VideoPlayerProvider>
             <MediaProvider />
+            <VideoHotkeys enableCommentShortcut={false} />
             <VideoControls enableCommentComposer={false} />
           </VideoPlayerProvider>
         </MediaPlayer>
