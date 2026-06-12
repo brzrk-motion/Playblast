@@ -1,12 +1,10 @@
+import { Link, NavLink, useLocation } from "react-router-dom"
 import {
-  LayoutDashboard,
-  Film,
-  GitCompare,
-  FolderOpen,
-  Users,
-  Settings,
   ChevronRight,
   Clapperboard,
+  ChevronsUpDown,
+  LogOut,
+  User,
 } from "lucide-react"
 import {
   Sidebar,
@@ -29,6 +27,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,62 +36,35 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ChevronsUpDown, LogOut, User } from "lucide-react"
+import { cn } from "@/lib/utils"
+import {
+  isNavGroupActive,
+  isNavItemActive,
+  navMain,
+  navSecondary,
+} from "@/lib/nav"
 
-const navMain = [
-  {
-    title: "Dashboard",
-    icon: LayoutDashboard,
-    url: "#",
-    isActive: true,
-  },
-  {
-    title: "Reviews",
-    icon: Film,
-    url: "#",
-    items: [
-      { title: "All Reviews", url: "#" },
-      { title: "Pending", url: "#" },
-      { title: "Approved", url: "#" },
-    ],
-  },
-  {
-    title: "Comparisons",
-    icon: GitCompare,
-    url: "#",
-    items: [
-      { title: "A/B Compare", url: "#" },
-      { title: "Version History", url: "#" },
-    ],
-  },
-  {
-    title: "Projects",
-    icon: FolderOpen,
-    url: "#",
-  },
-  {
-    title: "Team",
-    icon: Users,
-    url: "#",
-  },
-]
-
-const navSecondary = [
-  {
-    title: "Settings",
-    icon: Settings,
-    url: "#",
-  },
-]
+function ComingSoonBadge() {
+  return (
+    <Badge
+      variant="outline"
+      className="ml-auto shrink-0 px-1.5 py-0 text-[10px] font-normal text-muted-foreground"
+    >
+      Soon
+    </Badge>
+  )
+}
 
 export function AppSidebar() {
+  const location = useLocation()
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="#">
+              <Link to="/">
                 <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Clapperboard className="size-4" />
                 </div>
@@ -100,7 +72,7 @@ export function AppSidebar() {
                   <span className="font-semibold">Playblast</span>
                   <span className="text-muted-foreground text-xs">Video Proofing</span>
                 </div>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -112,7 +84,12 @@ export function AppSidebar() {
           <SidebarMenu>
             {navMain.map((item) =>
               item.items ? (
-                <Collapsible key={item.title} asChild defaultOpen={item.isActive} className="group/collapsible">
+                <Collapsible
+                  key={item.title}
+                  asChild
+                  defaultOpen={isNavGroupActive(location.pathname, item.items)}
+                  className="group/collapsible"
+                >
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton tooltip={item.title}>
@@ -124,9 +101,18 @@ export function AppSidebar() {
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {item.items.map((sub) => (
-                          <SidebarMenuSubItem key={sub.title}>
-                            <SidebarMenuSubButton asChild>
-                              <a href={sub.url}>{sub.title}</a>
+                          <SidebarMenuSubItem key={sub.url}>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={isNavItemActive(location.pathname, sub.url)}
+                            >
+                              <NavLink
+                                to={sub.url}
+                                className={cn(sub.comingSoon && "text-muted-foreground")}
+                              >
+                                <span>{sub.title}</span>
+                                {sub.comingSoon ? <ComingSoonBadge /> : null}
+                              </NavLink>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
                         ))}
@@ -136,12 +122,23 @@ export function AppSidebar() {
                 </Collapsible>
               ) : (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton tooltip={item.title} isActive={item.isActive}>
-                    <item.icon />
-                    <span>{item.title}</span>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip={item.title}
+                    isActive={isNavItemActive(location.pathname, item.url)}
+                  >
+                    <NavLink
+                      to={item.url}
+                      end={item.url === "/"}
+                      className={cn(item.comingSoon && "text-muted-foreground")}
+                    >
+                      <item.icon />
+                      <span>{item.title}</span>
+                      {item.comingSoon ? <ComingSoonBadge /> : null}
+                    </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              )
+              ),
             )}
           </SidebarMenu>
         </SidebarGroup>
@@ -151,9 +148,19 @@ export function AppSidebar() {
           <SidebarMenu>
             {navSecondary.map((item) => (
               <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton tooltip={item.title}>
-                  <item.icon />
-                  <span>{item.title}</span>
+                <SidebarMenuButton
+                  asChild
+                  tooltip={item.title}
+                  isActive={isNavItemActive(location.pathname, item.url)}
+                >
+                  <NavLink
+                    to={item.url}
+                    className={cn(item.comingSoon && "text-muted-foreground")}
+                  >
+                    <item.icon />
+                    <span>{item.title}</span>
+                    {item.comingSoon ? <ComingSoonBadge /> : null}
+                  </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
@@ -198,12 +205,14 @@ export function AppSidebar() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User className="mr-2 size-4" />
-                  Profile
+                <DropdownMenuItem asChild>
+                  <Link to="/profile">
+                    <User className="mr-2 size-4" />
+                    Profile
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem disabled>
                   <LogOut className="mr-2 size-4" />
                   Log out
                 </DropdownMenuItem>
