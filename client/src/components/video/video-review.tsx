@@ -16,6 +16,7 @@ import { VideoControls } from "@/components/video/video-controls"
 import { VideoHotkeys } from "@/components/video/video-hotkeys"
 import { VideoLoadingOverlay } from "@/components/video/video-loading-overlay"
 import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
 import { VideoPlayerProvider } from "@/context/video-player-provider"
 import { useVideoPlayer } from "@/hooks/use-video-player"
 import { getVideoUrl } from "@/lib/api"
@@ -109,6 +110,7 @@ function VideoReviewLayout({
     (commentsPanelOpen || Boolean(composer)) && !focusMode && !isFullscreen
   const displayTitle = title ?? filename
   const immersive = focusMode || isFullscreen
+  const hasApprovalActions = Boolean(onMarkNeedsRevision || onMarkApproved)
 
   return (
     <div
@@ -145,7 +147,7 @@ function VideoReviewLayout({
                 </p>
               </div>
 
-              <div className="flex shrink-0 items-center gap-1">
+              <div className="flex shrink-0 items-center">
                 <VideoApprovalActions
                   onMarkNeedsRevision={
                     onMarkNeedsRevision
@@ -158,33 +160,43 @@ function VideoReviewLayout({
                   statusUpdating={statusUpdating}
                 />
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={toggleCommentsPanel}
-                  aria-label={showCommentsPanel ? "Hide comments panel" : "Show comments panel"}
-                  aria-pressed={showCommentsPanel}
-                  title={`${showCommentsPanel ? "Hide" : "Show"} comments (T)`}
-                >
-                  {showCommentsPanel ? (
-                    <PanelRightClose className="size-4" />
-                  ) : (
-                    <PanelRightOpen className="size-4" />
-                  )}
-                </Button>
+                {hasApprovalActions ? (
+                  <Separator
+                    orientation="vertical"
+                    className="mx-4 h-6"
+                    decorative
+                  />
+                ) : null}
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={toggleFocusMode}
-                  aria-label="Enter focus mode"
-                  aria-pressed={focusMode}
-                  title="Focus mode (Z)"
-                >
-                  <Focus className="size-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={toggleCommentsPanel}
+                    aria-label={showCommentsPanel ? "Hide comments panel" : "Show comments panel"}
+                    aria-pressed={showCommentsPanel}
+                    title={`${showCommentsPanel ? "Hide" : "Show"} comments (T)`}
+                  >
+                    {showCommentsPanel ? (
+                      <PanelRightClose className="size-4" />
+                    ) : (
+                      <PanelRightOpen className="size-4" />
+                    )}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={toggleFocusMode}
+                    aria-label="Enter focus mode"
+                    aria-pressed={focusMode}
+                    title="Focus mode (Z)"
+                  >
+                    <Focus className="size-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           ) : null}
