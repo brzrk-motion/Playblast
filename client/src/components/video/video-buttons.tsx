@@ -23,7 +23,7 @@ import {
 import { cn } from "@/lib/utils"
 
 const controlButtonClass =
-  "size-9 text-foreground hover:bg-accent hover:text-accent-foreground"
+  "size-9 text-foreground hover:bg-accent hover:text-accent-foreground active:bg-accent/80"
 
 interface VideoControlButtonProps {
   label: string

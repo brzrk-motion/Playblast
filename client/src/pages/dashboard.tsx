@@ -4,6 +4,7 @@ import { VersionStatusBadge } from "@/components/project/version-status-badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { ProjectCardSkeleton } from "@/components/dashboard/project-card-skeleton"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Sheet,
@@ -83,9 +85,9 @@ function ProjectCard({ project, compact = false }: ProjectCardProps) {
   return (
     <Link
       to={`/projects/${encodeURIComponent(project.id)}`}
-      className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="block rounded-xl focus-ring"
     >
-      <Card className="h-full border-muted transition-colors hover:border-primary/40 hover:bg-muted/20">
+      <Card className="interactive-card h-full border-muted">
         <CardHeader className={compact ? "gap-2 pb-2" : "pb-3"}>
           <div className="flex items-start justify-between gap-2">
             <CardTitle className={compact ? "text-sm leading-snug" : "text-base leading-snug"}>
@@ -243,7 +245,7 @@ export function DashboardPage() {
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-28 rounded-xl" />
+            <Skeleton key={index} className="h-28 rounded-xl" aria-hidden />
           ))}
         </div>
       ) : error ? (
@@ -357,7 +359,7 @@ export function DashboardPage() {
           {loading ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 3 }).map((_, index) => (
-                <Skeleton key={index} className="h-36 rounded-xl" />
+                <ProjectCardSkeleton key={index} />
               ))}
             </div>
           ) : error ? null : projects.length === 0 ? (
@@ -429,7 +431,14 @@ export function DashboardPage() {
 
             <SheetFooter>
               <Button type="submit" disabled={creating}>
-                {creating ? "Creating..." : "Create Project"}
+                {creating ? (
+                  <>
+                    <Spinner className="size-4" />
+                    Creating…
+                  </>
+                ) : (
+                  "Create Project"
+                )}
               </Button>
             </SheetFooter>
           </form>

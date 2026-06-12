@@ -3,6 +3,7 @@ import { formatTime } from "@vidstack/react"
 import { MessageSquarePlus, Pencil, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { Input } from "@/components/ui/input"
 import { useVideoPlayer } from "@/hooks/use-video-player"
 import { cn } from "@/lib/utils"
@@ -42,6 +43,7 @@ function CommentComposerForm({
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const authorRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -56,14 +58,7 @@ function CommentComposerForm({
     }
 
     window.localStorage.setItem(AUTHOR_STORAGE_KEY, author)
-
-    const submitButton = form.querySelector<HTMLButtonElement>(
-      'button[type="submit"]',
-    )
-    if (submitButton) {
-      submitButton.disabled = true
-      submitButton.textContent = "Saving…"
-    }
+    setSubmitting(true)
 
     try {
       await onSubmit({
@@ -75,10 +70,7 @@ function CommentComposerForm({
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add comment")
-      if (submitButton) {
-        submitButton.disabled = false
-        submitButton.textContent = "Add comment"
-      }
+      setSubmitting(false)
     }
   }
 
@@ -107,6 +99,7 @@ function CommentComposerForm({
         defaultValue={getStoredAuthor()}
         placeholder="Your name"
         aria-label="Author name"
+        disabled={submitting}
       />
 
       <textarea
@@ -116,7 +109,8 @@ function CommentComposerForm({
         placeholder="Leave feedback at this timestamp…"
         aria-label="Comment body"
         rows={3}
-        className="w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+        className="w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] duration-150 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
+        disabled={submitting}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
             event.preventDefault()
@@ -148,11 +142,24 @@ function CommentComposerForm({
           playhead
         </p>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onClose}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onClose}
+            disabled={submitting}
+          >
             Cancel
           </Button>
-          <Button type="submit" size="sm">
-            Add comment
+          <Button type="submit" size="sm" disabled={submitting}>
+            {submitting ? (
+              <>
+                <Spinner className="size-3.5" />
+                Saving…
+              </>
+            ) : (
+              "Add comment"
+            )}
           </Button>
         </div>
       </div>
@@ -170,7 +177,7 @@ export function CommentComposer({ onSubmit, className }: CommentComposerProps) {
   return (
     <div
       className={cn(
-        "absolute inset-x-0 bottom-20 z-30 mx-3 rounded-lg border border-border bg-surface-overlay p-4 shadow-lg backdrop-blur-sm",
+        "transition-panel absolute inset-x-0 bottom-20 z-30 mx-3 animate-in fade-in-0 slide-in-from-bottom-2 rounded-lg border border-border bg-surface-overlay p-4 shadow-lg backdrop-blur-sm duration-200",
         className,
       )}
     >
