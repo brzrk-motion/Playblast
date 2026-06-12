@@ -1,11 +1,12 @@
 import { useRef } from "react"
 import { formatTime } from "@vidstack/react"
-import { MessageSquarePlus, X } from "lucide-react"
+import { MessageSquarePlus, Pencil, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useVideoPlayer } from "@/hooks/use-video-player"
 import { cn } from "@/lib/utils"
+import type { FrameAnnotation } from "@/types/annotation"
 
 const AUTHOR_STORAGE_KEY = "playblast-comment-author"
 
@@ -22,16 +23,19 @@ export interface CommentComposerProps {
     timestamp: number
     body: string
     author: string
+    annotation?: FrameAnnotation
   }) => Promise<void>
   className?: string
 }
 
 function CommentComposerForm({
   timestamp,
+  draftAnnotation,
   onSubmit,
   onClose,
 }: {
   timestamp: number
+  draftAnnotation: FrameAnnotation | null
   onSubmit: CommentComposerProps["onSubmit"]
   onClose: () => void
 }) {
@@ -60,7 +64,12 @@ function CommentComposerForm({
     }
 
     try {
-      await onSubmit({ timestamp, body, author })
+      await onSubmit({
+        timestamp,
+        body,
+        author,
+        annotation: draftAnnotation ?? undefined,
+      })
       onClose()
     } catch {
       if (submitButton) {
@@ -113,6 +122,17 @@ function CommentComposerForm({
         }}
       />
 
+      <div className="flex items-center gap-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+        <Pencil className="size-3.5 shrink-0 text-primary" />
+        <span>
+          {draftAnnotation
+            ? `${draftAnnotation.shapes.length} frame annotation${
+                draftAnnotation.shapes.length === 1 ? "" : "s"
+              } attached`
+            : "Draw on the paused frame with the toolbar above the video"}
+        </span>
+      </div>
+
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
           Press <kbd className="rounded border px-1">C</kbd> to comment at the
@@ -132,7 +152,7 @@ function CommentComposerForm({
 }
 
 export function CommentComposer({ onSubmit, className }: CommentComposerProps) {
-  const { composer, closeComposer } = useVideoPlayer()
+  const { composer, draftAnnotation, closeComposer } = useVideoPlayer()
 
   if (!composer) {
     return null
@@ -148,6 +168,7 @@ export function CommentComposer({ onSubmit, className }: CommentComposerProps) {
       <CommentComposerForm
         key={composer.timestamp}
         timestamp={composer.timestamp}
+        draftAnnotation={draftAnnotation}
         onSubmit={onSubmit}
         onClose={closeComposer}
       />

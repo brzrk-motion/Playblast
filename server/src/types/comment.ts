@@ -1,3 +1,5 @@
+import type { FrameAnnotation } from "./annotation.js"
+
 export interface Comment {
   id: string
   versionId: string
@@ -7,6 +9,7 @@ export interface Comment {
   author: string
   createdAt: string
   resolved: boolean
+  annotation?: FrameAnnotation
 }
 
 export interface CreateCommentInput {
@@ -14,6 +17,7 @@ export interface CreateCommentInput {
   timestamp: number
   body: string
   author: string
+  annotation?: FrameAnnotation
 }
 
 export interface UpdateCommentInput {

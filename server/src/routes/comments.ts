@@ -1,4 +1,5 @@
 import { Router } from "express"
+import { parseFrameAnnotation } from "../lib/annotation.js"
 import {
   createComment,
   deleteComment,
@@ -9,12 +10,14 @@ import {
   listComments,
   updateComment,
 } from "../storage/index.js"
+import type { FrameAnnotation } from "../types/annotation.js"
 import { getParam, getVersionRouteParams } from "../utils/params.js"
 
 function parseCreateCommentBody(body: unknown): {
   timestamp: number
   text: string
   author: string
+  annotation?: FrameAnnotation
 } | { error: string } {
   const timestamp = (body as { timestamp?: unknown })?.timestamp
   const text =
@@ -38,7 +41,22 @@ function parseCreateCommentBody(body: unknown): {
     return { error: "Comment author is required." }
   }
 
-  return { timestamp, text, author }
+  const annotationInput = (body as { annotation?: unknown })?.annotation
+
+  if (annotationInput === undefined) {
+    return { timestamp, text, author }
+  }
+
+  const parsedAnnotation = parseFrameAnnotation(annotationInput)
+  if ("error" in parsedAnnotation) {
+    return parsedAnnotation
+  }
+
+  if (Math.abs(parsedAnnotation.timestamp - timestamp) > 0.05) {
+    return { error: "Annotation timestamp must match the comment timestamp." }
+  }
+
+  return { timestamp, text, author, annotation: parsedAnnotation }
 }
 
 const commentsRouter = Router({ mergeParams: true })
@@ -87,6 +105,7 @@ commentsRouter.post("/", (req, res) => {
     timestamp: parsed.timestamp,
     body: parsed.text,
     author: parsed.author,
+    annotation: parsed.annotation,
   })
 
   res.status(201).json(comment)
@@ -138,6 +157,7 @@ commentByIdRouter.post("/", (req, res) => {
     timestamp: parsed.timestamp,
     body: parsed.text,
     author: parsed.author,
+    annotation: parsed.annotation,
   })
 
   res.status(201).json(comment)

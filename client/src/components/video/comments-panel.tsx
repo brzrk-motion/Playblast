@@ -1,6 +1,13 @@
 import { useState } from "react"
 import { formatTime } from "@vidstack/react"
-import { Check, ChevronDown, ChevronRight, MessageSquare, RotateCcw } from "lucide-react"
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  MessageSquare,
+  Pencil,
+  RotateCcw,
+} from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -61,6 +68,12 @@ function CommentRow({
               {formatTime(comment.timestamp)}
             </span>
             <span className="text-xs text-muted-foreground">{comment.author}</span>
+            {comment.annotation ? (
+              <Badge variant="outline" className="gap-1 text-[10px]">
+                <Pencil className="size-2.5" />
+                Frame
+              </Badge>
+            ) : null}
             {comment.resolved ? (
               <Badge variant="outline" className="ml-auto text-[10px]">
                 Resolved

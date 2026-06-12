@@ -181,6 +181,7 @@ export function createComment(input: CreateCommentInput): Comment {
       author: input.author,
       createdAt: new Date().toISOString(),
       resolved: false,
+      ...(input.annotation ? { annotation: input.annotation } : {}),
     }
 
     store.comments.push(comment)

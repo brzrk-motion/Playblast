@@ -1,3 +1,4 @@
+import type { FrameAnnotation } from "@/types/annotation"
 import type { Comment } from "@/types/comment"
 import type { Project, ProjectSummary } from "@/types/project"
 import type { UploadProgress, UploadResponse } from "@/types/upload"
@@ -93,6 +94,7 @@ export async function createComment(input: {
   timestamp: number
   body: string
   author: string
+  annotation?: FrameAnnotation
 }): Promise<Comment> {
   const response = await fetch("/api/comments", {
     method: "POST",
@@ -124,6 +126,7 @@ export async function createCommentForVersion(
     timestamp: number
     body: string
     author: string
+    annotation?: FrameAnnotation
   },
 ): Promise<Comment> {
   const response = await fetch(

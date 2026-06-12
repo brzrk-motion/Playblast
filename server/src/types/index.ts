@@ -1,3 +1,8 @@
+export type {
+  AnnotationShape,
+  AnnotationTool,
+  FrameAnnotation,
+} from "./annotation.js"
 export type { Comment, CreateCommentInput, UpdateCommentInput } from "./comment.js"
 export type {
   CreateProjectInput,

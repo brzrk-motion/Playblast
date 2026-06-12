@@ -5,11 +5,15 @@ import {
   VideoPlayerContext,
   type ComposerState,
 } from "@/context/video-player-context"
+import type { FrameAnnotation } from "@/types/annotation"
 
 export function VideoPlayerProvider({ children }: { children: ReactNode }) {
   const remote = useMediaRemote()
   const currentTime = useMediaState("currentTime")
   const [composer, setComposer] = useState<ComposerState | null>(null)
+  const [draftAnnotation, setDraftAnnotation] = useState<FrameAnnotation | null>(
+    null,
+  )
 
   const seek = useCallback(
     (timestamp: number) => {
@@ -33,6 +37,7 @@ export function VideoPlayerProvider({ children }: { children: ReactNode }) {
 
   const closeComposer = useCallback(() => {
     setComposer(null)
+    setDraftAnnotation(null)
   }, [])
 
   const value = useMemo(
@@ -41,10 +46,20 @@ export function VideoPlayerProvider({ children }: { children: ReactNode }) {
       seek,
       pause,
       composer,
+      draftAnnotation,
       openComposer,
       closeComposer,
+      setDraftAnnotation,
     }),
-    [closeComposer, composer, currentTime, openComposer, pause, seek],
+    [
+      closeComposer,
+      composer,
+      currentTime,
+      draftAnnotation,
+      openComposer,
+      pause,
+      seek,
+    ],
   )
 
   return (
