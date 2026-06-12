@@ -7,6 +7,7 @@ import { DashboardPage } from "@/pages/dashboard"
 import { DeliverablePage } from "@/pages/deliverable"
 import { ProjectOverviewPage } from "@/pages/project-overview"
 import { ProjectsPage } from "@/pages/projects"
+import { SettingsPage } from "@/pages/settings"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
@@ -29,7 +30,7 @@ function App() {
                 path="projects/:projectId/deliverables/:deliverableId/compare"
                 element={<ComparePage />}
               />
-              <Route path="settings" element={<ComingSoonPage />} />
+              <Route path="settings" element={<SettingsPage />} />
               <Route path="profile" element={<ComingSoonPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

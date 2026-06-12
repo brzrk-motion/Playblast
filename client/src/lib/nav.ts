@@ -33,7 +33,6 @@ export const navSecondary: NavItem[] = [
     title: "Settings",
     icon: Settings,
     url: "/settings",
-    comingSoon: true,
   },
 ]
 
@@ -43,10 +42,6 @@ export type ComingSoonPageConfig = {
 }
 
 export const comingSoonPages: Record<string, ComingSoonPageConfig> = {
-  "/settings": {
-    title: "Settings",
-    description: "Configure workspace preferences, notifications, and integrations.",
-  },
   "/profile": {
     title: "Profile",
     description: "Manage your account details and personal preferences.",
@@ -72,6 +67,10 @@ export function getPageHeader(pathname: string): { title: string; subtitle?: str
 
   if (pathname === "/") {
     return { title: "Dashboard" }
+  }
+
+  if (pathname === "/settings") {
+    return { title: "Settings" }
   }
 
   const comingSoon = comingSoonPages[pathname]
