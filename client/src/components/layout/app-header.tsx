@@ -1,9 +1,6 @@
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
-import { Badge } from "@/components/ui/badge"
-import { Bell } from "lucide-react"
-import { Button } from "@/components/ui/button"
 
 interface AppHeaderProps {
   title?: string
@@ -24,10 +21,6 @@ export function AppHeader({ title = "Dashboard", subtitle }: AppHeaderProps) {
       </div>
 
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon-sm" className="relative" aria-label="Notifications">
-          <Bell className="size-4" />
-          <Badge className="absolute -right-0.5 -top-0.5 size-2 p-0 border-background border-2" />
-        </Button>
         <ThemeToggle />
       </div>
     </header>

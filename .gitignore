@@ -7,7 +7,8 @@ dist-ssr
 client/dist
 server/dist
 server/uploads
-server/data
+server/data/*
+!server/data/store.json
 
 # Logs
 logs
