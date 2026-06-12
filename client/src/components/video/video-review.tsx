@@ -74,6 +74,7 @@ function VideoReviewLayout({
 }: VideoReviewLayoutProps) {
   const [commentsPanelOpenInternal, setCommentsPanelOpenInternal] = useState(true)
   const [focusModeInternal, setFocusModeInternal] = useState(false)
+  const [approveConfirmOpen, setApproveConfirmOpen] = useState(false)
   const isFullscreen = useMediaState("fullscreen")
   const { composer } = useVideoPlayer()
 
@@ -155,6 +156,8 @@ function VideoReviewLayout({
                   onMarkApproved={
                     onMarkApproved ? () => onMarkApproved() : undefined
                   }
+                  approveConfirmOpen={approveConfirmOpen}
+                  onApproveConfirmOpenChange={setApproveConfirmOpen}
                   statusUpdating={statusUpdating}
                 />
 
@@ -197,7 +200,11 @@ function VideoReviewLayout({
               onMarkNeedsRevision={
                 statusUpdating ? undefined : onMarkNeedsRevision
               }
-              onMarkApproved={statusUpdating ? undefined : onMarkApproved}
+              onRequestApproveConfirm={
+                statusUpdating || !onMarkApproved
+                  ? undefined
+                  : () => setApproveConfirmOpen(true)
+              }
               onToggleCommentsPanel={focusMode ? undefined : toggleCommentsPanel}
               onToggleFocusMode={toggleFocusMode}
               focusMode={focusMode}

@@ -17,7 +17,7 @@ export const REVIEW_SHORTCUTS: KeyboardShortcut[] = [
   { keys: ["T"], description: "Toggle comments panel" },
   { keys: ["Z"], description: "Toggle focus mode" },
   { keys: ["R"], description: "Mark version as needs revision" },
-  { keys: ["A"], description: "Mark version as approved" },
+  { keys: ["A"], description: "Open approve confirmation" },
 ]
 
 export const HELP_SHORTCUT: KeyboardShortcut = {

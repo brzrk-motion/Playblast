@@ -46,7 +46,7 @@ export interface VideoHotkeysProps {
    */
   captureShortcuts?: boolean
   onMarkNeedsRevision?: () => void
-  onMarkApproved?: () => void
+  onRequestApproveConfirm?: () => void
   onToggleCommentsPanel?: () => void
   onToggleFocusMode?: () => void
   focusMode?: boolean
@@ -56,7 +56,7 @@ export function VideoHotkeys({
   enableCommentShortcut = true,
   captureShortcuts = true,
   onMarkNeedsRevision,
-  onMarkApproved,
+  onRequestApproveConfirm,
   onToggleCommentsPanel,
   onToggleFocusMode,
   focusMode = false,
@@ -79,7 +79,8 @@ export function VideoHotkeys({
   }, [currentTime, duration, frameDuration])
 
   const showReviewShortcuts =
-    enableCommentShortcut || Boolean(onMarkNeedsRevision || onMarkApproved)
+    enableCommentShortcut ||
+    Boolean(onMarkNeedsRevision || onRequestApproveConfirm)
 
   useEffect(() => {
     if (!captureShortcuts) {
@@ -159,11 +160,11 @@ export function VideoHotkeys({
           return
         case "a":
         case "A":
-          if (!onMarkApproved) {
+          if (!onRequestApproveConfirm) {
             return
           }
           event.preventDefault()
-          onMarkApproved()
+          onRequestApproveConfirm()
           return
         case "t":
         case "T":
@@ -192,7 +193,7 @@ export function VideoHotkeys({
     captureShortcuts,
     enableCommentShortcut,
     focusMode,
-    onMarkApproved,
+    onRequestApproveConfirm,
     onMarkNeedsRevision,
     onToggleCommentsPanel,
     onToggleFocusMode,
