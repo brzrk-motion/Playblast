@@ -6,6 +6,7 @@ dist
 dist-ssr
 client/dist
 server/dist
+server/uploads
 
 # Logs
 logs
