@@ -69,7 +69,7 @@ export function VersionSelector({
             <div className="min-w-0 flex-1 space-y-1">
               <div className="flex items-center gap-2">
                 <p className="font-medium">{version.label}</p>
-                <VersionStatusBadge status={version.status} className="text-[10px]" />
+                <VersionStatusBadge status={version.status} className="type-micro" />
               </div>
               <p className="truncate text-xs text-muted-foreground">
                 {version.filename}

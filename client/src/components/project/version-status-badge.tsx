@@ -4,12 +4,9 @@ import { cn } from "@/lib/utils"
 import type { VersionStatus } from "@/types/version"
 
 const STATUS_STYLES: Record<VersionStatus, string> = {
-  pending_review:
-    "border-border bg-muted text-muted-foreground [a&]:hover:bg-muted",
-  needs_revision:
-    "border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  approved:
-    "border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  pending_review: "status-pending [a&]:hover:bg-status-pending-muted",
+  needs_revision: "status-warning [a&]:hover:bg-status-warning-muted",
+  approved: "status-success [a&]:hover:bg-status-success-muted",
 }
 
 interface VersionStatusBadgeProps {

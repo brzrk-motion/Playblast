@@ -142,7 +142,7 @@ function TextStampPrompt({
   return (
     <form
       className={cn(
-        "w-44 -translate-x-1/2 rounded-md border border-border bg-card/95 p-2 shadow-lg backdrop-blur-sm",
+        "w-44 -translate-x-1/2 rounded-md border border-border bg-surface-overlay p-2 shadow-lg backdrop-blur-sm",
         className,
       )}
       style={{ left, top }}
