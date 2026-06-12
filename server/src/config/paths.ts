@@ -1,5 +1,6 @@
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { config } from "./env.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -8,7 +9,7 @@ export const SERVER_ROOT = path.resolve(__dirname, "../..")
 export const CLIENT_DIST = path.resolve(SERVER_ROOT, "../client/dist")
 
 export function getProjectUploadDir(projectId: string): string {
-  return path.join(SERVER_ROOT, "uploads", projectId)
+  return path.join(config.uploadDir, projectId)
 }
 
 export function getUploadDir(projectId: string, version: string): string {

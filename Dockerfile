@@ -21,6 +21,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV UPLOAD_DIR=/app/uploads
+ENV MAX_UPLOAD_SIZE=5000
 
 COPY package.json package-lock.json ./
 COPY client/package.json ./client/

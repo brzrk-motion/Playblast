@@ -4,7 +4,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - playblast_uploads:/app/server/uploads
+      - playblast_uploads:/app/uploads
     restart: unless-stopped
 
 volumes:

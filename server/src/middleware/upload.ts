@@ -2,10 +2,9 @@ import fs from "node:fs"
 import path from "node:path"
 import multer from "multer"
 import type { NextFunction, Request, Response } from "express"
+import { getMaxUploadSizeBytes } from "../config/env.js"
 import { getUploadDir } from "../config/paths.js"
 import { getParam } from "../utils/params.js"
-
-const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024 // 2 GB
 
 const storage = multer.diskStorage({
   destination(req, _file, cb) {
@@ -26,7 +25,7 @@ const storage = multer.diskStorage({
 
 export const upload = multer({
   storage,
-  limits: { fileSize: MAX_FILE_SIZE },
+  limits: { fileSize: getMaxUploadSizeBytes() },
   fileFilter(_req, file, cb) {
     if (file.mimetype.startsWith("video/")) {
       cb(null, true)
