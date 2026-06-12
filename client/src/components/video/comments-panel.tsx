@@ -9,11 +9,12 @@ import {
   RotateCcw,
 } from "lucide-react"
 
+import { CommentComposerInline } from "@/components/video/comment-composer"
 import { CommentsPanelSkeleton } from "@/components/video/comments-panel-skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Collapsible,
   CollapsibleContent,
@@ -23,12 +24,19 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useVideoPlayer } from "@/hooks/use-video-player"
 import { cn } from "@/lib/utils"
 import type { Comment } from "@/types/comment"
+import type { FrameAnnotation } from "@/types/annotation"
 
 type CommentFilter = "all" | "open" | "resolved"
 
 export interface CommentsPanelProps {
   comments: Comment[]
   loading?: boolean
+  onCreateComment: (input: {
+    timestamp: number
+    body: string
+    author: string
+    annotation?: FrameAnnotation
+  }) => Promise<void>
   onResolveComment?: (commentId: string, resolved: boolean) => void
   resolvingCommentId?: string | null
   className?: string
@@ -60,7 +68,7 @@ function CommentRow({
         comment.resolved && "opacity-60",
       )}
     >
-      <div className="flex items-start gap-1 px-4 py-3">
+      <div className="flex items-start gap-1 px-3 py-2.5">
         <button
           type="button"
           className="interactive-row -m-1 min-w-0 flex-1 p-1 text-left"
@@ -121,10 +129,12 @@ function CommentRow({
 export function CommentsPanel({
   comments,
   loading = false,
+  onCreateComment,
   onResolveComment,
   resolvingCommentId = null,
   className,
 }: CommentsPanelProps) {
+  const { openComposer } = useVideoPlayer()
   const [filter, setFilter] = useState<CommentFilter>("all")
   const [resolvedExpanded, setResolvedExpanded] = useState(false)
 
@@ -151,16 +161,17 @@ export function CommentsPanel({
         : "No comments yet."
 
   return (
-    <Card className={cn("flex h-full min-h-0 flex-col", className)}>
-      <CardHeader className="shrink-0 border-b">
+    <Card className={cn("flex h-full min-h-0 flex-col overflow-hidden", className)}>
+      <CardHeader className="shrink-0 space-y-2 border-b px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">Comments</CardTitle>
-          <Badge variant="secondary">{openComments.length}</Badge>
+          <CardTitle className="text-sm">Comments</CardTitle>
+          <Badge variant="secondary" className="type-micro">
+            {openComments.length} open
+          </Badge>
         </div>
-        <CardDescription>Sorted by timestamp. Click to seek.</CardDescription>
 
         <div
-          className="flex gap-1 pt-1"
+          className="flex gap-1"
           role="group"
           aria-label="Filter comments"
         >
@@ -179,24 +190,24 @@ export function CommentsPanel({
         </div>
       </CardHeader>
 
-      <CardContent className="min-h-0 flex-1 p-0">
+      <CardContent className="flex min-h-0 flex-1 flex-col p-0">
         {loading ? (
-          <ScrollArea className="h-full max-h-[min(70vh,640px)]">
+          <ScrollArea className="min-h-0 flex-1">
             <CommentsPanelSkeleton />
           </ScrollArea>
         ) : filteredComments.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 px-6 py-12 text-center text-muted-foreground">
-            <MessageSquare className="size-8 opacity-50" />
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center text-muted-foreground">
+            <MessageSquare className="size-7 opacity-50" />
             <p className="text-sm">{emptyMessage}</p>
             {filter === "all" ? (
               <p className="text-xs">
-                Press <kbd className="rounded border px-1 text-foreground">C</kbd> or
-                click the scrub bar to add one.
+                Press <kbd className="rounded border px-1 text-foreground">C</kbd> or use
+                the input below.
               </p>
             ) : null}
           </div>
         ) : (
-          <ScrollArea className="h-full max-h-[min(70vh,640px)]">
+          <ScrollArea className="min-h-0 flex-1">
             {showOpenList && (filter === "open" || filter === "all") ? (
               <ul className="divide-y">
                 {openComments.map((comment) => (
@@ -228,7 +239,7 @@ export function CommentsPanel({
                 <CollapsibleTrigger asChild>
                   <button
                     type="button"
-                    className="focus-ring flex w-full items-center gap-2 border-t bg-muted/30 px-4 py-2.5 text-left text-xs text-muted-foreground transition-interactive hover:bg-muted/50 active:bg-muted/70"
+                    className="focus-ring flex w-full items-center gap-2 border-t bg-muted/30 px-3 py-2 text-left text-xs text-muted-foreground transition-interactive hover:bg-muted/50 active:bg-muted/70"
                   >
                     {resolvedExpanded ? (
                       <ChevronDown className="size-3.5 shrink-0" />
@@ -236,8 +247,7 @@ export function CommentsPanel({
                       <ChevronRight className="size-3.5 shrink-0" />
                     )}
                     <span>
-                      {resolvedComments.length}{" "}
-                      resolved {resolvedComments.length === 1 ? "comment" : "comments"}
+                      {resolvedComments.length} resolved
                     </span>
                     <span className="ml-auto">{resolvedExpanded ? "Hide" : "Show"}</span>
                   </button>
@@ -261,6 +271,11 @@ export function CommentsPanel({
             ) : null}
           </ScrollArea>
         )}
+
+        <CommentComposerInline
+          onSubmit={onCreateComment}
+          onOpenComposer={openComposer}
+        />
       </CardContent>
     </Card>
   )

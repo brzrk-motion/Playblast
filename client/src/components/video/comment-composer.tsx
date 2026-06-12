@@ -29,16 +29,18 @@ export interface CommentComposerProps {
   className?: string
 }
 
-function CommentComposerForm({
+export function CommentComposerForm({
   timestamp,
   draftAnnotation,
   onSubmit,
   onClose,
+  variant = "inline",
 }: {
   timestamp: number
   draftAnnotation: FrameAnnotation | null
   onSubmit: CommentComposerProps["onSubmit"]
   onClose: () => void
+  variant?: "inline" | "overlay"
 }) {
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const authorRef = useRef<HTMLInputElement>(null)
@@ -74,17 +76,24 @@ function CommentComposerForm({
     }
   }
 
+  const isInline = variant === "inline"
+
   return (
-    <form className="space-y-3" onSubmit={(event) => void handleSubmit(event)}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-          <MessageSquarePlus className="size-4 text-primary" />
-          Comment at {formatTime(timestamp)}
+    <form
+      className={cn("space-y-2", isInline && "space-y-2")}
+      onSubmit={(event) => void handleSubmit(event)}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-foreground">
+          <MessageSquarePlus className="size-4 shrink-0 text-primary" />
+          <span className="truncate">
+            {isInline ? `At ${formatTime(timestamp)}` : `Comment at ${formatTime(timestamp)}`}
+          </span>
         </div>
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
+          size="icon-xs"
           className="shrink-0"
           onClick={onClose}
           aria-label="Close comment composer"
@@ -93,42 +102,55 @@ function CommentComposerForm({
         </Button>
       </div>
 
-      <Input
-        ref={authorRef}
-        name="author"
-        defaultValue={getStoredAuthor()}
-        placeholder="Your name"
-        aria-label="Author name"
-        disabled={submitting}
-      />
+      <div className={cn("flex gap-2", isInline ? "flex-col sm:flex-row" : "flex-col")}>
+        <Input
+          ref={authorRef}
+          name="author"
+          defaultValue={getStoredAuthor()}
+          placeholder="Your name"
+          aria-label="Author name"
+          disabled={submitting}
+          className={isInline ? "sm:w-32" : undefined}
+        />
 
-      <textarea
-        ref={bodyRef}
-        name="body"
-        autoFocus
-        placeholder="Leave feedback at this timestamp…"
-        aria-label="Comment body"
-        rows={3}
-        className="w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] duration-150 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
-        disabled={submitting}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.preventDefault()
-            onClose()
-          }
-        }}
-      />
-
-      <div className="flex items-center gap-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-        <Pencil className="size-3.5 shrink-0 text-primary" />
-        <span>
-          {draftAnnotation
-            ? `${draftAnnotation.shapes.length} frame annotation${
-                draftAnnotation.shapes.length === 1 ? "" : "s"
-              } attached`
-            : "Draw on the paused frame with the toolbar above the video"}
-        </span>
+        <textarea
+          ref={bodyRef}
+          name="body"
+          autoFocus
+          placeholder="Leave feedback at this timestamp…"
+          aria-label="Comment body"
+          rows={isInline ? 2 : 3}
+          className="w-full flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] duration-150 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
+          disabled={submitting}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault()
+              onClose()
+            }
+          }}
+        />
       </div>
+
+      {draftAnnotation ? (
+        <div className="flex items-center gap-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
+          <Pencil className="size-3.5 shrink-0 text-primary" />
+          <span>
+            {draftAnnotation.shapes.length} frame annotation
+            {draftAnnotation.shapes.length === 1 ? "" : "s"} attached — draw on the
+            paused video
+          </span>
+        </div>
+      ) : isInline ? (
+        <p className="text-xs text-muted-foreground">
+          Draw on the paused frame to attach annotations. Press{" "}
+          <kbd className="rounded border px-1">C</kbd> to comment at the playhead.
+        </p>
+      ) : (
+        <div className="flex items-center gap-2 rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          <Pencil className="size-3.5 shrink-0 text-primary" />
+          <span>Draw on the paused frame with the toolbar above the video</span>
+        </div>
+      )}
 
       {error ? (
         <p role="alert" className="text-xs text-destructive">
@@ -136,58 +158,67 @@ function CommentComposerForm({
         </p>
       ) : null}
 
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">
-          Press <kbd className="rounded border px-1">C</kbd> to comment at the
-          playhead
-        </p>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            disabled={submitting}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" size="sm" disabled={submitting}>
-            {submitting ? (
-              <>
-                <Spinner className="size-3.5" />
-                Saving…
-              </>
-            ) : (
-              "Add comment"
-            )}
-          </Button>
-        </div>
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onClose}
+          disabled={submitting}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" size="sm" disabled={submitting}>
+          {submitting ? (
+            <>
+              <Spinner className="size-3.5" />
+              Saving…
+            </>
+          ) : (
+            "Add comment"
+          )}
+        </Button>
       </div>
     </form>
   )
 }
 
-export function CommentComposer({ onSubmit, className }: CommentComposerProps) {
-  const { composer, draftAnnotation, closeComposer } = useVideoPlayer()
+export function CommentComposerInline({
+  onSubmit,
+  onOpenComposer,
+  className,
+}: CommentComposerProps & {
+  onOpenComposer: (timestamp: number) => void
+}) {
+  const { composer, draftAnnotation, closeComposer, currentTime } = useVideoPlayer()
 
-  if (!composer) {
-    return null
+  if (composer) {
+    return (
+      <div className={cn("border-t bg-muted/20 p-3", className)}>
+        <CommentComposerForm
+          key={composer.timestamp}
+          timestamp={composer.timestamp}
+          draftAnnotation={draftAnnotation}
+          onSubmit={onSubmit}
+          onClose={closeComposer}
+          variant="inline"
+        />
+      </div>
+    )
   }
 
   return (
-    <div
-      className={cn(
-        "transition-panel absolute inset-x-0 bottom-20 z-30 mx-3 animate-in fade-in-0 slide-in-from-bottom-2 rounded-lg border border-border bg-surface-overlay p-4 shadow-lg backdrop-blur-sm duration-200",
-        className,
-      )}
-    >
-      <CommentComposerForm
-        key={composer.timestamp}
-        timestamp={composer.timestamp}
-        draftAnnotation={draftAnnotation}
-        onSubmit={onSubmit}
-        onClose={closeComposer}
-      />
+    <div className={cn("shrink-0 border-t bg-muted/20 p-3", className)}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-full justify-start gap-2 text-muted-foreground"
+        onClick={() => onOpenComposer(currentTime)}
+      >
+        <MessageSquarePlus className="size-4" />
+        Add comment at {formatTime(currentTime)}
+      </Button>
     </div>
   )
 }

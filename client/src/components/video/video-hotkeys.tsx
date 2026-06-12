@@ -49,6 +49,9 @@ export interface VideoHotkeysProps {
   captureShortcuts?: boolean
   onMarkNeedsRevision?: () => void
   onMarkApproved?: () => void
+  onToggleCommentsPanel?: () => void
+  onToggleFocusMode?: () => void
+  focusMode?: boolean
 }
 
 export function VideoHotkeys({
@@ -56,6 +59,9 @@ export function VideoHotkeys({
   captureShortcuts = true,
   onMarkNeedsRevision,
   onMarkApproved,
+  onToggleCommentsPanel,
+  onToggleFocusMode,
+  focusMode = false,
 }: VideoHotkeysProps) {
   const remote = useMediaRemote()
   const currentTime = useMediaState("currentTime")
@@ -154,6 +160,22 @@ export function VideoHotkeys({
           event.preventDefault()
           onMarkApproved()
           return
+        case "t":
+        case "T":
+          if (!onToggleCommentsPanel || focusMode) {
+            return
+          }
+          event.preventDefault()
+          onToggleCommentsPanel()
+          return
+        case "z":
+        case "Z":
+          if (!onToggleFocusMode) {
+            return
+          }
+          event.preventDefault()
+          onToggleFocusMode()
+          return
         default:
           return
       }
@@ -164,8 +186,11 @@ export function VideoHotkeys({
   }, [
     captureShortcuts,
     enableCommentShortcut,
+    focusMode,
     onMarkApproved,
     onMarkNeedsRevision,
+    onToggleCommentsPanel,
+    onToggleFocusMode,
     openComposer,
     remote,
     shortcutsOpen,

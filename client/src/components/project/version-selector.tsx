@@ -18,6 +18,7 @@ interface VersionSelectorProps {
   selectedLabel: string | null
   onSelect: (label: string) => void
   disabled?: boolean
+  compact?: boolean
 }
 
 function formatUploadedAt(value: string): string {
@@ -34,6 +35,7 @@ export function VersionSelector({
   selectedLabel,
   onSelect,
   disabled = false,
+  compact = false,
 }: VersionSelectorProps) {
   const sortedVersions = sortVersionsByDate(versions)
   const selectedVersion =
@@ -52,10 +54,17 @@ export function VersionSelector({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" disabled={disabled}>
-          <GitBranch />
-          {selectedVersion?.label ?? "Select version"}
-          <ChevronDown className="opacity-60" />
+        <Button
+          variant="outline"
+          size={compact ? "sm" : "default"}
+          disabled={disabled}
+          className={cn(compact && "h-8 gap-1.5 px-2.5")}
+        >
+          <GitBranch className={cn(compact && "size-3.5")} />
+          <span className="max-w-[8rem] truncate sm:max-w-[12rem]">
+            {selectedVersion?.label ?? "Select version"}
+          </span>
+          <ChevronDown className={cn("opacity-60", compact && "size-3.5")} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
