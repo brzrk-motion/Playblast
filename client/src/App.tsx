@@ -4,12 +4,14 @@ import { AppLayout } from "@/components/layout/app-layout"
 import { ComparePage } from "@/pages/compare"
 import { DashboardPage } from "@/pages/dashboard"
 import { ProjectPage } from "@/pages/project"
+import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 function App() {
   return (
     <ThemeProvider defaultTheme="dark">
       <TooltipProvider>
+        <Toaster position="bottom-right" duration={3000} closeButton />
         <BrowserRouter>
           <Routes>
             <Route element={<AppLayout />}>

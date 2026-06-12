@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useParams, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -12,21 +12,30 @@ import { VideoApprovalActions } from "@/components/video/video-approval-actions"
 import { VideoReview } from "@/components/video/video-review"
 import {
   createComment,
+  deleteComment,
   getProject,
   listComments,
   listVersions,
   resolveComment,
   updateVersionStatus,
 } from "@/lib/api"
-import { sortVersionsByDate } from "@/lib/versions"
+import {
+  humanizeApiError,
+  showErrorToast,
+  showSuccessToast,
+  showToast,
+} from "@/lib/toast"
+import { sortVersionsByDate, VERSION_STATUS_LABELS } from "@/lib/versions"
 import type { Comment } from "@/types/comment"
 import type { Project } from "@/types/project"
 import type { Version, VersionStatus } from "@/types/version"
-import { ArrowLeft, ChevronDown, Film, GitCompare, Upload } from "lucide-react"
+import { ArrowLeft, ChevronDown, Film, GitCompare, Link2, Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function ProjectPage() {
   const { projectId = "" } = useParams()
+  const [searchParams] = useSearchParams()
+  const versionFromUrl = searchParams.get("version")
   const [project, setProject] = useState<Project | null>(null)
   const [versions, setVersions] = useState<Version[]>([])
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
@@ -37,6 +46,7 @@ export function ProjectPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const [resolvingCommentId, setResolvingCommentId] = useState<string | null>(null)
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
   const [commentsLoading, setCommentsLoading] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
   const [versionsOpen, setVersionsOpen] = useState(false)
@@ -60,6 +70,13 @@ export function ProjectPage() {
       setProject(projectData)
       setVersions(sortedVersions)
       setSelectedLabel((current) => {
+        if (
+          versionFromUrl &&
+          sortedVersions.some((version) => version.label === versionFromUrl)
+        ) {
+          return versionFromUrl
+        }
+
         if (current && sortedVersions.some((version) => version.label === current)) {
           return current
         }
@@ -67,14 +84,16 @@ export function ProjectPage() {
         return sortedVersions[0]?.label ?? null
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load project")
+      const message = humanizeApiError(err, "Failed to load project")
+      setError(message)
+      showErrorToast(message)
       setProject(null)
       setVersions([])
       setSelectedLabel(null)
     } finally {
       setLoading(false)
     }
-  }, [projectId])
+  }, [projectId, versionFromUrl])
 
   useEffect(() => {
     if (!projectId) {
@@ -101,6 +120,13 @@ export function ProjectPage() {
         setProject(projectData)
         setVersions(sortedVersions)
         setSelectedLabel((current) => {
+          if (
+            versionFromUrl &&
+            sortedVersions.some((version) => version.label === versionFromUrl)
+          ) {
+            return versionFromUrl
+          }
+
           if (current && sortedVersions.some((version) => version.label === current)) {
             return current
           }
@@ -109,7 +135,9 @@ export function ProjectPage() {
         })
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load project")
+          const message = humanizeApiError(err, "Failed to load project")
+          setError(message)
+          showErrorToast(message)
           setProject(null)
           setVersions([])
           setSelectedLabel(null)
@@ -126,7 +154,7 @@ export function ProjectPage() {
     return () => {
       cancelled = true
     }
-  }, [projectId])
+  }, [projectId, versionFromUrl])
 
   const selectedVersion =
     versions.find((version) => version.label === selectedLabel) ?? null
@@ -140,12 +168,30 @@ export function ProjectPage() {
       setComments((current) =>
         current.map((comment) => (comment.id === updated.id ? updated : comment)),
       )
+      showSuccessToast(resolved ? "Comment resolved" : "Comment reopened")
     } catch (err) {
-      setActionError(
-        err instanceof Error ? err.message : "Failed to update comment",
-      )
+      const message = humanizeApiError(err, "Failed to update comment")
+      setActionError(message)
+      showErrorToast(message)
     } finally {
       setResolvingCommentId(null)
+    }
+  }
+
+  async function handleDeleteComment(commentId: string) {
+    setDeletingCommentId(commentId)
+    setActionError(null)
+
+    try {
+      await deleteComment(commentId)
+      setComments((current) => current.filter((comment) => comment.id !== commentId))
+      showSuccessToast("Comment deleted")
+    } catch (err) {
+      const message = humanizeApiError(err, "Failed to delete comment")
+      setActionError(message)
+      showErrorToast(message)
+    } finally {
+      setDeletingCommentId(null)
     }
   }
 
@@ -158,14 +204,34 @@ export function ProjectPage() {
       setVersions((current) =>
         current.map((version) => (version.id === updated.id ? updated : version)),
       )
+
+      if (status === "approved") {
+        showSuccessToast("Version approved")
+      } else if (status === "needs_revision") {
+        showSuccessToast("Needs revision")
+      } else {
+        showSuccessToast(VERSION_STATUS_LABELS[status])
+      }
     } catch (err) {
-      setActionError(
-        err instanceof Error
-          ? err.message
-          : "Failed to update version status",
-      )
+      const message = humanizeApiError(err, "Failed to update version status")
+      setActionError(message)
+      showErrorToast(message)
     } finally {
       setUpdatingStatusId(null)
+    }
+  }
+
+  async function handleCopyLink() {
+    const url = new URL(window.location.href)
+    if (selectedLabel) {
+      url.searchParams.set("version", selectedLabel)
+    }
+
+    try {
+      await navigator.clipboard.writeText(url.toString())
+      showToast("Link copied")
+    } catch {
+      showErrorToast("Couldn't copy link")
     }
   }
 
@@ -191,9 +257,9 @@ export function ProjectPage() {
         if (!cancelled) {
           setComments([])
           setCommentsLabel(versionLabel)
-          setActionError(
-            err instanceof Error ? err.message : "Failed to load comments",
-          )
+          const message = humanizeApiError(err, "Failed to load comments")
+          setActionError(message)
+          showErrorToast(message)
         }
       } finally {
         if (!cancelled) {
@@ -300,6 +366,16 @@ export function ProjectPage() {
           ) : null}
 
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void handleCopyLink()}
+              aria-label="Copy link to clipboard"
+            >
+              <Link2 className="size-4" />
+              <span className="hidden sm:inline">Copy link</span>
+            </Button>
+
             {versions.length >= 2 ? (
               <Button variant="ghost" size="sm" asChild>
                 <Link
@@ -390,15 +466,24 @@ export function ProjectPage() {
             }
             commentsLoading={commentsLoading}
             onCreateComment={async (input) => {
-              const comment = await createComment({
-                versionId: selectedVersion.id,
-                ...input,
-              })
-              setComments((current) =>
-                [...current, comment].sort((a, b) => a.timestamp - b.timestamp),
-              )
+              try {
+                const comment = await createComment({
+                  versionId: selectedVersion.id,
+                  ...input,
+                })
+                setComments((current) =>
+                  [...current, comment].sort((a, b) => a.timestamp - b.timestamp),
+                )
+                showSuccessToast("Comment posted")
+              } catch (err) {
+                const message = humanizeApiError(err, "Failed to post comment")
+                showErrorToast(message)
+                throw err
+              }
             }}
             onResolveComment={handleResolveComment}
+            onDeleteComment={handleDeleteComment}
+            deletingCommentId={deletingCommentId}
             onMarkNeedsRevision={() =>
               void handleStatusChange(selectedVersion.id, "needs_revision")
             }

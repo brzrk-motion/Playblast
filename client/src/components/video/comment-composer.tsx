@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Input } from "@/components/ui/input"
 import { useVideoPlayer } from "@/hooks/use-video-player"
+import { humanizeApiError, showErrorToast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import type { FrameAnnotation } from "@/types/annotation"
 
@@ -71,7 +72,9 @@ export function CommentComposerForm({
       })
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add comment")
+      const message = humanizeApiError(err, "Failed to add comment")
+      setError(message)
+      showErrorToast(message)
       setSubmitting(false)
     }
   }

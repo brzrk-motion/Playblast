@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton"
 import { SyncedVideoComparison } from "@/components/video/synced-video-comparison"
 import { getProject, listVersions } from "@/lib/api"
+import { humanizeApiError, showErrorToast } from "@/lib/toast"
 import { pickCompareVersionLabels, sortVersionsByDate } from "@/lib/versions"
 import type { Project } from "@/types/project"
 import type { Version } from "@/types/version"
@@ -48,7 +49,9 @@ export function ComparePage() {
       setProject(projectData)
       setVersions(sortedVersions)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load project")
+      const message = humanizeApiError(err, "Failed to load project")
+      setError(message)
+      showErrorToast(message)
       setProject(null)
       setVersions([])
     } finally {
@@ -83,7 +86,9 @@ export function ComparePage() {
         setVersions(sortedVersions)
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load project")
+          const message = humanizeApiError(err, "Failed to load project")
+          setError(message)
+          showErrorToast(message)
           setProject(null)
           setVersions([])
         }

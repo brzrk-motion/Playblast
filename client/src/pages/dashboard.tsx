@@ -27,6 +27,11 @@ import {
 } from "@/components/ui/sheet"
 import { createProject, listProjects } from "@/lib/api"
 import {
+  humanizeApiError,
+  showErrorToast,
+  showSuccessToast,
+} from "@/lib/toast"
+import {
   countProjectsByStatus,
   filterProjectsByName,
   PROJECT_SORT_LABELS,
@@ -161,7 +166,9 @@ export function DashboardPage() {
       const data = await listProjects()
       setProjects(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load projects")
+      const message = humanizeApiError(err, "Failed to load projects")
+      setError(message)
+      showErrorToast(message)
     } finally {
       setLoading(false)
     }
@@ -179,7 +186,9 @@ export function DashboardPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load projects")
+          const message = humanizeApiError(err, "Failed to load projects")
+          setError(message)
+          showErrorToast(message)
         }
       } finally {
         if (!cancelled) {
@@ -211,9 +220,12 @@ export function DashboardPage() {
       await createProject({ name })
       setProjectName("")
       setSheetOpen(false)
+      showSuccessToast("Project created")
       await loadProjects()
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "Failed to create project")
+      const message = humanizeApiError(err, "Failed to create project")
+      setCreateError(message)
+      showErrorToast(message)
     } finally {
       setCreating(false)
     }

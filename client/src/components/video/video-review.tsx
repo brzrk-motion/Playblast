@@ -36,9 +36,11 @@ export interface VideoReviewProps {
     annotation?: FrameAnnotation
   }) => Promise<void>
   onResolveComment?: (commentId: string, resolved: boolean) => Promise<void>
+  onDeleteComment?: (commentId: string) => Promise<void>
   onMarkNeedsRevision?: () => void
   onMarkApproved?: () => void
   resolvingCommentId?: string | null
+  deletingCommentId?: string | null
   statusUpdating?: boolean
   className?: string
   commentsPanelOpen?: boolean
@@ -57,9 +59,11 @@ function VideoReviewLayout({
   commentsLoading = false,
   onCreateComment,
   onResolveComment,
+  onDeleteComment,
   onMarkNeedsRevision,
   onMarkApproved,
   resolvingCommentId = null,
+  deletingCommentId = null,
   statusUpdating = false,
   className,
   commentsPanelOpen: commentsPanelOpenProp,
@@ -213,7 +217,13 @@ function VideoReviewLayout({
                     void onResolveComment(commentId, resolved)
                 : undefined
             }
+            onDeleteComment={
+              onDeleteComment
+                ? (commentId) => void onDeleteComment(commentId)
+                : undefined
+            }
             resolvingCommentId={resolvingCommentId}
+            deletingCommentId={deletingCommentId}
             className="min-h-[240px] lg:min-h-0"
           />
         ) : null}
@@ -231,9 +241,11 @@ export function VideoReview({
   commentsLoading = false,
   onCreateComment,
   onResolveComment,
+  onDeleteComment,
   onMarkNeedsRevision,
   onMarkApproved,
   resolvingCommentId = null,
+  deletingCommentId = null,
   statusUpdating = false,
   className,
   commentsPanelOpen,
@@ -263,9 +275,11 @@ export function VideoReview({
           commentsLoading={commentsLoading}
           onCreateComment={onCreateComment}
           onResolveComment={onResolveComment}
+          onDeleteComment={onDeleteComment}
           onMarkNeedsRevision={onMarkNeedsRevision}
           onMarkApproved={onMarkApproved}
           resolvingCommentId={resolvingCommentId}
+          deletingCommentId={deletingCommentId}
           statusUpdating={statusUpdating}
           commentsPanelOpen={commentsPanelOpen}
           onCommentsPanelOpenChange={onCommentsPanelOpenChange}
