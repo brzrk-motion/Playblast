@@ -17,12 +17,37 @@ export function getVideoUrl(
   return `/video/${encodeURIComponent(projectId)}/${encodeURIComponent(version)}/${encodedFilename}`
 }
 
+function humanizeHttpError(status: number, serverMessage?: string): string {
+  if (serverMessage) {
+    return serverMessage
+  }
+
+  switch (status) {
+    case 400:
+      return "Invalid request."
+    case 401:
+      return "Sign in required."
+    case 403:
+      return "You don't have permission to do that."
+    case 404:
+      return "Not found."
+    case 409:
+      return "This action conflicts with existing data."
+    case 413:
+      return "File is too large."
+    case 500:
+      return "Something went wrong on our end."
+    default:
+      return "Something went wrong. Please try again."
+  }
+}
+
 async function parseJsonResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as {
       error?: string
     } | null
-    throw new Error(body?.error ?? `Request failed with status ${response.status}`)
+    throw new Error(humanizeHttpError(response.status, body?.error))
   }
 
   return response.json() as Promise<T>
@@ -59,7 +84,21 @@ export async function deleteProject(id: string): Promise<void> {
     const body = (await response.json().catch(() => null)) as {
       error?: string
     } | null
-    throw new Error(body?.error ?? `Request failed with status ${response.status}`)
+    throw new Error(humanizeHttpError(response.status, body?.error))
+  }
+}
+
+export async function deleteComment(commentId: string): Promise<void> {
+  const response = await fetch(
+    `/api/comments/${encodeURIComponent(commentId)}`,
+    { method: "DELETE" },
+  )
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: string
+    } | null
+    throw new Error(humanizeHttpError(response.status, body?.error))
   }
 }
 
@@ -184,9 +223,9 @@ export function uploadVersion(
 
       try {
         const body = JSON.parse(xhr.responseText) as { error?: string }
-        reject(new Error(body.error ?? `Upload failed with status ${xhr.status}`))
+        reject(new Error(humanizeHttpError(xhr.status, body.error)))
       } catch {
-        reject(new Error(`Upload failed with status ${xhr.status}`))
+        reject(new Error(humanizeHttpError(xhr.status)))
       }
     })
 

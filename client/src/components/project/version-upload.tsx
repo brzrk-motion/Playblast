@@ -5,6 +5,13 @@ import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { uploadVersion } from "@/lib/api"
 import {
+  dismissToast,
+  humanizeApiError,
+  showErrorToast,
+  showLoadingToast,
+  showSuccessToast,
+} from "@/lib/toast"
+import {
   isValidVersionLabel,
   suggestNextVersionLabel,
 } from "@/lib/versions"
@@ -111,17 +118,24 @@ export function VersionUpload({
     setUploadProgress(null)
     setError(null)
 
+    const loadingToastId = showLoadingToast(`Uploading ${versionLabel}…`)
+
     try {
       await uploadVersion(projectId, versionLabel, selectedFile, (progress) => {
         setUploadProgress(progress)
       })
 
+      dismissToast(loadingToastId)
+      showSuccessToast("Upload complete")
       setSelectedFile(null)
       setUploadProgress(null)
       onSelectVersion(versionLabel)
       onUploaded()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed")
+      dismissToast(loadingToastId)
+      const message = humanizeApiError(err, "Upload failed")
+      setError(message)
+      showErrorToast(message)
     } finally {
       setUploading(false)
     }

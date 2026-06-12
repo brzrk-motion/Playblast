@@ -7,6 +7,7 @@ import {
   MessageSquare,
   Pencil,
   RotateCcw,
+  Trash2,
 } from "lucide-react"
 
 import { CommentComposerInline } from "@/components/video/comment-composer"
@@ -38,7 +39,9 @@ export interface CommentsPanelProps {
     annotation?: FrameAnnotation
   }) => Promise<void>
   onResolveComment?: (commentId: string, resolved: boolean) => void
+  onDeleteComment?: (commentId: string) => void
   resolvingCommentId?: string | null
+  deletingCommentId?: string | null
   className?: string
 }
 
@@ -50,14 +53,18 @@ interface CommentRowProps {
   comment: Comment
   expanded?: boolean
   onResolveComment?: (commentId: string, resolved: boolean) => void
+  onDeleteComment?: (commentId: string) => void
   resolving?: boolean
+  deleting?: boolean
 }
 
 function CommentRow({
   comment,
   expanded = true,
   onResolveComment,
+  onDeleteComment,
   resolving = false,
+  deleting = false,
 }: CommentRowProps) {
   const { seek } = useVideoPlayer()
 
@@ -98,29 +105,47 @@ function CommentRow({
           )}
         </button>
 
-        {onResolveComment ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            className="shrink-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-visible:opacity-100"
-            disabled={resolving}
-            aria-label={comment.resolved ? "Unresolve comment" : "Resolve comment"}
-            title={comment.resolved ? "Unresolve" : "Resolve"}
-            onClick={(event) => {
-              event.stopPropagation()
-              onResolveComment(comment.id, !comment.resolved)
-            }}
-          >
-            {resolving ? (
-              <Spinner className="size-3" />
-            ) : comment.resolved ? (
-              <RotateCcw />
-            ) : (
-              <Check />
-            )}
-          </Button>
-        ) : null}
+        <div className="flex shrink-0 flex-col gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100">
+          {onResolveComment ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              disabled={resolving || deleting}
+              aria-label={comment.resolved ? "Unresolve comment" : "Resolve comment"}
+              title={comment.resolved ? "Unresolve" : "Resolve"}
+              onClick={(event) => {
+                event.stopPropagation()
+                onResolveComment(comment.id, !comment.resolved)
+              }}
+            >
+              {resolving ? (
+                <Spinner className="size-3" />
+              ) : comment.resolved ? (
+                <RotateCcw />
+              ) : (
+                <Check />
+              )}
+            </Button>
+          ) : null}
+
+          {onDeleteComment ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              disabled={resolving || deleting}
+              aria-label="Delete comment"
+              title="Delete"
+              onClick={(event) => {
+                event.stopPropagation()
+                onDeleteComment(comment.id)
+              }}
+            >
+              {deleting ? <Spinner className="size-3" /> : <Trash2 />}
+            </Button>
+          ) : null}
+        </div>
       </div>
     </li>
   )
@@ -131,7 +156,9 @@ export function CommentsPanel({
   loading = false,
   onCreateComment,
   onResolveComment,
+  onDeleteComment,
   resolvingCommentId = null,
+  deletingCommentId = null,
   className,
 }: CommentsPanelProps) {
   const { openComposer } = useVideoPlayer()
@@ -215,7 +242,9 @@ export function CommentsPanel({
                     key={comment.id}
                     comment={comment}
                     onResolveComment={onResolveComment}
+                    onDeleteComment={onDeleteComment}
                     resolving={resolvingCommentId === comment.id}
+                    deleting={deletingCommentId === comment.id}
                   />
                 ))}
               </ul>
@@ -228,7 +257,9 @@ export function CommentsPanel({
                     key={comment.id}
                     comment={comment}
                     onResolveComment={onResolveComment}
+                    onDeleteComment={onDeleteComment}
                     resolving={resolvingCommentId === comment.id}
+                    deleting={deletingCommentId === comment.id}
                   />
                 ))}
               </ul>
@@ -261,7 +292,9 @@ export function CommentsPanel({
                           comment={comment}
                           expanded={resolvedExpanded}
                           onResolveComment={onResolveComment}
+                          onDeleteComment={onDeleteComment}
                           resolving={resolvingCommentId === comment.id}
+                          deleting={deletingCommentId === comment.id}
                         />
                       ))}
                     </ul>
