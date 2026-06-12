@@ -13,7 +13,7 @@ export interface VideoPlayerContextValue {
   composer: ComposerState | null
   draftAnnotation: FrameAnnotation | null
   openComposer: (timestamp: number) => void
-  closeComposer: () => void
+  closeComposer: (options?: { resumePlayback?: boolean }) => void
   setDraftAnnotation: (annotation: FrameAnnotation | null) => void
 }
 
