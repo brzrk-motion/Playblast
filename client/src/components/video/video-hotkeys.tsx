@@ -4,34 +4,8 @@ import { useMediaRemote, useMediaState } from "@vidstack/react"
 import { KeyboardShortcutsPanel } from "@/components/video/keyboard-shortcuts-panel"
 import { useFrameStep } from "@/hooks/use-frame-step"
 import { useVideoPlayer } from "@/hooks/use-video-player"
+import { shouldSuppressGlobalShortcut } from "@/lib/keyboard-guard"
 import { SKIP_SECONDS } from "@/lib/video-shortcuts"
-
-/**
- * Skip player shortcuts when the user is interacting with a form field or any
- * other interactive control (buttons, links, menus, sliders). Otherwise keys
- * like Space and the arrows would hijack normal keyboard navigation.
- */
-function isInteractiveTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) {
-    return false
-  }
-
-  const tagName = target.tagName
-  if (
-    tagName === "INPUT" ||
-    tagName === "TEXTAREA" ||
-    tagName === "SELECT" ||
-    target.isContentEditable
-  ) {
-    return true
-  }
-
-  return Boolean(
-    target.closest(
-      'button, a[href], [role="button"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="slider"], [role="menu"], [role="dialog"]',
-    ),
-  )
-}
 
 function isHelpKey(event: KeyboardEvent) {
   return event.key === "?" || (event.code === "Slash" && event.shiftKey)
@@ -94,7 +68,7 @@ export function VideoHotkeys({
         return
       }
 
-      if (isInteractiveTarget(event.target)) {
+      if (shouldSuppressGlobalShortcut(event)) {
         return
       }
 
