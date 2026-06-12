@@ -13,8 +13,12 @@ const filename = "sample.mp4"
 
 let server: Server
 let baseUrl: string
+let testUploadRoot = ""
 
 before(async () => {
+  testUploadRoot = fs.mkdtempSync(path.join(os.tmpdir(), "playblast-uploads-"))
+  process.env.UPLOAD_DIR = testUploadRoot
+
   const uploadDir = getUploadDir(projectId, version)
   fs.mkdirSync(uploadDir, { recursive: true })
   fs.writeFileSync(path.join(uploadDir, filename), Buffer.alloc(1024, 0xab))
@@ -38,6 +42,8 @@ after(async () => {
   })
 
   fs.rmSync(getUploadDir(projectId, version), { recursive: true, force: true })
+  delete process.env.UPLOAD_DIR
+  fs.rmSync(testUploadRoot, { recursive: true, force: true })
 })
 
 describe("GET /video/:projectId/:version/:filename", () => {
