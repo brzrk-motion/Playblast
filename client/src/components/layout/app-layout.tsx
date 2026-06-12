@@ -5,34 +5,20 @@ import { AppHeader } from "@/components/layout/app-header"
 import { PageHeaderProvider } from "@/context/page-header-provider"
 import { usePageHeaderContext } from "@/hooks/use-page-header-context"
 import { ScrollArea } from "@/components/ui/scroll-area"
-
-function usePageHeader() {
-  const location = useLocation()
-  const { projectName } = usePageHeaderContext()
-
-  if (location.pathname.startsWith("/projects/")) {
-    return {
-      title: "Project",
-      subtitle: projectName,
-    }
-  }
-
-  return {
-    title: "Dashboard",
-    subtitle: undefined,
-  }
-}
+import { getPageHeader } from "@/lib/nav"
 
 function AppLayoutContent() {
-  const { title, subtitle } = usePageHeader()
   const location = useLocation()
+  const { projectName } = usePageHeaderContext()
+  const { title, subtitle } = getPageHeader(location.pathname)
   const isReviewLayout = /^\/projects\/[^/]+$/.test(location.pathname)
+  const headerSubtitle = isReviewLayout ? projectName : subtitle
 
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="min-h-svh">
-        <AppHeader title={title} subtitle={subtitle} />
+        <AppHeader title={title} subtitle={headerSubtitle} />
         {isReviewLayout ? (
           <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 md:p-4">
             <Outlet />
