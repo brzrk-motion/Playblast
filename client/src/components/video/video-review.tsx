@@ -11,18 +11,18 @@ import { Focus, PanelRightClose, PanelRightOpen } from "lucide-react"
 
 import { AnnotationOverlay } from "@/components/video/annotation-overlay"
 import { CommentsPanel } from "@/components/video/comments-panel"
-import { VideoApprovalActions } from "@/components/video/video-approval-actions"
+import { VersionStatusBadge } from "@/components/project/version-status-badge"
 import { VideoControls } from "@/components/video/video-controls"
 import { VideoHotkeys } from "@/components/video/video-hotkeys"
 import { VideoLoadingOverlay } from "@/components/video/video-loading-overlay"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { VideoPlayerProvider } from "@/context/video-player-provider"
 import { useVideoPlayer } from "@/hooks/use-video-player"
 import { getVideoUrl } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import type { FrameAnnotation } from "@/types/annotation"
 import type { Comment } from "@/types/comment"
+import type { VersionStatus } from "@/types/version"
 
 export interface VideoReviewProps {
   projectId: string
@@ -41,6 +41,7 @@ export interface VideoReviewProps {
   onDeleteComment?: (commentId: string) => Promise<void>
   onMarkNeedsRevision?: () => void
   onMarkApproved?: () => void
+  versionStatus?: VersionStatus
   resolvingCommentId?: string | null
   deletingCommentId?: string | null
   statusUpdating?: boolean
@@ -64,6 +65,7 @@ function VideoReviewLayout({
   onDeleteComment,
   onMarkNeedsRevision,
   onMarkApproved,
+  versionStatus,
   resolvingCommentId = null,
   deletingCommentId = null,
   statusUpdating = false,
@@ -110,7 +112,6 @@ function VideoReviewLayout({
     (commentsPanelOpen || Boolean(composer)) && !focusMode && !isFullscreen
   const displayTitle = title ?? filename
   const immersive = focusMode || isFullscreen
-  const hasApprovalActions = Boolean(onMarkNeedsRevision || onMarkApproved)
 
   return (
     <div
@@ -147,56 +148,38 @@ function VideoReviewLayout({
                 </p>
               </div>
 
-              <div className="flex shrink-0 items-center">
-                <VideoApprovalActions
-                  onMarkNeedsRevision={
-                    onMarkNeedsRevision
-                      ? () => onMarkNeedsRevision()
-                      : undefined
-                  }
-                  onMarkApproved={
-                    onMarkApproved ? () => onMarkApproved() : undefined
-                  }
-                  statusUpdating={statusUpdating}
-                />
-
-                {hasApprovalActions ? (
-                  <Separator
-                    orientation="vertical"
-                    className="mx-4 h-6"
-                    decorative
-                  />
+              <div className="flex shrink-0 items-center gap-1">
+                {versionStatus ? (
+                  <VersionStatusBadge status={versionStatus} />
                 ) : null}
 
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={toggleCommentsPanel}
-                    aria-label={showCommentsPanel ? "Hide comments panel" : "Show comments panel"}
-                    aria-pressed={showCommentsPanel}
-                    title={`${showCommentsPanel ? "Hide" : "Show"} comments (T)`}
-                  >
-                    {showCommentsPanel ? (
-                      <PanelRightClose className="size-4" />
-                    ) : (
-                      <PanelRightOpen className="size-4" />
-                    )}
-                  </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={toggleCommentsPanel}
+                  aria-label={showCommentsPanel ? "Hide comments panel" : "Show comments panel"}
+                  aria-pressed={showCommentsPanel}
+                  title={`${showCommentsPanel ? "Hide" : "Show"} comments (T)`}
+                >
+                  {showCommentsPanel ? (
+                    <PanelRightClose className="size-4" />
+                  ) : (
+                    <PanelRightOpen className="size-4" />
+                  )}
+                </Button>
 
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={toggleFocusMode}
-                    aria-label="Enter focus mode"
-                    aria-pressed={focusMode}
-                    title="Focus mode (Z)"
-                  >
-                    <Focus className="size-4" />
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={toggleFocusMode}
+                  aria-label="Enter focus mode"
+                  aria-pressed={focusMode}
+                  title="Focus mode (Z)"
+                >
+                  <Focus className="size-4" />
+                </Button>
               </div>
             </div>
           ) : null}
@@ -267,6 +250,7 @@ export function VideoReview({
   onDeleteComment,
   onMarkNeedsRevision,
   onMarkApproved,
+  versionStatus,
   resolvingCommentId = null,
   deletingCommentId = null,
   statusUpdating = false,
@@ -302,6 +286,7 @@ export function VideoReview({
           onDeleteComment={onDeleteComment}
           onMarkNeedsRevision={onMarkNeedsRevision}
           onMarkApproved={onMarkApproved}
+          versionStatus={versionStatus}
           resolvingCommentId={resolvingCommentId}
           deletingCommentId={deletingCommentId}
           statusUpdating={statusUpdating}
