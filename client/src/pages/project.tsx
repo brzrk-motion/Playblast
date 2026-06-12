@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Skeleton } from "@/components/ui/skeleton"
 import { VersionCard } from "@/components/project/version-card"
 import { VersionSelector } from "@/components/project/version-selector"
 import { VersionStatusBadge } from "@/components/project/version-status-badge"
 import { VersionUpload } from "@/components/project/version-upload"
+import { VideoApprovalActions } from "@/components/video/video-approval-actions"
 import { VideoReview } from "@/components/video/video-review"
 import {
   createComment,
@@ -21,7 +22,8 @@ import { sortVersionsByDate } from "@/lib/versions"
 import type { Comment } from "@/types/comment"
 import type { Project } from "@/types/project"
 import type { Version, VersionStatus } from "@/types/version"
-import { ArrowLeft, Film, GitCompare } from "lucide-react"
+import { ArrowLeft, ChevronDown, Film, GitCompare, Upload } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export function ProjectPage() {
   const { projectId = "" } = useParams()
@@ -36,6 +38,9 @@ export function ProjectPage() {
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const [resolvingCommentId, setResolvingCommentId] = useState<string | null>(null)
   const [commentsLoading, setCommentsLoading] = useState(false)
+  const [focusMode, setFocusMode] = useState(false)
+  const [versionsOpen, setVersionsOpen] = useState(false)
+  const [uploadOpen, setUploadOpen] = useState(false)
 
   const loadProjectData = useCallback(async () => {
     if (!projectId) {
@@ -206,10 +211,9 @@ export function ProjectPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="aspect-video w-full rounded-xl" />
-        <Skeleton className="h-64 w-full rounded-xl" />
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="min-h-0 flex-1 rounded-xl" />
       </div>
     )
   }
@@ -241,10 +245,10 @@ export function ProjectPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {actionError ? (
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardContent className="flex items-center justify-between gap-4 py-3">
+    <div className="flex min-h-0 flex-1 flex-col">
+      {actionError && !focusMode ? (
+        <Card className="mb-2 shrink-0 border-destructive/30 bg-destructive/5">
+          <CardContent className="flex items-center justify-between gap-4 py-2">
             <p className="text-sm text-destructive">{actionError}</p>
             <Button
               variant="ghost"
@@ -256,58 +260,108 @@ export function ProjectPage() {
           </CardContent>
         </Card>
       ) : null}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-3">
-          <Button variant="ghost" size="sm" className="-ml-2 w-fit" asChild>
-            <Link to="/">
-              <ArrowLeft />
-              Dashboard
+
+      {!focusMode ? (
+        <div className="mb-2 flex shrink-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5 shadow-sm">
+          <Button variant="ghost" size="icon-sm" className="shrink-0" asChild>
+            <Link to="/" aria-label="Back to dashboard">
+              <ArrowLeft className="size-4" />
             </Link>
           </Button>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="type-page-title">{project.name}</h2>
-              <Badge variant="secondary">
-                {versions.length} {versions.length === 1 ? "version" : "versions"}
-              </Badge>
-              {selectedVersion ? (
-                <VersionStatusBadge status={selectedVersion.status} />
-              ) : null}
-            </div>
-            <p className="text-muted-foreground">
-              Upload new renders and switch between versions for review.
-            </p>
-          </div>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {versions.length >= 2 ? (
-            <Button variant="secondary" asChild>
-              <Link
-                to={`/projects/${project.id}/compare?left=${encodeURIComponent(selectedLabel ?? versions[0]?.label ?? "")}&right=${encodeURIComponent(versions.find((version) => version.label !== selectedLabel)?.label ?? versions[1]?.label ?? "")}`}
-              >
-                <GitCompare />
-                Compare versions
-              </Link>
-            </Button>
-          ) : null}
+          <div className="hidden h-4 w-px bg-border sm:block" />
+
+          <h2 className="max-w-[10rem] truncate text-sm font-semibold sm:max-w-[16rem]">
+            {project.name}
+          </h2>
+
           <VersionSelector
             versions={versions}
             selectedLabel={selectedLabel}
             onSelect={setSelectedLabel}
+            compact
+          />
+
+          {selectedVersion ? (
+            <VersionStatusBadge status={selectedVersion.status} />
+          ) : null}
+
+          {selectedVersion ? (
+            <VideoApprovalActions
+              onMarkNeedsRevision={() =>
+                void handleStatusChange(selectedVersion.id, "needs_revision")
+              }
+              onMarkApproved={() =>
+                void handleStatusChange(selectedVersion.id, "approved")
+              }
+              statusUpdating={updatingStatusId === selectedVersion.id}
+              className="ml-auto"
+            />
+          ) : null}
+
+          <div className="flex items-center gap-1">
+            {versions.length >= 2 ? (
+              <Button variant="ghost" size="sm" asChild>
+                <Link
+                  to={`/projects/${project.id}/compare?left=${encodeURIComponent(selectedLabel ?? versions[0]?.label ?? "")}&right=${encodeURIComponent(versions.find((version) => version.label !== selectedLabel)?.label ?? versions[1]?.label ?? "")}`}
+                >
+                  <GitCompare className="size-4" />
+                  <span className="hidden sm:inline">Compare</span>
+                </Link>
+              </Button>
+            ) : null}
+
+            <Collapsible open={uploadOpen} onOpenChange={setUploadOpen}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <Upload className="size-4" />
+                  <span className="hidden sm:inline">Upload</span>
+                  <ChevronDown
+                    className={cn(
+                      "size-3.5 transition-transform",
+                      uploadOpen && "rotate-180",
+                    )}
+                  />
+                </Button>
+              </CollapsibleTrigger>
+            </Collapsible>
+
+            {versions.length > 1 ? (
+              <Collapsible open={versionsOpen} onOpenChange={setVersionsOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <Film className="size-4" />
+                    <span className="hidden sm:inline">
+                      {versions.length} versions
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "size-3.5 transition-transform",
+                        versionsOpen && "rotate-180",
+                      )}
+                    />
+                  </Button>
+                </CollapsibleTrigger>
+              </Collapsible>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {!focusMode && uploadOpen ? (
+        <div className="mb-2 shrink-0">
+          <VersionUpload
+            projectId={project.id}
+            versions={versions}
+            onUploaded={() => void loadProjectData()}
+            onSelectVersion={setSelectedLabel}
           />
         </div>
-      </div>
+      ) : null}
 
-      {versions.length > 0 ? (
-        <div className="space-y-3">
-          <div>
-            <h3 className="type-section-title">Versions</h3>
-            <p className="text-sm text-muted-foreground">
-              Review approval status and switch between uploaded renders.
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {!focusMode && versionsOpen && versions.length > 1 ? (
+        <div className="mb-2 shrink-0">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {versions.map((version) => (
               <VersionCard
                 key={version.id}
@@ -324,56 +378,60 @@ export function ProjectPage() {
         </div>
       ) : null}
 
-      {selectedVersion ? (
-        <VideoReview
-          key={`${selectedVersion.id}-${selectedVersion.uploadedAt}`}
-          projectId={project.id}
-          version={selectedVersion.label}
-          filename={selectedVersion.filename}
-          title={selectedVersion.filename}
-          comments={
-            selectedLabel && commentsLabel === selectedLabel ? comments : []
-          }
-          commentsLoading={commentsLoading}
-          onCreateComment={async (input) => {
-            const comment = await createComment({
-              versionId: selectedVersion.id,
-              ...input,
-            })
-            setComments((current) =>
-              [...current, comment].sort((a, b) => a.timestamp - b.timestamp),
-            )
-          }}
-          onResolveComment={handleResolveComment}
-          onMarkNeedsRevision={() =>
-            void handleStatusChange(selectedVersion.id, "needs_revision")
-          }
-          onMarkApproved={() =>
-            void handleStatusChange(selectedVersion.id, "approved")
-          }
-          statusUpdating={updatingStatusId === selectedVersion.id}
-          resolvingCommentId={resolvingCommentId}
-        />
-      ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <Film className="size-10 text-muted-foreground" />
-            <div>
-              <p className="font-medium">No versions yet</p>
-              <p className="text-sm text-muted-foreground">
-                Upload your first video to start reviewing this project.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <VersionUpload
-        projectId={project.id}
-        versions={versions}
-        onUploaded={() => void loadProjectData()}
-        onSelectVersion={setSelectedLabel}
-      />
+      <div className="flex min-h-0 flex-1 flex-col">
+        {selectedVersion ? (
+          <VideoReview
+            key={`${selectedVersion.id}-${selectedVersion.uploadedAt}`}
+            projectId={project.id}
+            version={selectedVersion.label}
+            filename={selectedVersion.filename}
+            comments={
+              selectedLabel && commentsLabel === selectedLabel ? comments : []
+            }
+            commentsLoading={commentsLoading}
+            onCreateComment={async (input) => {
+              const comment = await createComment({
+                versionId: selectedVersion.id,
+                ...input,
+              })
+              setComments((current) =>
+                [...current, comment].sort((a, b) => a.timestamp - b.timestamp),
+              )
+            }}
+            onResolveComment={handleResolveComment}
+            onMarkNeedsRevision={() =>
+              void handleStatusChange(selectedVersion.id, "needs_revision")
+            }
+            onMarkApproved={() =>
+              void handleStatusChange(selectedVersion.id, "approved")
+            }
+            statusUpdating={updatingStatusId === selectedVersion.id}
+            resolvingCommentId={resolvingCommentId}
+            focusMode={focusMode}
+            onFocusModeChange={setFocusMode}
+          />
+        ) : (
+          <Card className="flex flex-1 items-center justify-center border-dashed">
+            <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+              <Film className="size-10 text-muted-foreground" />
+              <div>
+                <p className="font-medium">No versions yet</p>
+                <p className="text-sm text-muted-foreground">
+                  Upload your first video to start reviewing this project.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setUploadOpen(true)}
+              >
+                <Upload />
+                Upload video
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   )
 }

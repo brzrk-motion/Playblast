@@ -15,6 +15,8 @@ export const PLAYBACK_SHORTCUTS: KeyboardShortcut[] = [
 
 export const REVIEW_SHORTCUTS: KeyboardShortcut[] = [
   { keys: ["C"], description: "Add comment at current time" },
+  { keys: ["T"], description: "Toggle comments panel" },
+  { keys: ["Z"], description: "Toggle focus mode" },
   { keys: ["R"], description: "Mark version as needs revision" },
   { keys: ["A"], description: "Mark version as approved" },
 ]
