@@ -31,6 +31,7 @@ import type { Comment } from "@/types/comment"
 import type { Project } from "@/types/project"
 import type { Version, VersionStatus } from "@/types/version"
 import { ArrowLeft, ChevronDown, Film, GitCompare, Link2, Upload } from "lucide-react"
+import { useProjectPageHeader } from "@/hooks/use-project-page-header"
 import { cn } from "@/lib/utils"
 
 export function ProjectPage() {
@@ -65,6 +66,7 @@ export function ProjectPage() {
   }, [uploadOpen, versionsOpen])
 
   useEscapeKey(dismissOpenPanels, !focusMode && (uploadOpen || versionsOpen))
+  useProjectPageHeader(projectId, project)
 
   const loadProjectData = useCallback(async () => {
     if (!projectId) {

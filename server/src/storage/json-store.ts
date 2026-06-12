@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { sanitizeStore } from "../lib/store-sanitize.js"
 import { EMPTY_STORE, type DataStore } from "../types/store.js"
 import type { Version, VersionStatus } from "../types/version.js"
 
@@ -69,7 +70,14 @@ export function readStore(): DataStore {
     throw new Error(`Invalid data store format at ${storePath}`)
   }
 
-  return normalizeStore(parsed)
+  const normalized = normalizeStore(parsed)
+  const sanitized = sanitizeStore(normalized)
+
+  if (sanitized.comments.length !== normalized.comments.length) {
+    writeStore(sanitized)
+  }
+
+  return sanitized
 }
 
 export function writeStore(store: DataStore): void {

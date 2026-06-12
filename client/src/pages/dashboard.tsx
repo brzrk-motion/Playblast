@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Link, useSearchParams } from "react-router-dom"
 import { VersionStatusBadge } from "@/components/project/version-status-badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -31,15 +31,23 @@ import {
   showErrorToast,
   showSuccessToast,
 } from "@/lib/toast"
+import { getTimeOfDayGreeting } from "@/lib/greeting"
 import {
   countProjectsByStatus,
+  dashboardFilterToParam,
+  DASHBOARD_FILTER_PARAM,
+  filterProjectsByDashboardFilter,
   filterProjectsByName,
+  getDashboardFilterLabel,
+  parseDashboardFilterFromSearchParams,
   PROJECT_SORT_LABELS,
   recentlyUpdatedProjects,
   sortProjects,
   totalOpenComments,
+  type DashboardProjectFilter,
   type ProjectSortField,
 } from "@/lib/projects"
+import { cn } from "@/lib/utils"
 import { VERSION_STATUS_LABELS } from "@/lib/versions"
 import type { ProjectSummary } from "@/types/project"
 import type { VersionStatus } from "@/types/version"
@@ -125,6 +133,61 @@ function ProjectCard({ project, compact = false }: ProjectCardProps) {
   )
 }
 
+function dashboardFiltersEqual(
+  a: DashboardProjectFilter | null,
+  b: DashboardProjectFilter | null,
+): boolean {
+  if (!a || !b) {
+    return a === b
+  }
+
+  if (a.type !== b.type) {
+    return false
+  }
+
+  if (a.type === "open_comments") {
+    return true
+  }
+
+  return b.type === "status" && a.status === b.status
+}
+
+interface StatCardProps {
+  title: string
+  icon: React.ReactNode
+  value: number
+  description: string
+  active: boolean
+  onClick: () => void
+}
+
+function StatCard({ title, icon, value, description, active, onClick }: StatCardProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className="focus-ring w-full rounded-xl text-left"
+    >
+      <Card
+        className={cn(
+          "interactive-card h-full",
+          active && "border-primary ring-2 ring-primary/20",
+        )}
+      >
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          {icon}
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{value}</div>
+          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        </CardContent>
+      </Card>
+    </button>
+  )
+}
+
 const STATUS_OVERVIEW: Array<{
   status: VersionStatus
   icon: typeof Clock
@@ -148,6 +211,8 @@ const STATUS_OVERVIEW: Array<{
 ]
 
 export function DashboardPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const allProjectsRef = useRef<HTMLDivElement>(null)
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -157,6 +222,37 @@ export function DashboardPage() {
   const [createError, setCreateError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [sortField, setSortField] = useState<ProjectSortField>("updatedAt")
+
+  const activeFilter = useMemo(
+    () => parseDashboardFilterFromSearchParams(searchParams),
+    [searchParams],
+  )
+
+  const setActiveFilter = useCallback(
+    (filter: DashboardProjectFilter | null) => {
+      const next = new URLSearchParams(searchParams)
+      const param = dashboardFilterToParam(filter)
+
+      if (param) {
+        next.set(DASHBOARD_FILTER_PARAM, param)
+      } else {
+        next.delete(DASHBOARD_FILTER_PARAM)
+      }
+
+      setSearchParams(next, { replace: true })
+    },
+    [searchParams, setSearchParams],
+  )
+
+  const toggleDashboardFilter = useCallback(
+    (filter: DashboardProjectFilter) => {
+      setActiveFilter(
+        dashboardFiltersEqual(activeFilter, filter) ? null : filter,
+      )
+      allProjectsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    },
+    [activeFilter, setActiveFilter],
+  )
 
   const loadProjects = useCallback(async () => {
     setLoading(true)
@@ -233,17 +329,33 @@ export function DashboardPage() {
 
   const statusCounts = useMemo(() => countProjectsByStatus(projects), [projects])
   const openCommentTotal = useMemo(() => totalOpenComments(projects), [projects])
-  const recentProjects = useMemo(() => recentlyUpdatedProjects(projects), [projects])
+  const greeting = useMemo(() => getTimeOfDayGreeting(), [])
+  const recentProjects = useMemo(
+    () => recentlyUpdatedProjects(filterProjectsByName(projects, searchQuery)),
+    [projects, searchQuery],
+  )
   const filteredProjects = useMemo(
-    () => sortProjects(filterProjectsByName(projects, searchQuery), sortField),
-    [projects, searchQuery, sortField],
+    () =>
+      sortProjects(
+        filterProjectsByDashboardFilter(
+          filterProjectsByName(projects, searchQuery),
+          activeFilter,
+        ),
+        sortField,
+      ),
+    [projects, searchQuery, sortField, activeFilter],
+  )
+
+  const openCommentProjectCount = useMemo(
+    () => projects.filter((project) => project.openCommentCount > 0).length,
+    [projects],
   )
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="type-page-title">Good morning</h2>
+          <h2 className="type-page-title">{greeting}</h2>
           <p className="text-muted-foreground">
             Your home for reviews, revisions, and approvals.
           </p>
@@ -269,40 +381,38 @@ export function DashboardPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Open Comments</CardTitle>
-                <MessageSquare className="size-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{openCommentTotal}</div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Across {projects.length}{" "}
-                  {projects.length === 1 ? "project" : "projects"}
-                </p>
-              </CardContent>
-            </Card>
+          <div
+            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            role="group"
+            aria-label="Filter projects by status"
+          >
+            <StatCard
+              title="Open Comments"
+              icon={<MessageSquare className="size-4 text-muted-foreground" />}
+              value={openCommentTotal}
+              description={`Across ${openCommentProjectCount} ${
+                openCommentProjectCount === 1 ? "project" : "projects"
+              }`}
+              active={activeFilter?.type === "open_comments"}
+              onClick={() => toggleDashboardFilter({ type: "open_comments" })}
+            />
 
             {STATUS_OVERVIEW.map(({ status, icon: Icon, accentClass }) => (
-              <Card key={status}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    {VERSION_STATUS_LABELS[status]}
-                  </CardTitle>
-                  <Icon className={`size-4 ${accentClass}`} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{statusCounts[status]}</div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {statusCounts[status] === 1 ? "project" : "projects"}
-                  </p>
-                </CardContent>
-              </Card>
+              <StatCard
+                key={status}
+                title={VERSION_STATUS_LABELS[status]}
+                icon={<Icon className={`size-4 ${accentClass}`} />}
+                value={statusCounts[status]}
+                description={statusCounts[status] === 1 ? "project" : "projects"}
+                active={
+                  activeFilter?.type === "status" && activeFilter.status === status
+                }
+                onClick={() => toggleDashboardFilter({ type: "status", status })}
+              />
             ))}
           </div>
 
-          {projects.length > 0 ? (
+          {recentProjects.length > 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle>Recently Updated</CardTitle>
@@ -322,13 +432,15 @@ export function DashboardPage() {
         </>
       )}
 
-      <Card>
+      <Card ref={allProjectsRef}>
         <CardHeader>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <CardTitle>All Projects</CardTitle>
               <CardDescription>
-                Search and sort your project library
+                {activeFilter
+                  ? `Showing ${getDashboardFilterLabel(activeFilter)}`
+                  : "Search and sort your project library"}
               </CardDescription>
             </div>
             <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
@@ -337,6 +449,12 @@ export function DashboardPage() {
                 <Input
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      event.preventDefault()
+                      setSearchQuery("")
+                    }
+                  }}
                   placeholder="Search projects..."
                   className="pl-9"
                   aria-label="Search projects by name"
@@ -394,12 +512,27 @@ export function DashboardPage() {
               <div>
                 <p className="font-medium">No matching projects</p>
                 <p className="text-sm text-muted-foreground">
-                  Try a different search term or clear the filter.
+                  {searchQuery && activeFilter
+                    ? "Try a different search term or clear the active filters."
+                    : searchQuery
+                      ? "Try a different search term or clear the search."
+                      : activeFilter
+                        ? `No ${getDashboardFilterLabel(activeFilter)} match this filter.`
+                        : "Try a different search term or clear the filter."}
                 </p>
               </div>
-              <Button variant="outline" onClick={() => setSearchQuery("")}>
-                Clear search
-              </Button>
+              <div className="flex flex-wrap justify-center gap-2">
+                {searchQuery ? (
+                  <Button variant="outline" onClick={() => setSearchQuery("")}>
+                    Clear search
+                  </Button>
+                ) : null}
+                {activeFilter ? (
+                  <Button variant="outline" onClick={() => setActiveFilter(null)}>
+                    Clear filter
+                  </Button>
+                ) : null}
+              </div>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
