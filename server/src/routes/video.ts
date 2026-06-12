@@ -6,6 +6,7 @@ import { getVideoContentType } from "../utils/mime.js"
 
 interface VideoParams {
   projectId: string
+  deliverableId: string
   version: string
   filename: string
 }
@@ -14,10 +15,11 @@ const videoRouter = Router({ mergeParams: true })
 
 videoRouter.get("/", (req: Request<VideoParams>, res) => {
   const projectId = getParam(req.params.projectId)
+  const deliverableId = getParam(req.params.deliverableId)
   const version = getParam(req.params.version)
   const filename = getParam(req.params.filename)
 
-  const videoPath = getVideoPath(projectId, version, filename)
+  const videoPath = getVideoPath(projectId, deliverableId, version, filename)
   if (!videoPath) {
     res.status(400).json({ error: "Invalid filename" })
     return

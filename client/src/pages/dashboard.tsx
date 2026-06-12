@@ -1,66 +1,38 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Link, useSearchParams } from "react-router-dom"
-import { VersionStatusBadge } from "@/components/project/version-status-badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useEffect, useMemo, useState } from "react"
+import { Link } from "react-router-dom"
+import {
+  AlertTriangle,
+  CalendarClock,
+  CheckCircle2,
+  FolderKanban,
+  MessageSquare,
+  Wallet,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Spinner } from "@/components/ui/spinner"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { ProjectCardSkeleton } from "@/components/dashboard/project-card-skeleton"
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ProjectStatusBadge } from "@/components/project/project-status-badge"
+import { listProjects } from "@/lib/api"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
-import { createProject, listProjects } from "@/lib/api"
+  budgetHealth,
+  formatCurrency,
+} from "@/lib/budget"
 import {
-  humanizeApiError,
-  showErrorToast,
-  showSuccessToast,
-} from "@/lib/toast"
-import { getTimeOfDayGreeting } from "@/lib/greeting"
-import {
+  countDeliverablesInReview,
   countProjectsByStatus,
-  dashboardFilterToParam,
-  DASHBOARD_FILTER_PARAM,
-  filterProjectsByDashboardFilter,
-  filterProjectsByName,
-  getDashboardFilterLabel,
-  parseDashboardFilterFromSearchParams,
-  PROJECT_SORT_LABELS,
   recentlyUpdatedProjects,
-  sortProjects,
   totalOpenComments,
-  type DashboardProjectFilter,
-  type ProjectSortField,
 } from "@/lib/projects"
-import { cn } from "@/lib/utils"
-import { VERSION_STATUS_LABELS } from "@/lib/versions"
+import { getTimeOfDayGreeting } from "@/lib/greeting"
+import { humanizeApiError, showErrorToast } from "@/lib/toast"
 import type { ProjectSummary } from "@/types/project"
-import type { VersionStatus } from "@/types/version"
-import {
-  ArrowDownUp,
-  CheckCircle2,
-  Clock,
-  FolderOpen,
-  MessageSquare,
-  Plus,
-  RotateCcw,
-  Search,
-} from "lucide-react"
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString(undefined, {
@@ -70,205 +42,52 @@ function formatDate(value: string): string {
   })
 }
 
-function formatRelativeDate(value: string): string {
-  const date = new Date(value)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffDays === 0) {
-    return "Today"
-  }
-  if (diffDays === 1) {
-    return "Yesterday"
-  }
-  if (diffDays < 7) {
-    return `${diffDays} days ago`
-  }
-
-  return formatDate(value)
-}
-
-interface ProjectCardProps {
-  project: ProjectSummary
-  compact?: boolean
-}
-
-function ProjectCard({ project, compact = false }: ProjectCardProps) {
-  return (
-    <Link
-      to={`/projects/${encodeURIComponent(project.id)}`}
-      className="block rounded-xl focus-ring"
-    >
-      <Card className="interactive-card h-full border-muted">
-        <CardHeader className={compact ? "gap-2 pb-2" : "pb-3"}>
-          <div className="flex items-start justify-between gap-2">
-            <CardTitle className={compact ? "text-sm leading-snug" : "text-base leading-snug"}>
-              {project.name}
-            </CardTitle>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-              {project.openCommentCount > 0 ? (
-                <Badge
-                  variant="default"
-                  className="gap-1"
-                  title={`${project.openCommentCount} open ${project.openCommentCount === 1 ? "comment" : "comments"}`}
-                >
-                  <MessageSquare className="size-3" />
-                  {project.openCommentCount}
-                </Badge>
-              ) : null}
-              <Badge variant="secondary">
-                {project.versionCount}{" "}
-                {project.versionCount === 1 ? "version" : "versions"}
-              </Badge>
-            </div>
-          </div>
-          <VersionStatusBadge status={project.status} />
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          <p>Updated {formatRelativeDate(project.updatedAt)}</p>
-        </CardContent>
-      </Card>
-    </Link>
-  )
-}
-
-function dashboardFiltersEqual(
-  a: DashboardProjectFilter | null,
-  b: DashboardProjectFilter | null,
-): boolean {
-  if (!a || !b) {
-    return a === b
-  }
-
-  if (a.type !== b.type) {
-    return false
-  }
-
-  if (a.type === "open_comments") {
-    return true
-  }
-
-  return b.type === "status" && a.status === b.status
+interface Deadline {
+  projectId: string
+  projectName: string
+  label: string
+  dueDate: string
 }
 
 interface StatCardProps {
   title: string
   icon: React.ReactNode
-  value: number
+  value: number | string
   description: string
-  active: boolean
-  onClick: () => void
+  to?: string
 }
 
-function StatCard({ title, icon, value, description, active, onClick }: StatCardProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className="focus-ring w-full rounded-xl text-left"
-    >
-      <Card
-        className={cn(
-          "interactive-card h-full",
-          active && "border-primary ring-2 ring-primary/20",
-        )}
-      >
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">{title}</CardTitle>
-          {icon}
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{value}</div>
-          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-        </CardContent>
-      </Card>
-    </button>
+function StatCard({ title, icon, value, description, to }: StatCardProps) {
+  const card = (
+    <Card className="interactive-card h-full">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+      </CardContent>
+    </Card>
   )
-}
 
-const STATUS_OVERVIEW: Array<{
-  status: VersionStatus
-  icon: typeof Clock
-  accentClass: string
-}> = [
-  {
-    status: "pending_review",
-    icon: Clock,
-    accentClass: "text-status-pending-foreground",
-  },
-  {
-    status: "needs_revision",
-    icon: RotateCcw,
-    accentClass: "text-status-warning-foreground",
-  },
-  {
-    status: "approved",
-    icon: CheckCircle2,
-    accentClass: "text-status-success-foreground",
-  },
-]
+  if (to) {
+    return (
+      <Link to={to} className="block rounded-xl focus-ring">
+        {card}
+      </Link>
+    )
+  }
+
+  return card
+}
 
 export function DashboardPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const allProjectsRef = useRef<HTMLDivElement>(null)
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [projectName, setProjectName] = useState("")
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [sortField, setSortField] = useState<ProjectSortField>("updatedAt")
 
-  const activeFilter = useMemo(
-    () => parseDashboardFilterFromSearchParams(searchParams),
-    [searchParams],
-  )
-
-  const setActiveFilter = useCallback(
-    (filter: DashboardProjectFilter | null) => {
-      const next = new URLSearchParams(searchParams)
-      const param = dashboardFilterToParam(filter)
-
-      if (param) {
-        next.set(DASHBOARD_FILTER_PARAM, param)
-      } else {
-        next.delete(DASHBOARD_FILTER_PARAM)
-      }
-
-      setSearchParams(next, { replace: true })
-    },
-    [searchParams, setSearchParams],
-  )
-
-  const toggleDashboardFilter = useCallback(
-    (filter: DashboardProjectFilter) => {
-      setActiveFilter(
-        dashboardFiltersEqual(activeFilter, filter) ? null : filter,
-      )
-      allProjectsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-    },
-    [activeFilter, setActiveFilter],
-  )
-
-  const loadProjects = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const data = await listProjects()
-      setProjects(data)
-    } catch (err) {
-      const message = humanizeApiError(err, "Failed to load projects")
-      setError(message)
-      showErrorToast(message)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const greeting = useMemo(() => getTimeOfDayGreeting(), [])
 
   useEffect(() => {
     let cancelled = false
@@ -294,301 +113,267 @@ export function DashboardPage() {
     }
 
     void fetchProjects()
-
     return () => {
       cancelled = true
     }
   }, [])
 
-  async function handleCreateProject(event: React.FormEvent) {
-    event.preventDefault()
-
-    const name = projectName.trim()
-    if (!name) {
-      setCreateError("Project name is required.")
-      return
-    }
-
-    setCreating(true)
-    setCreateError(null)
-
-    try {
-      await createProject({ name })
-      setProjectName("")
-      setSheetOpen(false)
-      showSuccessToast("Project created")
-      await loadProjects()
-    } catch (err) {
-      const message = humanizeApiError(err, "Failed to create project")
-      setCreateError(message)
-      showErrorToast(message)
-    } finally {
-      setCreating(false)
-    }
-  }
-
   const statusCounts = useMemo(() => countProjectsByStatus(projects), [projects])
-  const openCommentTotal = useMemo(() => totalOpenComments(projects), [projects])
-  const greeting = useMemo(() => getTimeOfDayGreeting(), [])
+  const openComments = useMemo(() => totalOpenComments(projects), [projects])
+  const inReview = useMemo(() => countDeliverablesInReview(projects), [projects])
   const recentProjects = useMemo(
-    () => recentlyUpdatedProjects(filterProjectsByName(projects, searchQuery)),
-    [projects, searchQuery],
-  )
-  const filteredProjects = useMemo(
-    () =>
-      sortProjects(
-        filterProjectsByDashboardFilter(
-          filterProjectsByName(projects, searchQuery),
-          activeFilter,
-        ),
-        sortField,
-      ),
-    [projects, searchQuery, sortField, activeFilter],
-  )
-
-  const openCommentProjectCount = useMemo(
-    () => projects.filter((project) => project.openCommentCount > 0).length,
+    () => recentlyUpdatedProjects(projects),
     [projects],
   )
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="type-page-title">{greeting}</h2>
-          <p className="text-muted-foreground">
-            Your home for reviews, revisions, and approvals.
-          </p>
-        </div>
-        <Button onClick={() => setSheetOpen(true)}>
-          <Plus />
-          New Project
-        </Button>
-      </div>
+  const budgetAttention = useMemo(
+    () =>
+      projects.filter((project) => {
+        if (!project.budget) return false
+        const health = budgetHealth(project.budget)
+        return health === "warning" || health === "over"
+      }),
+    [projects],
+  )
 
-      {loading ? (
+  const upcomingDeadlines = useMemo<Deadline[]>(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    const deadlines: Deadline[] = []
+
+    for (const project of projects) {
+      if (project.nextMilestone?.dueDate) {
+        deadlines.push({
+          projectId: project.id,
+          projectName: project.name,
+          label: project.nextMilestone.name,
+          dueDate: project.nextMilestone.dueDate,
+        })
+      }
+      if (project.endDate) {
+        deadlines.push({
+          projectId: project.id,
+          projectName: project.name,
+          label: "Project deadline",
+          dueDate: project.endDate,
+        })
+      }
+    }
+
+    return deadlines
+      .filter((deadline) => deadline.dueDate >= today)
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+      .slice(0, 5)
+  }, [projects])
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-64" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <Skeleton key={index} className="h-28 rounded-xl" aria-hidden />
           ))}
         </div>
-      ) : error ? (
-        <div className="flex flex-col items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-          <p className="text-sm text-destructive">{error}</p>
-          <Button variant="outline" size="sm" onClick={() => void loadProjects()}>
-            Try again
-          </Button>
-        </div>
-      ) : (
-        <>
-          <div
-            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-            role="group"
-            aria-label="Filter projects by status"
-          >
-            <StatCard
-              title="Open Comments"
-              icon={<MessageSquare className="size-4 text-muted-foreground" />}
-              value={openCommentTotal}
-              description={`Across ${openCommentProjectCount} ${
-                openCommentProjectCount === 1 ? "project" : "projects"
-              }`}
-              active={activeFilter?.type === "open_comments"}
-              onClick={() => toggleDashboardFilter({ type: "open_comments" })}
-            />
+        <Skeleton className="h-48 rounded-xl" />
+      </div>
+    )
+  }
 
-            {STATUS_OVERVIEW.map(({ status, icon: Icon, accentClass }) => (
-              <StatCard
-                key={status}
-                title={VERSION_STATUS_LABELS[status]}
-                icon={<Icon className={`size-4 ${accentClass}`} />}
-                value={statusCounts[status]}
-                description={statusCounts[status] === 1 ? "project" : "projects"}
-                active={
-                  activeFilter?.type === "status" && activeFilter.status === status
-                }
-                onClick={() => toggleDashboardFilter({ type: "status", status })}
-              />
-            ))}
-          </div>
+  if (error) {
+    return (
+      <div className="flex flex-col items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+        <p className="text-sm text-destructive">{error}</p>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/projects">Go to projects</Link>
+        </Button>
+      </div>
+    )
+  }
 
-          {recentProjects.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Recently Updated</CardTitle>
-                <CardDescription>
-                  Projects with the latest activity across your workspace
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                  {recentProjects.map((project) => (
-                    <ProjectCard key={project.id} project={project} compact />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
-        </>
-      )}
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="type-page-title">{greeting}</h2>
+        <p className="text-muted-foreground">
+          Portfolio health across budgets, deadlines, and approvals.
+        </p>
+      </div>
 
-      <Card ref={allProjectsRef}>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Active Projects"
+          icon={<FolderKanban className="size-4 text-muted-foreground" />}
+          value={statusCounts.active}
+          description={`${projects.length} total in portfolio`}
+          to="/projects?filter=active"
+        />
+        <StatCard
+          title="Deliverables in Review"
+          icon={<CheckCircle2 className="size-4 text-status-warning-foreground" />}
+          value={inReview}
+          description="Awaiting creative approval"
+          to="/projects"
+        />
+        <StatCard
+          title="Open Comments"
+          icon={<MessageSquare className="size-4 text-muted-foreground" />}
+          value={openComments}
+          description="Across all deliverables"
+          to="/projects?filter=open_comments"
+        />
+        <StatCard
+          title="Budget Attention"
+          icon={<Wallet className="size-4 text-status-warning-foreground" />}
+          value={budgetAttention.length}
+          description="Projects near or over budget"
+          to="/projects"
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarClock className="size-4 text-muted-foreground" />
+              Upcoming Deadlines
+            </CardTitle>
+            <CardDescription>
+              The next milestones and project end dates.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {upcomingDeadlines.length > 0 ? (
+              <ul className="space-y-1">
+                {upcomingDeadlines.map((deadline, index) => (
+                  <li key={`${deadline.projectId}-${index}`}>
+                    <Link
+                      to={`/projects/${encodeURIComponent(deadline.projectId)}`}
+                      className="interactive-row flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 focus-ring"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">
+                          {deadline.label}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {deadline.projectName}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {formatDate(deadline.dueDate)}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No upcoming deadlines.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="size-4 text-muted-foreground" />
+              Budget Health
+            </CardTitle>
+            <CardDescription>
+              Projects approaching or exceeding their budget.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {budgetAttention.length > 0 ? (
+              <ul className="space-y-1">
+                {budgetAttention.slice(0, 5).map((project) => (
+                  <li key={project.id}>
+                    <Link
+                      to={`/projects/${encodeURIComponent(project.id)}`}
+                      className="interactive-row flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 focus-ring"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">
+                          {project.name}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {project.budget
+                            ? `${formatCurrency(project.budget.spent ?? 0, project.budget.currency)} / ${formatCurrency(project.budget.total, project.budget.currency)}`
+                            : null}
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 border-destructive/40 bg-destructive/10 text-destructive"
+                      >
+                        {project.budget && budgetHealth(project.budget) === "over"
+                          ? "Over"
+                          : "Near"}
+                      </Badge>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                All projects are on budget.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
         <CardHeader>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <CardTitle>All Projects</CardTitle>
-              <CardDescription>
-                {activeFilter
-                  ? `Showing ${getDashboardFilterLabel(activeFilter)}`
-                  : "Search and sort your project library"}
-              </CardDescription>
-            </div>
-            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
-              <div className="relative flex-1 sm:min-w-64">
-                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Escape") {
-                      event.preventDefault()
-                      setSearchQuery("")
-                    }
-                  }}
-                  placeholder="Search projects..."
-                  className="pl-9"
-                  aria-label="Search projects by name"
-                />
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="shrink-0">
-                    <ArrowDownUp />
-                    Sort: {PROJECT_SORT_LABELS[sortField]}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuRadioGroup
-                    value={sortField}
-                    onValueChange={(value) => setSortField(value as ProjectSortField)}
-                  >
-                    {(Object.keys(PROJECT_SORT_LABELS) as ProjectSortField[]).map((field) => (
-                      <DropdownMenuRadioItem key={field} value={field}>
-                        {PROJECT_SORT_LABELS[field]}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
+          <CardTitle>Recently Updated</CardTitle>
+          <CardDescription>
+            Projects with the latest activity across your portfolio.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <ProjectCardSkeleton key={index} />
+          {recentProjects.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {recentProjects.map((project) => (
+                <Link
+                  key={project.id}
+                  to={`/projects/${encodeURIComponent(project.id)}`}
+                  className="block rounded-xl focus-ring"
+                >
+                  <Card className="interactive-card h-full border-muted">
+                    <CardHeader className="gap-2 pb-2">
+                      <CardTitle className="text-sm leading-snug">
+                        {project.name}
+                      </CardTitle>
+                      <ProjectStatusBadge status={project.status} />
+                    </CardHeader>
+                    <CardContent className="text-sm text-muted-foreground">
+                      <p>
+                        {project.deliverableCount}{" "}
+                        {project.deliverableCount === 1
+                          ? "deliverable"
+                          : "deliverables"}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
-          ) : error ? null : projects.length === 0 ? (
+          ) : (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-8 text-center">
-              <FolderOpen className="size-8 text-muted-foreground" />
+              <FolderKanban className="size-8 text-muted-foreground" />
               <div>
                 <p className="font-medium">No projects yet</p>
                 <p className="text-sm text-muted-foreground">
-                  Create your first project to start uploading and reviewing videos.
+                  Create your first project to start planning work.
                 </p>
               </div>
-              <Button onClick={() => setSheetOpen(true)}>
-                <Plus />
-                New Project
+              <Button asChild>
+                <Link to="/projects">Go to projects</Link>
               </Button>
-            </div>
-          ) : filteredProjects.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-8 text-center">
-              <Search className="size-8 text-muted-foreground" />
-              <div>
-                <p className="font-medium">No matching projects</p>
-                <p className="text-sm text-muted-foreground">
-                  {searchQuery && activeFilter
-                    ? "Try a different search term or clear the active filters."
-                    : searchQuery
-                      ? "Try a different search term or clear the search."
-                      : activeFilter
-                        ? `No ${getDashboardFilterLabel(activeFilter)} match this filter.`
-                        : "Try a different search term or clear the filter."}
-                </p>
-              </div>
-              <div className="flex flex-wrap justify-center gap-2">
-                {searchQuery ? (
-                  <Button variant="outline" onClick={() => setSearchQuery("")}>
-                    Clear search
-                  </Button>
-                ) : null}
-                {activeFilter ? (
-                  <Button variant="outline" onClick={() => setActiveFilter(null)}>
-                    Clear filter
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
             </div>
           )}
         </CardContent>
       </Card>
-
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent>
-          <form onSubmit={(event) => void handleCreateProject(event)} className="flex h-full flex-col">
-            <SheetHeader>
-              <SheetTitle>New Project</SheetTitle>
-              <SheetDescription>
-                Give your project a name to start organizing video versions and reviews.
-              </SheetDescription>
-            </SheetHeader>
-
-            <div className="flex flex-1 flex-col gap-4 px-4">
-              <div className="space-y-2">
-                <label htmlFor="project-name" className="text-sm font-medium">
-                  Project name
-                </label>
-                <Input
-                  id="project-name"
-                  value={projectName}
-                  onChange={(event) => setProjectName(event.target.value)}
-                  placeholder="e.g. Hero Spot Q3"
-                  autoFocus
-                  disabled={creating}
-                  aria-invalid={createError ? true : undefined}
-                />
-                {createError ? (
-                  <p className="text-sm text-destructive">{createError}</p>
-                ) : null}
-              </div>
-            </div>
-
-            <SheetFooter>
-              <Button type="submit" disabled={creating}>
-                {creating ? (
-                  <>
-                    <Spinner className="size-4" />
-                    Creating…
-                  </>
-                ) : (
-                  "Create Project"
-                )}
-              </Button>
-            </SheetFooter>
-          </form>
-        </SheetContent>
-      </Sheet>
     </div>
   )
 }

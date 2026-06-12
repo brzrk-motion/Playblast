@@ -39,6 +39,8 @@ function normalizeVersion(version: Version): Version {
 function normalizeStore(store: DataStore): DataStore {
   return {
     ...store,
+    deliverables: store.deliverables ?? [],
+    milestones: store.milestones ?? [],
     versions: store.versions.map(normalizeVersion),
   }
 }
@@ -52,7 +54,9 @@ function isDataStore(value: unknown): value is DataStore {
   return (
     Array.isArray(record.projects) &&
     Array.isArray(record.versions) &&
-    Array.isArray(record.comments)
+    Array.isArray(record.comments) &&
+    (record.deliverables === undefined || Array.isArray(record.deliverables)) &&
+    (record.milestones === undefined || Array.isArray(record.milestones))
   )
 }
 

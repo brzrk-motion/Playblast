@@ -4,7 +4,9 @@ import { AppLayout } from "@/components/layout/app-layout"
 import { ComparePage } from "@/pages/compare"
 import { ComingSoonPage } from "@/pages/coming-soon"
 import { DashboardPage } from "@/pages/dashboard"
-import { ProjectPage } from "@/pages/project"
+import { DeliverablePage } from "@/pages/deliverable"
+import { ProjectOverviewPage } from "@/pages/project-overview"
+import { ProjectsPage } from "@/pages/projects"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
@@ -17,14 +19,16 @@ function App() {
           <Routes>
             <Route element={<AppLayout />}>
               <Route index element={<DashboardPage />} />
-              <Route path="reviews" element={<ComingSoonPage />} />
-              <Route path="reviews/pending" element={<ComingSoonPage />} />
-              <Route path="reviews/approved" element={<ComingSoonPage />} />
-              <Route path="comparisons/ab-compare" element={<ComingSoonPage />} />
-              <Route path="comparisons/version-history" element={<ComingSoonPage />} />
-              <Route path="projects" element={<ComingSoonPage />} />
-              <Route path="projects/:projectId" element={<ProjectPage />} />
-              <Route path="projects/:projectId/compare" element={<ComparePage />} />
+              <Route path="projects" element={<ProjectsPage />} />
+              <Route path="projects/:projectId" element={<ProjectOverviewPage />} />
+              <Route
+                path="projects/:projectId/deliverables/:deliverableId"
+                element={<DeliverablePage />}
+              />
+              <Route
+                path="projects/:projectId/deliverables/:deliverableId/compare"
+                element={<ComparePage />}
+              />
               <Route path="team" element={<ComingSoonPage />} />
               <Route path="settings" element={<ComingSoonPage />} />
               <Route path="profile" element={<ComingSoonPage />} />

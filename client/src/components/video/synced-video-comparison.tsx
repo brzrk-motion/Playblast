@@ -9,6 +9,7 @@ import type { Version } from "@/types/version"
 
 export interface SyncedVideoComparisonProps {
   projectId: string
+  deliverableId: string
   versions: Version[]
   leftLabel: string | null
   rightLabel: string | null
@@ -19,6 +20,7 @@ export interface SyncedVideoComparisonProps {
 
 export function SyncedVideoComparison({
   projectId,
+  deliverableId,
   versions,
   leftLabel,
   rightLabel,
@@ -53,6 +55,7 @@ export function SyncedVideoComparison({
           <ComparisonPane
             pane="left"
             projectId={projectId}
+            deliverableId={deliverableId}
             versions={versions}
             selectedLabel={leftLabel}
             onSelect={onLeftLabelChange}
@@ -60,6 +63,7 @@ export function SyncedVideoComparison({
           <ComparisonPane
             pane="right"
             projectId={projectId}
+            deliverableId={deliverableId}
             versions={versions}
             selectedLabel={rightLabel}
             onSelect={onRightLabelChange}

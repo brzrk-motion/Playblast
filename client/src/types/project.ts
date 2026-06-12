@@ -1,15 +1,45 @@
+import type { DeliverableStatus } from "./deliverable"
+
+export type ProjectStatus = "active" | "on_hold" | "completed" | "archived"
+
+export const PROJECT_STATUSES: ProjectStatus[] = [
+  "active",
+  "on_hold",
+  "completed",
+  "archived",
+]
+
+export interface BudgetLineItem {
+  id: string
+  label: string
+  category?: string
+  amount: number
+}
+
+export interface ProjectBudget {
+  total: number
+  currency: string
+  spent?: number
+  lineItems?: BudgetLineItem[]
+}
+
 export interface Project {
   id: string
   name: string
   createdAt: string
+  status: ProjectStatus
+  client?: string
+  description?: string
+  startDate?: string
+  endDate?: string
+  budget?: ProjectBudget
 }
 
-import type { VersionStatus } from "./version"
-
 export interface ProjectSummary extends Project {
+  deliverableCount: number
   versionCount: number
-  updatedAt: string
   openCommentCount: number
-  /** Latest version status, or pending_review when the project has no versions yet. */
-  status: VersionStatus
+  updatedAt: string
+  deliverableStatusCounts: Record<DeliverableStatus, number>
+  nextMilestone: { id: string; name: string; dueDate?: string } | null
 }

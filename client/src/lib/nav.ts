@@ -1,12 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import {
-  Film,
-  FolderOpen,
-  GitCompare,
-  LayoutDashboard,
-  Settings,
-  Users,
-} from "lucide-react"
+import { FolderKanban, LayoutDashboard, Settings, Users } from "lucide-react"
 
 export type NavSubItem = {
   title: string
@@ -29,29 +22,9 @@ export const navMain: NavItem[] = [
     url: "/",
   },
   {
-    title: "Reviews",
-    icon: Film,
-    url: "/reviews",
-    items: [
-      { title: "All Reviews", url: "/reviews", comingSoon: true },
-      { title: "Pending", url: "/reviews/pending", comingSoon: true },
-      { title: "Approved", url: "/reviews/approved", comingSoon: true },
-    ],
-  },
-  {
-    title: "Comparisons",
-    icon: GitCompare,
-    url: "/comparisons/ab-compare",
-    items: [
-      { title: "A/B Compare", url: "/comparisons/ab-compare", comingSoon: true },
-      { title: "Version History", url: "/comparisons/version-history", comingSoon: true },
-    ],
-  },
-  {
     title: "Projects",
-    icon: FolderOpen,
+    icon: FolderKanban,
     url: "/projects",
-    comingSoon: true,
   },
   {
     title: "Team",
@@ -76,36 +49,6 @@ export type ComingSoonPageConfig = {
 }
 
 export const comingSoonPages: Record<string, ComingSoonPageConfig> = {
-  "/reviews": {
-    title: "All Reviews",
-    description:
-      "Browse every review across your workspace in one place. Open a project from the dashboard to review videos today.",
-  },
-  "/reviews/pending": {
-    title: "Pending Reviews",
-    description:
-      "Track versions waiting for feedback or approval. Project-level review is available from each project page.",
-  },
-  "/reviews/approved": {
-    title: "Approved Reviews",
-    description:
-      "See approved versions across projects. Approval actions are available on individual project review pages.",
-  },
-  "/comparisons/ab-compare": {
-    title: "A/B Compare",
-    description:
-      "Compare two versions side by side. Open a project and use Compare to review differences between versions.",
-  },
-  "/comparisons/version-history": {
-    title: "Version History",
-    description:
-      "Browse version timelines across projects. Version lists are available on each project page.",
-  },
-  "/projects": {
-    title: "Projects",
-    description:
-      "A dedicated projects view is on the way. Browse and create projects from the dashboard in the meantime.",
-  },
   "/team": {
     title: "Team",
     description: "Invite collaborators and manage workspace members.",
@@ -125,8 +68,16 @@ export function getPageHeader(pathname: string): { title: string; subtitle?: str
     return { title: "Compare", subtitle: "Side-by-side review" }
   }
 
+  if (/^\/projects\/[^/]+\/deliverables\/[^/]+$/.test(pathname)) {
+    return { title: "Deliverable" }
+  }
+
   if (/^\/projects\/[^/]+$/.test(pathname)) {
     return { title: "Project" }
+  }
+
+  if (pathname === "/projects") {
+    return { title: "Projects" }
   }
 
   if (pathname === "/") {
@@ -142,6 +93,9 @@ export function getPageHeader(pathname: string): { title: string; subtitle?: str
 }
 
 export function isNavItemActive(pathname: string, url: string): boolean {
+  if (url === "/projects") {
+    return pathname === "/projects" || pathname.startsWith("/projects/")
+  }
   return pathname === url
 }
 

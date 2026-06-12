@@ -11,8 +11,11 @@ function AppLayoutContent() {
   const location = useLocation()
   const { projectName } = usePageHeaderContext()
   const { title, subtitle } = getPageHeader(location.pathname)
-  const isReviewLayout = /^\/projects\/[^/]+$/.test(location.pathname)
-  const headerSubtitle = isReviewLayout ? projectName : subtitle
+  const isReviewLayout = /^\/projects\/[^/]+\/deliverables\/[^/]+$/.test(
+    location.pathname,
+  )
+  const isProjectScoped = /^\/projects\/[^/]+/.test(location.pathname)
+  const headerSubtitle = isProjectScoped ? projectName : subtitle
 
   return (
     <SidebarProvider>

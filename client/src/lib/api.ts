@@ -1,11 +1,23 @@
 import type { FrameAnnotation } from "@/types/annotation"
 import type { Comment } from "@/types/comment"
-import type { Project, ProjectSummary } from "@/types/project"
+import type {
+  Deliverable,
+  DeliverableStatus,
+  DeliverableSummary,
+} from "@/types/deliverable"
+import type { Milestone } from "@/types/milestone"
+import type {
+  Project,
+  ProjectBudget,
+  ProjectStatus,
+  ProjectSummary,
+} from "@/types/project"
 import type { UploadProgress, UploadResponse } from "@/types/upload"
 import type { Version, VersionStatus } from "@/types/version"
 
 export function getVideoUrl(
   projectId: string,
+  deliverableId: string,
   version: string,
   filename: string,
 ): string {
@@ -14,7 +26,7 @@ export function getVideoUrl(
     .map((segment) => encodeURIComponent(segment))
     .join("/")
 
-  return `/video/${encodeURIComponent(projectId)}/${encodeURIComponent(version)}/${encodedFilename}`
+  return `/video/${encodeURIComponent(projectId)}/${encodeURIComponent(deliverableId)}/${encodeURIComponent(version)}/${encodedFilename}`
 }
 
 function humanizeHttpError(status: number, serverMessage?: string): string {
@@ -53,6 +65,17 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>
 }
 
+async function expectOk(response: Response): Promise<void> {
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: string
+    } | null
+    throw new Error(humanizeHttpError(response.status, body?.error))
+  }
+}
+
+// --- Projects ---------------------------------------------------------------
+
 export async function listProjects(): Promise<ProjectSummary[]> {
   const response = await fetch("/api/projects")
   return parseJsonResponse<ProjectSummary[]>(response)
@@ -63,10 +86,18 @@ export async function getProject(id: string): Promise<Project> {
   return parseJsonResponse<Project>(response)
 }
 
-export async function createProject(body: {
+export interface CreateProjectInput {
   name: string
   id?: string
-}): Promise<Project> {
+  status?: ProjectStatus
+  client?: string
+  description?: string
+  startDate?: string
+  endDate?: string
+  budget?: ProjectBudget
+}
+
+export async function createProject(body: CreateProjectInput): Promise<Project> {
   const response = await fetch("/api/projects", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -75,46 +106,175 @@ export async function createProject(body: {
   return parseJsonResponse<Project>(response)
 }
 
+export interface UpdateProjectInput {
+  name?: string
+  status?: ProjectStatus
+  client?: string | null
+  description?: string | null
+  startDate?: string | null
+  endDate?: string | null
+  budget?: ProjectBudget | null
+}
+
+export async function updateProject(
+  id: string,
+  input: UpdateProjectInput,
+): Promise<Project> {
+  const response = await fetch(`/api/projects/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  })
+  return parseJsonResponse<Project>(response)
+}
+
 export async function deleteProject(id: string): Promise<void> {
   const response = await fetch(`/api/projects/${encodeURIComponent(id)}`, {
     method: "DELETE",
   })
-
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      error?: string
-    } | null
-    throw new Error(humanizeHttpError(response.status, body?.error))
-  }
+  await expectOk(response)
 }
 
-export async function deleteComment(commentId: string): Promise<void> {
+// --- Deliverables -----------------------------------------------------------
+
+export async function listDeliverables(
+  projectId: string,
+): Promise<DeliverableSummary[]> {
   const response = await fetch(
-    `/api/comments/${encodeURIComponent(commentId)}`,
+    `/api/projects/${encodeURIComponent(projectId)}/deliverables`,
+  )
+  return parseJsonResponse<DeliverableSummary[]>(response)
+}
+
+export async function getDeliverable(
+  deliverableId: string,
+): Promise<Deliverable> {
+  const response = await fetch(
+    `/api/deliverables/${encodeURIComponent(deliverableId)}`,
+  )
+  return parseJsonResponse<Deliverable>(response)
+}
+
+export async function createDeliverable(
+  projectId: string,
+  input: { name: string; description?: string; dueDate?: string; status?: DeliverableStatus },
+): Promise<Deliverable> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/deliverables`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  )
+  return parseJsonResponse<Deliverable>(response)
+}
+
+export async function updateDeliverable(
+  deliverableId: string,
+  input: {
+    name?: string
+    description?: string | null
+    status?: DeliverableStatus
+    dueDate?: string | null
+  },
+): Promise<Deliverable> {
+  const response = await fetch(
+    `/api/deliverables/${encodeURIComponent(deliverableId)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  )
+  return parseJsonResponse<Deliverable>(response)
+}
+
+export async function updateDeliverableStatus(
+  deliverableId: string,
+  status: DeliverableStatus,
+): Promise<Deliverable> {
+  const response = await fetch(
+    `/api/deliverables/${encodeURIComponent(deliverableId)}/status`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    },
+  )
+  return parseJsonResponse<Deliverable>(response)
+}
+
+export async function deleteDeliverable(deliverableId: string): Promise<void> {
+  const response = await fetch(
+    `/api/deliverables/${encodeURIComponent(deliverableId)}`,
     { method: "DELETE" },
   )
-
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      error?: string
-    } | null
-    throw new Error(humanizeHttpError(response.status, body?.error))
-  }
+  await expectOk(response)
 }
 
-export async function listVersions(projectId: string): Promise<Version[]> {
+// --- Milestones -------------------------------------------------------------
+
+export async function listMilestones(projectId: string): Promise<Milestone[]> {
   const response = await fetch(
-    `/api/projects/${encodeURIComponent(projectId)}/versions`,
+    `/api/projects/${encodeURIComponent(projectId)}/milestones`,
+  )
+  return parseJsonResponse<Milestone[]>(response)
+}
+
+export async function createMilestone(
+  projectId: string,
+  input: { name: string; dueDate?: string; done?: boolean },
+): Promise<Milestone> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/milestones`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  )
+  return parseJsonResponse<Milestone>(response)
+}
+
+export async function updateMilestone(
+  milestoneId: string,
+  input: { name?: string; dueDate?: string | null; done?: boolean },
+): Promise<Milestone> {
+  const response = await fetch(
+    `/api/milestones/${encodeURIComponent(milestoneId)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  )
+  return parseJsonResponse<Milestone>(response)
+}
+
+export async function deleteMilestone(milestoneId: string): Promise<void> {
+  const response = await fetch(
+    `/api/milestones/${encodeURIComponent(milestoneId)}`,
+    { method: "DELETE" },
+  )
+  await expectOk(response)
+}
+
+// --- Versions ---------------------------------------------------------------
+
+export async function listVersions(deliverableId: string): Promise<Version[]> {
+  const response = await fetch(
+    `/api/deliverables/${encodeURIComponent(deliverableId)}/versions`,
   )
   return parseJsonResponse<Version[]>(response)
 }
 
 export async function listComments(
-  projectId: string,
+  deliverableId: string,
   versionLabel: string,
 ): Promise<Comment[]> {
   const response = await fetch(
-    `/api/projects/${encodeURIComponent(projectId)}/versions/${encodeURIComponent(versionLabel)}/comments`,
+    `/api/deliverables/${encodeURIComponent(deliverableId)}/versions/${encodeURIComponent(versionLabel)}/comments`,
   )
   return parseJsonResponse<Comment[]>(response)
 }
@@ -158,8 +318,16 @@ export async function resolveComment(
   return parseJsonResponse<Comment>(response)
 }
 
+export async function deleteComment(commentId: string): Promise<void> {
+  const response = await fetch(
+    `/api/comments/${encodeURIComponent(commentId)}`,
+    { method: "DELETE" },
+  )
+  await expectOk(response)
+}
+
 export async function createCommentForVersion(
-  projectId: string,
+  deliverableId: string,
   versionLabel: string,
   input: {
     timestamp: number
@@ -169,7 +337,7 @@ export async function createCommentForVersion(
   },
 ): Promise<Comment> {
   const response = await fetch(
-    `/api/projects/${encodeURIComponent(projectId)}/versions/${encodeURIComponent(versionLabel)}/comments`,
+    `/api/deliverables/${encodeURIComponent(deliverableId)}/versions/${encodeURIComponent(versionLabel)}/comments`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -210,7 +378,7 @@ export async function updateVersionStatus(
 }
 
 export function uploadVersion(
-  projectId: string,
+  deliverableId: string,
   label: string,
   file: File,
   onProgress?: (progress: UploadProgress) => void,
@@ -254,7 +422,7 @@ export function uploadVersion(
 
     xhr.open(
       "POST",
-      `/api/projects/${encodeURIComponent(projectId)}/versions/${encodeURIComponent(label)}/upload`,
+      `/api/deliverables/${encodeURIComponent(deliverableId)}/versions/${encodeURIComponent(label)}/upload`,
     )
     xhr.send(formData)
   })

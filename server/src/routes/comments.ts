@@ -4,7 +4,7 @@ import {
   createComment,
   deleteComment,
   getComment,
-  getProject,
+  getDeliverable,
   getVersion,
   getVersionByLabel,
   listComments,
@@ -62,15 +62,15 @@ function parseCreateCommentBody(body: unknown): {
 const commentsRouter = Router({ mergeParams: true })
 
 commentsRouter.get("/", (req, res) => {
-  const { projectId, version: versionLabel } = getVersionRouteParams(req)
+  const { deliverableId, version: versionLabel } = getVersionRouteParams(req)
 
-  const project = getProject(projectId)
-  if (!project) {
-    res.status(404).json({ error: "Project not found." })
+  const deliverable = getDeliverable(deliverableId)
+  if (!deliverable) {
+    res.status(404).json({ error: "Deliverable not found." })
     return
   }
 
-  const version = getVersionByLabel(projectId, versionLabel)
+  const version = getVersionByLabel(deliverableId, versionLabel)
   if (!version) {
     res.status(404).json({ error: "Version not found." })
     return
@@ -80,15 +80,15 @@ commentsRouter.get("/", (req, res) => {
 })
 
 commentsRouter.post("/", (req, res) => {
-  const { projectId, version: versionLabel } = getVersionRouteParams(req)
+  const { deliverableId, version: versionLabel } = getVersionRouteParams(req)
 
-  const project = getProject(projectId)
-  if (!project) {
-    res.status(404).json({ error: "Project not found." })
+  const deliverable = getDeliverable(deliverableId)
+  if (!deliverable) {
+    res.status(404).json({ error: "Deliverable not found." })
     return
   }
 
-  const version = getVersionByLabel(projectId, versionLabel)
+  const version = getVersionByLabel(deliverableId, versionLabel)
   if (!version) {
     res.status(404).json({ error: "Version not found." })
     return

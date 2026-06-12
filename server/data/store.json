@@ -1,5 +1,88 @@
 {
-  "projects": [],
-  "versions": [],
-  "comments": []
+  "projects": [
+    {
+      "id": "3d004b1e-c5b5-4a0b-9a23-6945682a2a43",
+      "name": "Lofree Spec Ad",
+      "createdAt": "2026-06-12T18:51:41.782Z",
+      "status": "active",
+      "client": "Lofree",
+      "startDate": "2026-06-04",
+      "endDate": "2026-06-30",
+      "budget": {
+        "total": 5000,
+        "currency": "USD",
+        "spent": 4500
+      }
+    }
+  ],
+  "versions": [
+    {
+      "id": "497f76f7-3554-44da-ac76-4e962a17f14f",
+      "projectId": "3d004b1e-c5b5-4a0b-9a23-6945682a2a43",
+      "deliverableId": "c2dcfa2e-5379-46f1-9590-6dfd16690d4b",
+      "label": "v1",
+      "filename": "Animatic.mp4",
+      "uploadedAt": "2026-06-12T19:08:16.503Z",
+      "status": "pending_review"
+    }
+  ],
+  "comments": [
+    {
+      "id": "42a435c8-015e-4df9-b76e-545cc31bf834",
+      "versionId": "497f76f7-3554-44da-ac76-4e962a17f14f",
+      "timestamp": 26.526802,
+      "body": "This fucks",
+      "author": "Reviewer",
+      "createdAt": "2026-06-12T19:09:04.436Z",
+      "resolved": false
+    },
+    {
+      "id": "fd4b4818-f8e3-44a4-afa1-f555b836c5d0",
+      "versionId": "497f76f7-3554-44da-ac76-4e962a17f14f",
+      "timestamp": 29.971555,
+      "body": "Yeahh!",
+      "author": "Reviewer",
+      "createdAt": "2026-06-12T19:22:56.701Z",
+      "resolved": false
+    },
+    {
+      "id": "31d4acfc-51e5-4c25-bb06-f035582cfa81",
+      "versionId": "497f76f7-3554-44da-ac76-4e962a17f14f",
+      "timestamp": 18.914,
+      "body": "Love the text!",
+      "author": "Reviewer",
+      "createdAt": "2026-06-12T19:23:36.287Z",
+      "resolved": false
+    },
+    {
+      "id": "e97cfbed-fbb2-402e-89aa-6c4bf77ba33f",
+      "versionId": "497f76f7-3554-44da-ac76-4e962a17f14f",
+      "timestamp": 5.39,
+      "body": "Cool arrow!",
+      "author": "Reviewer",
+      "createdAt": "2026-06-12T19:23:52.751Z",
+      "resolved": false
+    },
+    {
+      "id": "c509f242-b5b1-4f93-b259-4478cbef1e36",
+      "versionId": "497f76f7-3554-44da-ac76-4e962a17f14f",
+      "timestamp": 40.3025,
+      "body": "Love the orange!",
+      "author": "Reviewer",
+      "createdAt": "2026-06-12T19:24:35.698Z",
+      "resolved": false
+    }
+  ],
+  "deliverables": [
+    {
+      "id": "c2dcfa2e-5379-46f1-9590-6dfd16690d4b",
+      "projectId": "3d004b1e-c5b5-4a0b-9a23-6945682a2a43",
+      "name": "Animatic",
+      "status": "in_review",
+      "createdAt": "2026-06-12T19:07:08.375Z",
+      "order": 0,
+      "dueDate": "2026-06-19"
+    }
+  ],
+  "milestones": []
 }

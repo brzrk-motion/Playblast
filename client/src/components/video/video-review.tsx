@@ -26,6 +26,7 @@ import type { VersionStatus } from "@/types/version"
 
 export interface VideoReviewProps {
   projectId: string
+  deliverableId: string
   version: string
   filename: string
   title?: string
@@ -242,6 +243,7 @@ function VideoReviewLayout({
 
 export function VideoReview({
   projectId,
+  deliverableId,
   version,
   filename,
   title,
@@ -263,7 +265,7 @@ export function VideoReview({
   onFocusModeChange,
 }: VideoReviewProps) {
   const playerRef = useRef<MediaPlayerInstance>(null)
-  const src = getVideoUrl(projectId, version, filename)
+  const src = getVideoUrl(projectId, deliverableId, version, filename)
 
   return (
     <MediaPlayer
@@ -278,6 +280,7 @@ export function VideoReview({
       <VideoPlayerProvider>
         <VideoReviewLayout
           projectId={projectId}
+          deliverableId={deliverableId}
           version={version}
           filename={filename}
           title={title}

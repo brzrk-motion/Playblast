@@ -21,6 +21,7 @@ import type { Version } from "@/types/version"
 export interface ComparisonPaneProps {
   pane: ComparePane
   projectId: string
+  deliverableId: string
   versions: Version[]
   selectedLabel: string | null
   onSelect: (label: string) => void
@@ -30,6 +31,7 @@ export interface ComparisonPaneProps {
 export function ComparisonPane({
   pane,
   projectId,
+  deliverableId,
   versions,
   selectedLabel,
   onSelect,
@@ -61,6 +63,7 @@ export function ComparisonPane({
 
   const src = getVideoUrl(
     projectId,
+    deliverableId,
     selectedVersion.label,
     selectedVersion.filename,
   )

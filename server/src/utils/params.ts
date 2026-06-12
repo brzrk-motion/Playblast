@@ -4,17 +4,21 @@ export function getParam(value: string | string[]): string {
   return Array.isArray(value) ? value[0] : value
 }
 
+export function getProjectIdParam(req: Request): string {
+  return getParam((req.params as { projectId: string | string[] }).projectId)
+}
+
 export function getVersionRouteParams(req: Request): {
-  projectId: string
+  deliverableId: string
   version: string
 } {
   const params = req.params as {
-    projectId: string | string[]
+    deliverableId: string | string[]
     version: string | string[]
   }
 
   return {
-    projectId: getParam(params.projectId),
+    deliverableId: getParam(params.deliverableId),
     version: getParam(params.version),
   }
 }

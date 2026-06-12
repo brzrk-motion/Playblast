@@ -1,21 +1,83 @@
+import type { DeliverableStatus } from "./deliverable.js"
+
+export type ProjectStatus = "active" | "on_hold" | "completed" | "archived"
+
+export const PROJECT_STATUSES: ProjectStatus[] = [
+  "active",
+  "on_hold",
+  "completed",
+  "archived",
+]
+
+export function isProjectStatus(value: unknown): value is ProjectStatus {
+  return (
+    typeof value === "string" &&
+    (PROJECT_STATUSES as string[]).includes(value)
+  )
+}
+
+/**
+ * A single budget line item. Unused in the current UI but persisted so the
+ * budget can grow into a line-item model without another schema migration.
+ */
+export interface BudgetLineItem {
+  id: string
+  label: string
+  category?: string
+  amount: number
+}
+
+export interface ProjectBudget {
+  total: number
+  currency: string
+  /** Manually entered actual spend. */
+  spent?: number
+  lineItems?: BudgetLineItem[]
+}
+
 export interface Project {
   id: string
   name: string
   createdAt: string
+  status: ProjectStatus
+  client?: string
+  description?: string
+  /** ISO date string. */
+  startDate?: string
+  /** ISO date string. */
+  endDate?: string
+  budget?: ProjectBudget
 }
 
-import type { VersionStatus } from "./version.js"
-
 export interface ProjectSummary extends Project {
+  deliverableCount: number
   versionCount: number
-  updatedAt: string
   openCommentCount: number
-  /** Latest version status, or pending_review when the project has no versions yet. */
-  status: VersionStatus
+  updatedAt: string
+  /** Count of deliverables in each status, for dashboard rollups. */
+  deliverableStatusCounts: Record<DeliverableStatus, number>
+  /** Soonest upcoming (incomplete) milestone, when present. */
+  nextMilestone: { id: string; name: string; dueDate?: string } | null
 }
 
 export interface CreateProjectInput {
   name: string
   /** Optional stable id (e.g. upload folder slug). A UUID is generated when omitted. */
   id?: string
+  status?: ProjectStatus
+  client?: string
+  description?: string
+  startDate?: string
+  endDate?: string
+  budget?: ProjectBudget
+}
+
+export interface UpdateProjectInput {
+  name?: string
+  status?: ProjectStatus
+  client?: string | null
+  description?: string | null
+  startDate?: string | null
+  endDate?: string | null
+  budget?: ProjectBudget | null
 }

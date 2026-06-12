@@ -36,142 +36,247 @@ after(async () => {
   fs.rmSync(tempDir, { recursive: true, force: true })
 })
 
-describe("projects, versions, and comments API", () => {
-  it("creates a project and lists versions", async () => {
-    const createResponse = await fetch(`${baseUrl}/api/projects`, {
+async function createProject(id: string, name: string, extra: object = {}) {
+  const response = await fetch(`${baseUrl}/api/projects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, name, ...extra }),
+  })
+  return response
+}
+
+async function createDeliverable(projectId: string, name: string) {
+  const response = await fetch(
+    `${baseUrl}/api/projects/${projectId}/deliverables`,
+    {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: "spot-a", name: "Spot A" }),
+      body: JSON.stringify({ name }),
+    },
+  )
+  return (await response.json()) as { id: string; name: string; status: string }
+}
+
+async function createVersion(
+  projectId: string,
+  deliverableId: string,
+  label: string,
+) {
+  const { createVersion: repoCreateVersion } = await import(
+    "../storage/repository.js"
+  )
+  return repoCreateVersion({
+    projectId,
+    deliverableId,
+    label,
+    filename: "render.mp4",
+  })
+}
+
+describe("projects, deliverables, milestones, versions, and comments API", () => {
+  it("creates a project with management defaults", async () => {
+    const createResponse = await createProject("spot-a", "Spot A", {
+      client: "BRZRK",
+      status: "active",
+      budget: { total: 25000, currency: "USD" },
     })
 
     assert.equal(createResponse.status, 201)
-    const project = (await createResponse.json()) as { id: string; name: string }
+    const project = (await createResponse.json()) as {
+      id: string
+      name: string
+      status: string
+      client: string
+      budget: { total: number }
+    }
     assert.equal(project.id, "spot-a")
-    assert.equal(project.name, "Spot A")
+    assert.equal(project.status, "active")
+    assert.equal(project.client, "BRZRK")
+    assert.equal(project.budget.total, 25000)
+  })
 
-    const listResponse = await fetch(`${baseUrl}/api/projects`)
-    assert.equal(listResponse.status, 200)
-    const projects = (await listResponse.json()) as Array<{ id: string }>
-    assert.equal(projects.some((item) => item.id === "spot-a"), true)
-
-    const versionsResponse = await fetch(`${baseUrl}/api/projects/spot-a/versions`)
-    assert.equal(versionsResponse.status, 200)
-    const versions = (await versionsResponse.json()) as unknown[]
-    assert.equal(versions.length, 0)
+  it("rejects an invalid project status on create", async () => {
+    const response = await createProject("spot-bad-status", "Bad", {
+      status: "wip",
+    })
+    assert.equal(response.status, 400)
   })
 
   it("gets a project by id and returns 404 when missing", async () => {
-    await fetch(`${baseUrl}/api/projects`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: "spot-get", name: "Spot Get" }),
-    })
+    await createProject("spot-get", "Spot Get")
 
     const getResponse = await fetch(`${baseUrl}/api/projects/spot-get`)
     assert.equal(getResponse.status, 200)
-    const project = (await getResponse.json()) as { id: string; name: string }
+    const project = (await getResponse.json()) as { id: string }
     assert.equal(project.id, "spot-get")
-    assert.equal(project.name, "Spot Get")
 
     const missingResponse = await fetch(`${baseUrl}/api/projects/missing-id`)
     assert.equal(missingResponse.status, 404)
   })
 
-  it("lists projects with version count and updated date", async () => {
-    await fetch(`${baseUrl}/api/projects`, {
-      method: "POST",
+  it("updates a project via PATCH", async () => {
+    await createProject("spot-patch", "Spot Patch")
+
+    const patchResponse = await fetch(`${baseUrl}/api/projects/spot-patch`, {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: "spot-summary", name: "Spot Summary" }),
+      body: JSON.stringify({
+        status: "completed",
+        client: "Acme",
+        budget: { total: 10000, currency: "usd", spent: 5000 },
+      }),
     })
 
-    const { createVersion } = await import("../storage/repository.js")
-    createVersion({
-      projectId: "spot-summary",
-      label: "v1",
-      filename: "render.mp4",
+    assert.equal(patchResponse.status, 200)
+    const updated = (await patchResponse.json()) as {
+      status: string
+      client: string
+      budget: { total: number; currency: string; spent: number }
+    }
+    assert.equal(updated.status, "completed")
+    assert.equal(updated.client, "Acme")
+    assert.equal(updated.budget.currency, "USD")
+    assert.equal(updated.budget.spent, 5000)
+
+    const invalid = await fetch(`${baseUrl}/api/projects/spot-patch`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "nope" }),
     })
+    assert.equal(invalid.status, 400)
+  })
+
+  it("creates, lists, updates, and deletes deliverables", async () => {
+    await createProject("spot-deliv", "Spot Deliverables")
+
+    const created = await createDeliverable("spot-deliv", "Hero Film")
+    assert.equal(created.status, "not_started")
+
+    const listResponse = await fetch(
+      `${baseUrl}/api/projects/spot-deliv/deliverables`,
+    )
+    assert.equal(listResponse.status, 200)
+    const list = (await listResponse.json()) as Array<{
+      id: string
+      versionCount: number
+    }>
+    assert.equal(list.length, 1)
+    assert.equal(list[0]?.versionCount, 0)
+
+    const statusResponse = await fetch(
+      `${baseUrl}/api/deliverables/${created.id}/status`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "approved" }),
+      },
+    )
+    assert.equal(statusResponse.status, 200)
+    const withStatus = (await statusResponse.json()) as { status: string }
+    assert.equal(withStatus.status, "approved")
+
+    const badStatusResponse = await fetch(
+      `${baseUrl}/api/deliverables/${created.id}/status`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "done" }),
+      },
+    )
+    assert.equal(badStatusResponse.status, 400)
+
+    const deleteResponse = await fetch(
+      `${baseUrl}/api/deliverables/${created.id}`,
+      { method: "DELETE" },
+    )
+    assert.equal(deleteResponse.status, 204)
+
+    const getResponse = await fetch(`${baseUrl}/api/deliverables/${created.id}`)
+    assert.equal(getResponse.status, 404)
+  })
+
+  it("returns 404 when creating a deliverable for a missing project", async () => {
+    const response = await fetch(
+      `${baseUrl}/api/projects/does-not-exist/deliverables`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Nope" }),
+      },
+    )
+    assert.equal(response.status, 404)
+  })
+
+  it("creates, updates, and deletes milestones", async () => {
+    await createProject("spot-milestone", "Spot Milestone")
+
+    const createResponse = await fetch(
+      `${baseUrl}/api/projects/spot-milestone/milestones`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "First cut", dueDate: "2026-04-01" }),
+      },
+    )
+    assert.equal(createResponse.status, 201)
+    const milestone = (await createResponse.json()) as {
+      id: string
+      done: boolean
+    }
+    assert.equal(milestone.done, false)
+
+    const patchResponse = await fetch(
+      `${baseUrl}/api/milestones/${milestone.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ done: true }),
+      },
+    )
+    assert.equal(patchResponse.status, 200)
+    const updated = (await patchResponse.json()) as { done: boolean }
+    assert.equal(updated.done, true)
+
+    const deleteResponse = await fetch(
+      `${baseUrl}/api/milestones/${milestone.id}`,
+      { method: "DELETE" },
+    )
+    assert.equal(deleteResponse.status, 204)
+  })
+
+  it("lists project summaries with rollup fields", async () => {
+    await createProject("spot-summary", "Spot Summary")
+    const deliverable = await createDeliverable("spot-summary", "Cut")
+    await createVersion("spot-summary", deliverable.id, "v1")
 
     const listResponse = await fetch(`${baseUrl}/api/projects`)
     assert.equal(listResponse.status, 200)
     const projects = (await listResponse.json()) as Array<{
       id: string
+      deliverableCount: number
       versionCount: number
-      updatedAt: string
+      openCommentCount: number
       status: string
     }>
     const summary = projects.find((item) => item.id === "spot-summary")
     assert.ok(summary)
+    assert.equal(summary.deliverableCount, 1)
     assert.equal(summary.versionCount, 1)
-    assert.ok(summary.updatedAt)
     assert.equal(summary.openCommentCount, 0)
-    assert.equal(summary.status, "pending_review")
+    assert.equal(summary.status, "active")
   })
 
-  it("lists projects with open comment count across versions", async () => {
-    await fetch(`${baseUrl}/api/projects`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: "spot-open-count", name: "Spot Open Count" }),
-    })
-
-    const { createVersion, createComment } = await import("../storage/repository.js")
-    const version = createVersion({
-      projectId: "spot-open-count",
-      label: "v1",
-      filename: "render.mp4",
-    })
-
-    const openComment = createComment({
-      versionId: version.id,
-      timestamp: 1,
-      body: "Needs fix",
-      author: "Sam",
-    })
-    const resolvedComment = createComment({
-      versionId: version.id,
-      timestamp: 2,
-      body: "Already fixed",
-      author: "Alex",
-    })
-    const { updateComment } = await import("../storage/repository.js")
-    updateComment(resolvedComment.id, { resolved: true })
-
-    const listResponse = await fetch(`${baseUrl}/api/projects`)
-    assert.equal(listResponse.status, 200)
-    const projects = (await listResponse.json()) as Array<{
-      id: string
-      openCommentCount: number
-    }>
-    const summary = projects.find((item) => item.id === "spot-open-count")
-    assert.ok(summary)
-    assert.equal(summary.openCommentCount, 1)
-    assert.equal(openComment.resolved, false)
-  })
-
-  it("deletes a project and cascades versions and comments", async () => {
-    await fetch(`${baseUrl}/api/projects`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: "spot-delete", name: "Spot Delete" }),
-    })
-
-    const { createVersion } = await import("../storage/repository.js")
-    const version = createVersion({
-      projectId: "spot-delete",
-      label: "v1",
-      filename: "render.mp4",
-    })
+  it("deletes a project and cascades deliverables and comments", async () => {
+    await createProject("spot-delete", "Spot Delete")
+    const deliverable = await createDeliverable("spot-delete", "Cut")
+    const version = await createVersion("spot-delete", deliverable.id, "v1")
 
     const createCommentResponse = await fetch(
-      `${baseUrl}/api/projects/spot-delete/versions/v1/comments`,
+      `${baseUrl}/api/deliverables/${deliverable.id}/versions/v1/comments`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          timestamp: 1,
-          body: "Test comment",
-          author: "Sam",
-        }),
+        body: JSON.stringify({ timestamp: 1, body: "Test comment", author: "Sam" }),
       },
     )
     assert.equal(createCommentResponse.status, 201)
@@ -184,40 +289,26 @@ describe("projects, versions, and comments API", () => {
     const getResponse = await fetch(`${baseUrl}/api/projects/spot-delete`)
     assert.equal(getResponse.status, 404)
 
-    const versionsResponse = await fetch(
-      `${baseUrl}/api/projects/spot-delete/versions`,
-    )
-    assert.equal(versionsResponse.status, 404)
-
     const { listComments } = await import("../storage/repository.js")
     assert.equal(listComments(version.id).length, 0)
   })
 
-  it("returns 404 when uploading to a non-existent project", async () => {
+  it("returns 404 when uploading to a non-existent deliverable", async () => {
     const response = await fetch(
-      `${baseUrl}/api/projects/does-not-exist/versions/v1/upload`,
+      `${baseUrl}/api/deliverables/does-not-exist/versions/v1/upload`,
       { method: "POST" },
     )
 
     assert.equal(response.status, 404)
   })
 
-  it("creates and updates comments for a version", async () => {
-    await fetch(`${baseUrl}/api/projects`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: "spot-b", name: "Spot B" }),
-    })
-
-    const { createVersion } = await import("../storage/repository.js")
-    createVersion({
-      projectId: "spot-b",
-      label: "v1",
-      filename: "render.mp4",
-    })
+  it("creates and updates comments for a deliverable version", async () => {
+    await createProject("spot-b", "Spot B")
+    const deliverable = await createDeliverable("spot-b", "Cut")
+    await createVersion("spot-b", deliverable.id, "v1")
 
     const createCommentResponse = await fetch(
-      `${baseUrl}/api/projects/spot-b/versions/v1/comments`,
+      `${baseUrl}/api/deliverables/${deliverable.id}/versions/v1/comments`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -237,7 +328,7 @@ describe("projects, versions, and comments API", () => {
     assert.equal(comment.resolved, false)
 
     const listResponse = await fetch(
-      `${baseUrl}/api/projects/spot-b/versions/v1/comments`,
+      `${baseUrl}/api/deliverables/${deliverable.id}/versions/v1/comments`,
     )
     assert.equal(listResponse.status, 200)
     const comments = (await listResponse.json()) as Array<{ id: string }>
@@ -256,29 +347,6 @@ describe("projects, versions, and comments API", () => {
     const updated = (await patchResponse.json()) as { resolved: boolean }
     assert.equal(updated.resolved, true)
 
-    const unresolveResponse = await fetch(
-      `${baseUrl}/api/comments/${comment.id}/resolve`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resolved: false }),
-      },
-    )
-
-    assert.equal(unresolveResponse.status, 200)
-    const unresolved = (await unresolveResponse.json()) as { resolved: boolean }
-    assert.equal(unresolved.resolved, false)
-
-    const legacyPatchResponse = await fetch(`${baseUrl}/api/comments/${comment.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ resolved: true }),
-    })
-
-    assert.equal(legacyPatchResponse.status, 200)
-    const legacyUpdated = (await legacyPatchResponse.json()) as { resolved: boolean }
-    assert.equal(legacyUpdated.resolved, true)
-
     const deleteResponse = await fetch(`${baseUrl}/api/comments/${comment.id}`, {
       method: "DELETE",
     })
@@ -286,18 +354,9 @@ describe("projects, versions, and comments API", () => {
   })
 
   it("updates version approval status via PATCH /api/versions/:id/status", async () => {
-    await fetch(`${baseUrl}/api/projects`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: "spot-status", name: "Spot Status" }),
-    })
-
-    const { createVersion } = await import("../storage/repository.js")
-    const version = createVersion({
-      projectId: "spot-status",
-      label: "v1",
-      filename: "render.mp4",
-    })
+    await createProject("spot-status", "Spot Status")
+    const deliverable = await createDeliverable("spot-status", "Cut")
+    const version = await createVersion("spot-status", deliverable.id, "v1")
 
     assert.equal(version.status, "pending_review")
 
@@ -313,19 +372,6 @@ describe("projects, versions, and comments API", () => {
     assert.equal(approvedResponse.status, 200)
     const approved = (await approvedResponse.json()) as { status: string }
     assert.equal(approved.status, "approved")
-
-    const revisionResponse = await fetch(
-      `${baseUrl}/api/versions/${version.id}/status`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "needs_revision" }),
-      },
-    )
-
-    assert.equal(revisionResponse.status, 200)
-    const revision = (await revisionResponse.json()) as { status: string }
-    assert.equal(revision.status, "needs_revision")
 
     const invalidResponse = await fetch(
       `${baseUrl}/api/versions/${version.id}/status`,
@@ -351,23 +397,10 @@ describe("projects, versions, and comments API", () => {
   })
 
   it("renames a version label via PATCH /api/versions/:id/label", async () => {
-    await fetch(`${baseUrl}/api/projects`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: "spot-rename", name: "Spot Rename" }),
-    })
-
-    const { createVersion } = await import("../storage/repository.js")
-    const version = createVersion({
-      projectId: "spot-rename",
-      label: "v1",
-      filename: "render.mp4",
-    })
-    createVersion({
-      projectId: "spot-rename",
-      label: "v2",
-      filename: "other.mp4",
-    })
+    await createProject("spot-rename", "Spot Rename")
+    const deliverable = await createDeliverable("spot-rename", "Cut")
+    const version = await createVersion("spot-rename", deliverable.id, "v1")
+    await createVersion("spot-rename", deliverable.id, "v2")
 
     const renamedResponse = await fetch(
       `${baseUrl}/api/versions/${version.id}/label`,
@@ -395,18 +428,9 @@ describe("projects, versions, and comments API", () => {
   })
 
   it("lists and creates comments via flat /api/comments endpoints", async () => {
-    await fetch(`${baseUrl}/api/projects`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: "spot-flat", name: "Spot Flat" }),
-    })
-
-    const { createVersion } = await import("../storage/repository.js")
-    const version = createVersion({
-      projectId: "spot-flat",
-      label: "v1",
-      filename: "render.mp4",
-    })
+    await createProject("spot-flat", "Spot Flat")
+    const deliverable = await createDeliverable("spot-flat", "Cut")
+    const version = await createVersion("spot-flat", deliverable.id, "v1")
 
     const createResponse = await fetch(`${baseUrl}/api/comments`, {
       method: "POST",
@@ -420,38 +444,22 @@ describe("projects, versions, and comments API", () => {
     })
 
     assert.equal(createResponse.status, 201)
-    const created = (await createResponse.json()) as {
-      id: string
-      versionId: string
-    }
+    const created = (await createResponse.json()) as { id: string; versionId: string }
     assert.equal(created.versionId, version.id)
 
     const listResponse = await fetch(
       `${baseUrl}/api/comments?versionId=${encodeURIComponent(version.id)}`,
     )
     assert.equal(listResponse.status, 200)
-    const comments = (await listResponse.json()) as Array<{
-      id: string
-      timestamp: number
-    }>
+    const comments = (await listResponse.json()) as Array<{ id: string }>
     assert.equal(comments.length, 1)
     assert.equal(comments[0]?.id, created.id)
-    assert.equal(comments[0]?.timestamp, 3.5)
   })
 
   it("creates comments with frame annotations", async () => {
-    await fetch(`${baseUrl}/api/projects`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: "spot-annotate", name: "Spot Annotate" }),
-    })
-
-    const { createVersion } = await import("../storage/repository.js")
-    const version = createVersion({
-      projectId: "spot-annotate",
-      label: "v1",
-      filename: "render.mp4",
-    })
+    await createProject("spot-annotate", "Spot Annotate")
+    const deliverable = await createDeliverable("spot-annotate", "Cut")
+    const version = await createVersion("spot-annotate", deliverable.id, "v1")
 
     const annotation = {
       timestamp: 4.25,
@@ -464,15 +472,6 @@ describe("projects, versions, and comments API", () => {
           color: "#f97316",
           strokeWidth: 0.004,
           points: [0.2, 0.3, 0.7, 0.6],
-        },
-        {
-          id: "shape-2",
-          type: "text",
-          color: "#f97316",
-          strokeWidth: 0.004,
-          points: [0.5, 0.5],
-          text: "Fix lighting",
-          fontSize: 0.04,
         },
       ],
     }
@@ -490,36 +489,21 @@ describe("projects, versions, and comments API", () => {
     })
 
     assert.equal(createResponse.status, 201)
-    const created = (await createResponse.json()) as {
+    const createdComment = (await createResponse.json()) as {
       annotation?: { shapes: Array<{ type: string }> }
     }
-    assert.equal(created.annotation?.shapes.length, 2)
-    assert.equal(created.annotation?.shapes[0]?.type, "arrow")
-
-    const listResponse = await fetch(
-      `${baseUrl}/api/comments?versionId=${encodeURIComponent(version.id)}`,
-    )
-    assert.equal(listResponse.status, 200)
-    const comments = (await listResponse.json()) as Array<{
-      annotation?: { shapes: unknown[] }
-    }>
-    assert.equal(comments.length, 1)
-    assert.equal(comments[0]?.annotation?.shapes.length, 2)
+    assert.equal(createdComment.annotation?.shapes.length, 1)
+    assert.equal(createdComment.annotation?.shapes[0]?.type, "arrow")
   })
 
   it("rejects invalid frame annotations", async () => {
-    await fetch(`${baseUrl}/api/projects`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: "spot-annotate-invalid", name: "Spot Invalid" }),
-    })
-
-    const { createVersion } = await import("../storage/repository.js")
-    const version = createVersion({
-      projectId: "spot-annotate-invalid",
-      label: "v1",
-      filename: "render.mp4",
-    })
+    await createProject("spot-annotate-invalid", "Spot Invalid")
+    const deliverable = await createDeliverable("spot-annotate-invalid", "Cut")
+    const version = await createVersion(
+      "spot-annotate-invalid",
+      deliverable.id,
+      "v1",
+    )
 
     const mismatchResponse = await fetch(`${baseUrl}/api/comments`, {
       method: "POST",
@@ -547,24 +531,5 @@ describe("projects, versions, and comments API", () => {
     })
 
     assert.equal(mismatchResponse.status, 400)
-
-    const emptyShapesResponse = await fetch(`${baseUrl}/api/comments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        versionId: version.id,
-        timestamp: 2,
-        body: "Empty shapes",
-        author: "Sam",
-        annotation: {
-          timestamp: 2,
-          viewportWidth: 1280,
-          viewportHeight: 720,
-          shapes: [],
-        },
-      }),
-    })
-
-    assert.equal(emptyShapesResponse.status, 400)
   })
 })

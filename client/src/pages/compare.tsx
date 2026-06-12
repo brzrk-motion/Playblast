@@ -5,18 +5,20 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SyncedVideoComparison } from "@/components/video/synced-video-comparison"
-import { getProject, listVersions } from "@/lib/api"
+import { getDeliverable, getProject, listVersions } from "@/lib/api"
 import { humanizeApiError, showErrorToast } from "@/lib/toast"
 import { pickCompareVersionLabels, sortVersionsByDate } from "@/lib/versions"
+import type { Deliverable } from "@/types/deliverable"
 import type { Project } from "@/types/project"
 import type { Version } from "@/types/version"
 import { useProjectPageHeader } from "@/hooks/use-project-page-header"
 import { ArrowLeft, GitCompare } from "lucide-react"
 
 export function ComparePage() {
-  const { projectId = "" } = useParams()
+  const { projectId = "", deliverableId = "" } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const [project, setProject] = useState<Project | null>(null)
+  const [deliverable, setDeliverable] = useState<Deliverable | null>(null)
   const [versions, setVersions] = useState<Version[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -34,65 +36,60 @@ export function ComparePage() {
   )
 
   const loadProjectData = useCallback(async () => {
-    if (!projectId) {
+    if (!projectId || !deliverableId) {
       return
     }
 
-    setLoading(true)
-    setError(null)
-
     try {
-      const [projectData, versionData] = await Promise.all([
+      const [projectData, deliverableData, versionData] = await Promise.all([
         getProject(projectId),
-        listVersions(projectId),
+        getDeliverable(deliverableId),
+        listVersions(deliverableId),
       ])
 
       const sortedVersions = sortVersionsByDate(versionData)
 
       setProject(projectData)
+      setDeliverable(deliverableData)
       setVersions(sortedVersions)
+      setError(null)
     } catch (err) {
-      const message = humanizeApiError(err, "Failed to load project")
+      const message = humanizeApiError(err, "Failed to load deliverable")
       setError(message)
       showErrorToast(message)
       setProject(null)
+      setDeliverable(null)
       setVersions([])
     } finally {
       setLoading(false)
     }
-  }, [projectId])
+  }, [projectId, deliverableId])
 
   useEffect(() => {
-    if (!projectId) {
-      return
-    }
+    if (!projectId || !deliverableId) return
 
     let cancelled = false
 
-    async function fetchProject() {
-      setLoading(true)
-      setError(null)
-
+    async function fetchData() {
       try {
-        const [projectData, versionData] = await Promise.all([
+        const [projectData, deliverableData, versionData] = await Promise.all([
           getProject(projectId),
-          listVersions(projectId),
+          getDeliverable(deliverableId),
+          listVersions(deliverableId),
         ])
-
-        if (cancelled) {
-          return
+        if (!cancelled) {
+          setProject(projectData)
+          setDeliverable(deliverableData)
+          setVersions(sortVersionsByDate(versionData))
+          setError(null)
         }
-
-        const sortedVersions = sortVersionsByDate(versionData)
-
-        setProject(projectData)
-        setVersions(sortedVersions)
       } catch (err) {
         if (!cancelled) {
-          const message = humanizeApiError(err, "Failed to load project")
+          const message = humanizeApiError(err, "Failed to load deliverable")
           setError(message)
           showErrorToast(message)
           setProject(null)
+          setDeliverable(null)
           setVersions([])
         }
       } finally {
@@ -102,12 +99,12 @@ export function ComparePage() {
       }
     }
 
-    void fetchProject()
+    void fetchData()
 
     return () => {
       cancelled = true
     }
-  }, [projectId])
+  }, [projectId, deliverableId])
 
   const updateSearchParam = useCallback(
     (pane: "left" | "right", label: string) => {
@@ -155,24 +152,31 @@ export function ComparePage() {
     )
   }
 
-  if (error || !project) {
+  if (error || !project || !deliverable) {
     return (
       <div className="space-y-4">
         <Button variant="ghost" asChild>
-          <Link to="/">
+          <Link to={`/projects/${projectId}`}>
             <ArrowLeft />
-            Back to dashboard
+            Back to project
           </Link>
         </Button>
         <Card className="border-destructive/30 bg-destructive/5">
           <CardHeader>
             <CardTitle>Comparison unavailable</CardTitle>
             <CardDescription className="text-destructive">
-              {error ?? "Project not found."}
+              {error ?? "Deliverable not found."}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" onClick={() => void loadProjectData()}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setLoading(true)
+                setError(null)
+                void loadProjectData()
+              }}
+            >
               Try again
             </Button>
           </CardContent>
@@ -181,13 +185,15 @@ export function ComparePage() {
     )
   }
 
+  const deliverableHref = `/projects/${project.id}/deliverables/${deliverable.id}`
+
   if (versions.length < 2) {
     return (
       <div className="space-y-6">
         <Button variant="ghost" size="sm" className="-ml-2 w-fit" asChild>
-          <Link to={`/projects/${project.id}`}>
+          <Link to={deliverableHref}>
             <ArrowLeft />
-            Back to project
+            Back to deliverable
           </Link>
         </Button>
         <Card className="border-dashed">
@@ -200,7 +206,7 @@ export function ComparePage() {
               </p>
             </div>
             <Button asChild>
-              <Link to={`/projects/${project.id}`}>Go to project</Link>
+              <Link to={deliverableHref}>Go to deliverable</Link>
             </Button>
           </CardContent>
         </Card>
@@ -212,14 +218,14 @@ export function ComparePage() {
     <div className="space-y-6">
       <div className="space-y-3">
         <Button variant="ghost" size="sm" className="-ml-2 w-fit" asChild>
-          <Link to={`/projects/${project.id}`}>
+          <Link to={deliverableHref}>
             <ArrowLeft />
-            Back to project
+            Back to deliverable
           </Link>
         </Button>
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="type-page-title">{project.name}</h2>
+            <h2 className="type-page-title">{deliverable.name}</h2>
             <Badge variant="secondary">Version comparison</Badge>
           </div>
           <p className="text-muted-foreground">
@@ -230,6 +236,7 @@ export function ComparePage() {
 
       <SyncedVideoComparison
         projectId={project.id}
+        deliverableId={deliverable.id}
         versions={versions}
         leftLabel={leftLabel}
         rightLabel={rightLabel}

@@ -9,8 +9,9 @@ import { getParam } from "../utils/params.js"
 const storage = multer.diskStorage({
   destination(req, _file, cb) {
     const projectId = getParam(req.params.projectId)
+    const deliverableId = getParam(req.params.deliverableId)
     const version = getParam(req.params.version)
-    const uploadDir = getUploadDir(projectId, version)
+    const uploadDir = getUploadDir(projectId, deliverableId, version)
 
     fs.mkdirSync(uploadDir, { recursive: true })
     cb(null, uploadDir)

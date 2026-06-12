@@ -11,6 +11,7 @@ const versions: Version[] = [
   {
     id: "1",
     projectId: "demo",
+    deliverableId: "deliv",
     label: "v1",
     filename: "a.mp4",
     uploadedAt: "2026-01-01T00:00:00.000Z",
@@ -19,6 +20,7 @@ const versions: Version[] = [
   {
     id: "2",
     projectId: "demo",
+    deliverableId: "deliv",
     label: "v2",
     filename: "b.mp4",
     uploadedAt: "2026-02-01T00:00:00.000Z",
@@ -27,6 +29,7 @@ const versions: Version[] = [
   {
     id: "3",
     projectId: "demo",
+    deliverableId: "deliv",
     label: "v3",
     filename: "c.mp4",
     uploadedAt: "2026-03-01T00:00:00.000Z",

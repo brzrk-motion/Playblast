@@ -19,16 +19,28 @@ export function getProjectUploadDir(projectId: string): string {
   return path.join(config.uploadDir, projectId)
 }
 
-export function getUploadDir(projectId: string, version: string): string {
-  return path.join(getProjectUploadDir(projectId), version)
+export function getDeliverableUploadDir(
+  projectId: string,
+  deliverableId: string,
+): string {
+  return path.join(getProjectUploadDir(projectId), deliverableId)
+}
+
+export function getUploadDir(
+  projectId: string,
+  deliverableId: string,
+  version: string,
+): string {
+  return path.join(getDeliverableUploadDir(projectId, deliverableId), version)
 }
 
 export function getVideoPath(
   projectId: string,
+  deliverableId: string,
   version: string,
   filename: string,
 ): string | null {
-  const uploadDir = path.resolve(getUploadDir(projectId, version))
+  const uploadDir = path.resolve(getUploadDir(projectId, deliverableId, version))
   const resolvedPath = path.resolve(uploadDir, filename)
 
   if (

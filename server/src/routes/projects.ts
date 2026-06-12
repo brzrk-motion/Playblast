@@ -10,8 +10,11 @@ import {
   deleteProject,
   getProject,
   listProjectSummaries,
-  listVersions,
+  listVersionsByProject,
+  updateProject,
 } from "../storage/index.js"
+import { parseProjectBudget, parseProjectPatch } from "../lib/project-input.js"
+import { isProjectStatus } from "../types/index.js"
 import { getParam } from "../utils/params.js"
 
 const projectsRouter = Router()
@@ -37,7 +40,38 @@ projectsRouter.post("/", (req, res) => {
     return
   }
 
-  const project = createProject({ name, id })
+  const status = req.body?.status
+  if (status !== undefined && !isProjectStatus(status)) {
+    res.status(400).json({
+      error: "status must be one of: active, on_hold, completed, archived.",
+    })
+    return
+  }
+
+  let budget
+  if (req.body?.budget !== undefined && req.body?.budget !== null) {
+    const parsedBudget = parseProjectBudget(req.body.budget)
+    if ("error" in parsedBudget) {
+      res.status(400).json({ error: parsedBudget.error })
+      return
+    }
+    budget = parsedBudget.budget
+  }
+
+  const project = createProject({
+    name,
+    id,
+    status,
+    client: typeof req.body?.client === "string" ? req.body.client.trim() : undefined,
+    description:
+      typeof req.body?.description === "string"
+        ? req.body.description.trim()
+        : undefined,
+    startDate:
+      typeof req.body?.startDate === "string" ? req.body.startDate : undefined,
+    endDate: typeof req.body?.endDate === "string" ? req.body.endDate : undefined,
+    budget,
+  })
   res.status(201).json(project)
 })
 
@@ -51,6 +85,25 @@ projectsRouter.get("/:projectId", (req, res) => {
   }
 
   res.json(project)
+})
+
+projectsRouter.patch("/:projectId", (req, res) => {
+  const projectId = getParam(req.params.projectId)
+  const project = getProject(projectId)
+
+  if (!project) {
+    res.status(404).json({ error: "Project not found." })
+    return
+  }
+
+  const parsed = parseProjectPatch(req.body)
+  if ("error" in parsed) {
+    res.status(400).json({ error: parsed.error })
+    return
+  }
+
+  const updated = updateProject(projectId, parsed.input)
+  res.json(updated)
 })
 
 projectsRouter.delete(
@@ -86,7 +139,7 @@ projectsRouter.get(
       return
     }
 
-    res.json(listVersions(projectId))
+    res.json(listVersionsByProject(projectId))
   },
 )
 

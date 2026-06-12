@@ -8,41 +8,60 @@ import {
 } from "../../../client/src/lib/projects.ts"
 import type { ProjectSummary } from "../../../client/src/types/project.ts"
 
+function emptyStatusCounts() {
+  return {
+    not_started: 0,
+    in_progress: 0,
+    in_review: 0,
+    approved: 0,
+    rejected: 0,
+  }
+}
+
 const projects: ProjectSummary[] = [
   {
     id: "1",
     name: "Alpha",
     createdAt: "2026-01-01T00:00:00.000Z",
+    status: "active",
+    deliverableCount: 1,
     versionCount: 1,
     updatedAt: "2026-03-01T00:00:00.000Z",
     openCommentCount: 2,
-    status: "pending_review",
+    deliverableStatusCounts: emptyStatusCounts(),
+    nextMilestone: null,
   },
   {
     id: "2",
     name: "Beta",
     createdAt: "2026-01-01T00:00:00.000Z",
+    status: "on_hold",
+    deliverableCount: 1,
     versionCount: 1,
     updatedAt: "2026-02-01T00:00:00.000Z",
     openCommentCount: 0,
-    status: "needs_revision",
+    deliverableStatusCounts: emptyStatusCounts(),
+    nextMilestone: null,
   },
   {
     id: "3",
     name: "Gamma",
     createdAt: "2026-01-01T00:00:00.000Z",
+    status: "completed",
+    deliverableCount: 1,
     versionCount: 1,
     updatedAt: "2026-01-15T00:00:00.000Z",
     openCommentCount: 0,
-    status: "approved",
+    deliverableStatusCounts: emptyStatusCounts(),
+    nextMilestone: null,
   },
 ]
 
-test("parseDashboardFilter accepts open comments and status values", () => {
+test("parseDashboardFilter accepts open comments and project status values", () => {
   assert.deepEqual(parseDashboardFilter("open_comments"), { type: "open_comments" })
-  assert.deepEqual(parseDashboardFilter("approved"), {
+  assert.deepEqual(parseDashboardFilter("active"), {
     type: "status",
-    status: "approved",
+    status: "active",
   })
   assert.equal(parseDashboardFilter(null), null)
   assert.equal(parseDashboardFilter("invalid"), null)
@@ -51,8 +70,8 @@ test("parseDashboardFilter accepts open comments and status values", () => {
 test("dashboardFilterToParam round-trips filter values", () => {
   assert.equal(dashboardFilterToParam({ type: "open_comments" }), "open_comments")
   assert.equal(
-    dashboardFilterToParam({ type: "status", status: "needs_revision" }),
-    "needs_revision",
+    dashboardFilterToParam({ type: "status", status: "on_hold" }),
+    "on_hold",
   )
   assert.equal(dashboardFilterToParam(null), null)
 })
@@ -71,7 +90,7 @@ test("filterProjectsByDashboardFilter filters by open comments", () => {
 test("filterProjectsByDashboardFilter filters by status", () => {
   const filtered = filterProjectsByDashboardFilter(projects, {
     type: "status",
-    status: "needs_revision",
+    status: "on_hold",
   })
 
   assert.deepEqual(

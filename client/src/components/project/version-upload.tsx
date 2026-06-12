@@ -37,7 +37,7 @@ import {
 import { cn } from "@/lib/utils"
 
 interface VersionUploadProps {
-  projectId: string
+  deliverableId: string
   versions: Version[]
   onUploaded: () => void
   onSelectVersion: (label: string) => void
@@ -114,7 +114,7 @@ function MetadataGrid({ metadata }: { metadata: VideoFileMetadata }) {
 }
 
 export function VersionUpload({
-  projectId,
+  deliverableId,
   versions,
   onUploaded,
   onSelectVersion,
@@ -230,7 +230,7 @@ export function VersionUpload({
     const loadingToastId = showLoadingToast(`Uploading ${versionLabel}…`)
 
     try {
-      const response = await uploadVersion(projectId, versionLabel, selectedFile, (progress) => {
+      const response = await uploadVersion(deliverableId, versionLabel, selectedFile, (progress) => {
         setUploadProgress(progress)
       })
 

@@ -14,10 +14,12 @@ import { VideoReview } from "@/components/video/video-review"
 import {
   createComment,
   deleteComment,
+  getDeliverable,
   getProject,
   listComments,
   listVersions,
   resolveComment,
+  updateDeliverable,
   updateVersionStatus,
 } from "@/lib/api"
 import {
@@ -28,17 +30,27 @@ import {
 } from "@/lib/toast"
 import { sortVersionsByDate, VERSION_STATUS_LABELS } from "@/lib/versions"
 import type { Comment } from "@/types/comment"
+import type { Deliverable, DeliverableStatus } from "@/types/deliverable"
 import type { Project } from "@/types/project"
 import type { Version, VersionStatus } from "@/types/version"
 import { ArrowLeft, ChevronDown, Film, GitCompare, Link2, Upload } from "lucide-react"
 import { useProjectPageHeader } from "@/hooks/use-project-page-header"
 import { cn } from "@/lib/utils"
 
-export function ProjectPage() {
-  const { projectId = "" } = useParams()
+function deliverableStatusForVersion(
+  status: VersionStatus,
+): DeliverableStatus | null {
+  if (status === "approved") return "approved"
+  if (status === "needs_revision") return "in_review"
+  return null
+}
+
+export function DeliverablePage() {
+  const { projectId = "", deliverableId = "" } = useParams()
   const [searchParams] = useSearchParams()
   const versionFromUrl = searchParams.get("version")
   const [project, setProject] = useState<Project | null>(null)
+  const [deliverable, setDeliverable] = useState<Deliverable | null>(null)
   const [versions, setVersions] = useState<Version[]>([])
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
@@ -69,22 +81,21 @@ export function ProjectPage() {
   useEscapeKey(dismissOpenPanels, !focusMode && (uploadOpen || versionsOpen))
   useProjectPageHeader(projectId, project)
 
-  const loadProjectData = useCallback(async () => {
-    if (!projectId) {
+  const loadData = useCallback(async () => {
+    if (!projectId || !deliverableId) {
       return
     }
 
-    setLoading(true)
-    setError(null)
-
     try {
-      const [projectData, versionData] = await Promise.all([
+      const [projectData, deliverableData, versionData] = await Promise.all([
         getProject(projectId),
-        listVersions(projectId),
+        getDeliverable(deliverableId),
+        listVersions(deliverableId),
       ])
 
       const sortedVersions = sortVersionsByDate(versionData)
       setProject(projectData)
+      setDeliverable(deliverableData)
       setVersions(sortedVersions)
       setSelectedLabel((current) => {
         if (
@@ -100,41 +111,38 @@ export function ProjectPage() {
 
         return sortedVersions[0]?.label ?? null
       })
+      setError(null)
     } catch (err) {
-      const message = humanizeApiError(err, "Failed to load project")
+      const message = humanizeApiError(err, "Failed to load deliverable")
       setError(message)
       showErrorToast(message)
       setProject(null)
+      setDeliverable(null)
       setVersions([])
       setSelectedLabel(null)
     } finally {
       setLoading(false)
     }
-  }, [projectId, versionFromUrl])
+  }, [projectId, deliverableId, versionFromUrl])
 
   useEffect(() => {
-    if (!projectId) {
-      return
-    }
+    if (!projectId || !deliverableId) return
 
     let cancelled = false
 
-    async function fetchProject() {
-      setLoading(true)
-      setError(null)
-
+    async function fetchData() {
       try {
-        const [projectData, versionData] = await Promise.all([
+        const [projectData, deliverableData, versionData] = await Promise.all([
           getProject(projectId),
-          listVersions(projectId),
+          getDeliverable(deliverableId),
+          listVersions(deliverableId),
         ])
 
-        if (cancelled) {
-          return
-        }
+        if (cancelled) return
 
         const sortedVersions = sortVersionsByDate(versionData)
         setProject(projectData)
+        setDeliverable(deliverableData)
         setVersions(sortedVersions)
         setSelectedLabel((current) => {
           if (
@@ -150,12 +158,14 @@ export function ProjectPage() {
 
           return sortedVersions[0]?.label ?? null
         })
+        setError(null)
       } catch (err) {
         if (!cancelled) {
-          const message = humanizeApiError(err, "Failed to load project")
+          const message = humanizeApiError(err, "Failed to load deliverable")
           setError(message)
           showErrorToast(message)
           setProject(null)
+          setDeliverable(null)
           setVersions([])
           setSelectedLabel(null)
         }
@@ -166,12 +176,12 @@ export function ProjectPage() {
       }
     }
 
-    void fetchProject()
+    void fetchData()
 
     return () => {
       cancelled = true
     }
-  }, [projectId, versionFromUrl])
+  }, [projectId, deliverableId, versionFromUrl])
 
   const selectedVersion =
     versions.find((version) => version.label === selectedLabel) ?? null
@@ -218,9 +228,10 @@ export function ProjectPage() {
 
     try {
       const updated = await updateVersionStatus(versionId, status)
-      setVersions((current) =>
-        current.map((version) => (version.id === updated.id ? updated : version)),
+      const nextVersions = versions.map((version) =>
+        version.id === updated.id ? updated : version,
       )
+      setVersions(nextVersions)
 
       if (status === "approved") {
         showSuccessToast("Version approved")
@@ -228,6 +239,25 @@ export function ProjectPage() {
         showSuccessToast("Needs revision")
       } else {
         showSuccessToast(VERSION_STATUS_LABELS[status])
+      }
+
+      // Roll the deliverable status up from the latest version's approval state.
+      const latest = sortVersionsByDate(nextVersions)[0]
+      const rollup = deliverableStatusForVersion(status)
+      if (
+        deliverable &&
+        latest?.id === updated.id &&
+        rollup &&
+        deliverable.status !== rollup
+      ) {
+        try {
+          const updatedDeliverable = await updateDeliverable(deliverable.id, {
+            status: rollup,
+          })
+          setDeliverable(updatedDeliverable)
+        } catch {
+          // Non-fatal: keep the version status change even if rollup fails.
+        }
       }
     } catch (err) {
       const message = humanizeApiError(err, "Failed to update version status")
@@ -253,11 +283,11 @@ export function ProjectPage() {
   }
 
   useEffect(() => {
-    if (!projectId || !selectedLabel) {
+    if (!deliverableId || !selectedLabel) {
       return
     }
 
-    const activeProjectId = projectId
+    const activeDeliverableId = deliverableId
     const versionLabel = selectedLabel
     let cancelled = false
 
@@ -265,7 +295,7 @@ export function ProjectPage() {
       setCommentsLoading(true)
 
       try {
-        const data = await listComments(activeProjectId, versionLabel)
+        const data = await listComments(activeDeliverableId, versionLabel)
         if (!cancelled) {
           setComments(data)
           setCommentsLabel(versionLabel)
@@ -290,7 +320,7 @@ export function ProjectPage() {
     return () => {
       cancelled = true
     }
-  }, [projectId, selectedLabel])
+  }, [deliverableId, selectedLabel])
 
   if (loading) {
     return (
@@ -301,24 +331,31 @@ export function ProjectPage() {
     )
   }
 
-  if (error || !project) {
+  if (error || !project || !deliverable) {
     return (
       <div className="space-y-4">
         <Button variant="ghost" asChild>
-          <Link to="/">
+          <Link to={`/projects/${projectId}`}>
             <ArrowLeft />
-            Back to dashboard
+            Back to project
           </Link>
         </Button>
         <Card className="border-destructive/30 bg-destructive/5">
           <CardHeader>
-            <CardTitle>Project unavailable</CardTitle>
+            <CardTitle>Deliverable unavailable</CardTitle>
             <CardDescription className="text-destructive">
-              {error ?? "Project not found."}
+              {error ?? "Deliverable not found."}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" onClick={() => void loadProjectData()}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setLoading(true)
+                setError(null)
+                void loadData()
+              }}
+            >
               Try again
             </Button>
           </CardContent>
@@ -347,7 +384,7 @@ export function ProjectPage() {
       {!focusMode ? (
         <div className="mb-2 flex shrink-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5 shadow-sm">
           <Button variant="ghost" size="icon-sm" className="shrink-0" asChild>
-            <Link to="/" aria-label="Back to dashboard">
+            <Link to={`/projects/${project.id}`} aria-label="Back to project">
               <ArrowLeft className="size-4" />
             </Link>
           </Button>
@@ -355,7 +392,7 @@ export function ProjectPage() {
           <div className="hidden h-4 w-px bg-border sm:block" />
 
           <h2 className="max-w-[10rem] truncate text-sm font-semibold sm:max-w-[16rem]">
-            {project.name}
+            {deliverable.name}
           </h2>
 
           <VersionSelector
@@ -398,7 +435,7 @@ export function ProjectPage() {
             {versions.length >= 2 ? (
               <Button variant="ghost" size="sm" asChild>
                 <Link
-                  to={`/projects/${project.id}/compare?left=${encodeURIComponent(selectedLabel ?? versions[0]?.label ?? "")}&right=${encodeURIComponent(versions.find((version) => version.label !== selectedLabel)?.label ?? versions[1]?.label ?? "")}`}
+                  to={`/projects/${project.id}/deliverables/${deliverable.id}/compare?left=${encodeURIComponent(selectedLabel ?? versions[0]?.label ?? "")}&right=${encodeURIComponent(versions.find((version) => version.label !== selectedLabel)?.label ?? versions[1]?.label ?? "")}`}
                 >
                   <GitCompare className="size-4" />
                   <span className="hidden sm:inline">Compare</span>
@@ -446,9 +483,9 @@ export function ProjectPage() {
       {!focusMode && uploadOpen ? (
         <div className="mb-2 shrink-0">
           <VersionUpload
-            projectId={project.id}
+            deliverableId={deliverable.id}
             versions={versions}
-            onUploaded={() => void loadProjectData()}
+            onUploaded={() => void loadData()}
             onSelectVersion={setSelectedLabel}
           />
         </div>
@@ -478,6 +515,7 @@ export function ProjectPage() {
           <VideoReview
             key={`${selectedVersion.id}-${selectedVersion.uploadedAt}`}
             projectId={project.id}
+            deliverableId={deliverable.id}
             version={selectedVersion.label}
             filename={selectedVersion.filename}
             comments={
@@ -520,7 +558,7 @@ export function ProjectPage() {
               <div>
                 <p className="font-medium">No versions yet</p>
                 <p className="text-sm text-muted-foreground">
-                  Upload your first video to start reviewing this project.
+                  Upload your first video to start reviewing this deliverable.
                 </p>
               </div>
               <Button

@@ -70,7 +70,7 @@ export function AppSidebar() {
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
                   <span className="font-semibold">Playblast</span>
-                  <span className="text-muted-foreground text-xs">Video Proofing</span>
+                  <span className="text-muted-foreground text-xs">Project Management</span>
                 </div>
               </Link>
             </SidebarMenuButton>

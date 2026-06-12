@@ -16,6 +16,7 @@ export function isVersionStatus(value: unknown): value is VersionStatus {
 export interface Version {
   id: string
   projectId: string
+  deliverableId: string
   /** Human-readable label such as v1, v2 */
   label: string
   filename: string
@@ -25,6 +26,7 @@ export interface Version {
 
 export interface CreateVersionInput {
   projectId: string
+  deliverableId: string
   label: string
   filename: string
 }

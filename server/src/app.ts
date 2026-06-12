@@ -22,7 +22,7 @@ export function createApp() {
   app.use(express.json())
   app.use("/api", apiRouter)
   app.use(
-    "/video/:projectId/:version/:filename",
+    "/video/:projectId/:deliverableId/:version/:filename",
     validateVideoParams,
     videoRouter,
   )

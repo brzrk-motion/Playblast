@@ -1,6 +1,5 @@
-import { VERSION_STATUS_LABELS, VERSION_STATUS_ORDER } from "./versions"
-import type { ProjectSummary } from "@/types/project"
-import type { VersionStatus } from "@/types/version"
+import { PROJECT_STATUSES } from "../types/project"
+import type { ProjectStatus, ProjectSummary } from "../types/project"
 
 export type ProjectSortField = "updatedAt" | "name" | "status"
 
@@ -9,6 +8,15 @@ export const PROJECT_SORT_LABELS: Record<ProjectSortField, string> = {
   name: "Name",
   status: "Status",
 }
+
+export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  active: "Active",
+  on_hold: "On Hold",
+  completed: "Completed",
+  archived: "Archived",
+}
+
+export const PROJECT_STATUS_ORDER: ProjectStatus[] = PROJECT_STATUSES
 
 export function filterProjectsByName(
   projects: ProjectSummary[],
@@ -19,8 +27,10 @@ export function filterProjectsByName(
     return projects
   }
 
-  return projects.filter((project) =>
-    project.name.toLowerCase().includes(normalized),
+  return projects.filter(
+    (project) =>
+      project.name.toLowerCase().includes(normalized) ||
+      (project.client?.toLowerCase().includes(normalized) ?? false),
   )
 }
 
@@ -36,8 +46,8 @@ export function sortProjects(
         return a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
       case "status": {
         const statusDelta =
-          VERSION_STATUS_ORDER.indexOf(a.status) -
-          VERSION_STATUS_ORDER.indexOf(b.status)
+          PROJECT_STATUS_ORDER.indexOf(a.status) -
+          PROJECT_STATUS_ORDER.indexOf(b.status)
         if (statusDelta !== 0) {
           return statusDelta
         }
@@ -56,22 +66,30 @@ export function sortProjects(
 
 export function countProjectsByStatus(
   projects: ProjectSummary[],
-): Record<VersionStatus, number> {
+): Record<ProjectStatus, number> {
   return projects.reduce(
     (counts, project) => {
       counts[project.status] += 1
       return counts
     },
     {
-      pending_review: 0,
-      needs_revision: 0,
-      approved: 0,
-    } satisfies Record<VersionStatus, number>,
+      active: 0,
+      on_hold: 0,
+      completed: 0,
+      archived: 0,
+    } satisfies Record<ProjectStatus, number>,
   )
 }
 
 export function totalOpenComments(projects: ProjectSummary[]): number {
   return projects.reduce((total, project) => total + project.openCommentCount, 0)
+}
+
+export function countDeliverablesInReview(projects: ProjectSummary[]): number {
+  return projects.reduce(
+    (total, project) => total + project.deliverableStatusCounts.in_review,
+    0,
+  )
 }
 
 export function recentlyUpdatedProjects(
@@ -83,9 +101,13 @@ export function recentlyUpdatedProjects(
 
 export type DashboardProjectFilter =
   | { type: "open_comments" }
-  | { type: "status"; status: VersionStatus }
+  | { type: "status"; status: ProjectStatus }
 
 const DASHBOARD_FILTER_PARAM = "filter"
+
+function isProjectStatusValue(value: string): value is ProjectStatus {
+  return (PROJECT_STATUS_ORDER as string[]).includes(value)
+}
 
 export function parseDashboardFilter(
   value: string | null,
@@ -98,11 +120,7 @@ export function parseDashboardFilter(
     return { type: "open_comments" }
   }
 
-  if (
-    value === "pending_review" ||
-    value === "needs_revision" ||
-    value === "approved"
-  ) {
+  if (isProjectStatusValue(value)) {
     return { type: "status", status: value }
   }
 
@@ -132,7 +150,7 @@ export function getDashboardFilterLabel(
     return "projects with open comments"
   }
 
-  return `${VERSION_STATUS_LABELS[filter.status].toLowerCase()} projects`
+  return `${PROJECT_STATUS_LABELS[filter.status].toLowerCase()} projects`
 }
 
 export function filterProjectsByDashboardFilter(
