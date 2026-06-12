@@ -9,7 +9,8 @@ export const PLAYBACK_SHORTCUTS: KeyboardShortcut[] = [
   { keys: ["Space"], description: "Play / pause" },
   { keys: ["J"], description: "Skip back 5 seconds" },
   { keys: ["L"], description: "Skip forward 5 seconds" },
-  { keys: ["←", "→"], description: "Step one frame" },
+  { keys: ["←"], description: "Step back one frame" },
+  { keys: ["→"], description: "Step forward one frame" },
 ]
 
 export const REVIEW_SHORTCUTS: KeyboardShortcut[] = [

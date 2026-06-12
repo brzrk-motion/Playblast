@@ -2,9 +2,9 @@ import { useEffect, useState } from "react"
 import { useMediaPlayer, useMediaState } from "@vidstack/react"
 
 import { frameDuration } from "@/lib/timecode"
+import { DEFAULT_VIDEO_FPS } from "@/lib/video-player-config"
 
 const SAMPLE_TARGET = 30
-const FALLBACK_FPS = 24
 
 /**
  * Estimates video frame rate via requestVideoFrameCallback when available.
@@ -97,5 +97,5 @@ export function useVideoFps(): number | null {
 
 export function useFrameDuration(): number {
   const detectedFps = useVideoFps()
-  return frameDuration(detectedFps ?? FALLBACK_FPS)
+  return frameDuration(detectedFps ?? DEFAULT_VIDEO_FPS)
 }

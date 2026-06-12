@@ -276,6 +276,7 @@ export function VideoReview({
       playsInline
       crossOrigin
       controlsDelay={2000}
+      keyDisabled
     >
       <VideoPlayerProvider>
         <VideoReviewLayout
