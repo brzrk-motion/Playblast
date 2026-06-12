@@ -2,14 +2,72 @@
 
 ## Cursor Cloud specific instructions
 
-Playblast is a single-tier, frontend-only Vite + React 19 + TypeScript SPA (a video-proofing UI prototype). All data is hardcoded mock data — there is no backend, database, auth, or environment variables.
+Playblast is an internal video proofing tool for BRZRK — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work.
 
-Standard commands live in `package.json`:
-- Dev server: `npm run dev` (Vite, serves on port `5173`). Add `-- --host` to expose it on the network interface.
-- Lint: `npm run lint`
-- Build: `npm run build` (runs `tsc -b` then `vite build`)
-- Preview built output: `npm run preview`
+The repo is an **npm workspaces monorepo** with two packages:
 
-Notes:
-- Node 22 (or any version satisfying Vite 8's requirement of Node ^20.19 / >=22.12) is required.
-- There are no automated tests in this repo; verify changes via lint, build, and manual UI interaction.
+| Package | Path | Stack |
+|---------|------|-------|
+| `@playblast/client` | `client/` | React 19, Vite 8, TypeScript, shadcn/ui, Tailwind CSS, Vidstack |
+| `@playblast/server` | `server/` | Express 5, TypeScript, local filesystem + JSON file store |
+
+In development, the Vite dev server (port `5173`) proxies `/api` and `/video` to the Express server (port `3000`). In production, Express serves the built client from `client/dist` alongside the API.
+
+There is **no authentication** — comment authors are supplied by the client at post time.
+
+### Data & storage
+
+- **Metadata** (projects, versions, comments, annotations) is persisted in `server/data/store.json` by default. Override with `PLAYBLAST_DATA_DIR`.
+- **Video uploads** are stored on the local filesystem under `UPLOAD_DIR` (default `/app/uploads`; see `.env.example` for local dev).
+- There is no database.
+
+### Environment variables
+
+Copy `.env.example` to `.env` at the repo root. Supported variables:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `PORT` | `3000` | Express listen port |
+| `UPLOAD_DIR` | `/app/uploads` | Absolute path for uploaded video files |
+| `MAX_UPLOAD_SIZE` | `5000` | Max upload size in megabytes |
+| `NODE_ENV` | `development` | `production` or `development` |
+| `PLAYBLAST_DATA_DIR` | `server/data` | Directory for `store.json` (optional) |
+
+### Standard commands
+
+Run from the repository root:
+
+| Command | Description |
+|---------|-------------|
+| `npm install` | Install all workspace dependencies |
+| `npm run dev` | Start client and server concurrently |
+| `npm run build` | Build client (`tsc -b` + Vite) and server (`tsc`) |
+| `npm run lint` | Lint the client (`eslint`) |
+| `npm run test` | Run server tests (`tsx --test`) |
+
+Workspace-specific scripts:
+
+```bash
+npm run dev -w client      # Vite dev server on :5173
+npm run dev -w server      # Express with tsx watch on :3000
+npm run preview -w client  # Preview built client
+npm run start -w server    # Run compiled server (after build)
+```
+
+### Testing & verification
+
+- **Server tests** live in `server/src/**/*.test.ts` and cover env config, storage, routes, and data models. Run with `npm run test`.
+- **No client tests** — verify UI changes via lint, build, and manual interaction.
+- After server or API changes, run `npm run test` in addition to lint and build.
+
+### Deployment
+
+- `Dockerfile` builds both workspaces and runs a single Node process that serves API + static client on port `3000`.
+- `docker-compose.yml` mounts a named volume at `/app/uploads` for upload persistence.
+- `scripts/validate-upload-volume.sh` smoke-tests Docker volume persistence (requires Docker).
+
+### Notes
+
+- Node 20+ is required (Dockerfile uses Node 20; Vite 8 needs `^20.19` or `>=22.12`).
+- Client API calls go through `client/src/lib/api.ts` using relative `/api/*` paths.
+- Key client routes: dashboard (`/`), project review (`/projects/:projectId`), version comparison (`/projects/:projectId/compare`).
