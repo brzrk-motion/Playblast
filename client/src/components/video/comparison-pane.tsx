@@ -96,6 +96,7 @@ export function ComparisonPane({
           src={src}
           playsInline
           crossOrigin
+          controlsDelay={2000}
           onPlay={() => {
             handlePlayerEvent(pane, "play")
           }}

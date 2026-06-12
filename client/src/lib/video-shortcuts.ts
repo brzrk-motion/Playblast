@@ -1,5 +1,4 @@
 export const SKIP_SECONDS = 5
-export const FRAME_DURATION_SECONDS = 1 / 24
 
 export interface KeyboardShortcut {
   keys: string[]
@@ -10,7 +9,7 @@ export const PLAYBACK_SHORTCUTS: KeyboardShortcut[] = [
   { keys: ["Space"], description: "Play / pause" },
   { keys: ["J"], description: "Skip back 5 seconds" },
   { keys: ["L"], description: "Skip forward 5 seconds" },
-  { keys: ["←", "→"], description: "Step one frame (1/24 s)" },
+  { keys: ["←", "→"], description: "Step one frame" },
 ]
 
 export const REVIEW_SHORTCUTS: KeyboardShortcut[] = [

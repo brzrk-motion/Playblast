@@ -56,6 +56,7 @@ export function VideoPlayer({
         src={src}
         playsInline
         crossOrigin
+        controlsDelay={2000}
       >
         <VideoPlayerProvider>
           <MediaProvider />

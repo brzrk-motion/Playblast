@@ -1,7 +1,7 @@
 import { useState } from "react"
-import { formatTime } from "@vidstack/react"
 
 import { markerColorClass } from "@/lib/design-tokens"
+import { formatTimecode } from "@/lib/timecode"
 import { cn } from "@/lib/utils"
 import type { Comment } from "@/types/comment"
 
@@ -31,7 +31,10 @@ export function CommentMarkers({
       aria-hidden={comments.length === 0}
     >
       {comments.map((comment, index) => {
-        const percent = Math.min(100, Math.max(0, (comment.timestamp / duration) * 100))
+        const percent = Math.min(
+          100,
+          Math.max(0, (comment.timestamp / duration) * 100),
+        )
         const isHovered = hoveredId === comment.id
 
         return (
@@ -47,11 +50,11 @@ export function CommentMarkers({
             <button
               type="button"
               className={cn(
-                "block rounded-full ring-1 transition-interactive hover:scale-125 focus-visible:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-110",
+                "block rounded-full ring-1 ring-black/40 transition-interactive hover:scale-125 focus-visible:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 active:scale-110",
                 comment.annotation ? "size-2.5 ring-2" : "size-2",
                 markerColorClass(index),
               )}
-              aria-label={`${comment.annotation ? "Annotated comment" : "Comment"} at ${formatTime(comment.timestamp)} by ${comment.author}`}
+              aria-label={`${comment.annotation ? "Annotated comment" : "Comment"} at ${formatTimecode(comment.timestamp)} by ${comment.author}`}
               onClick={(event) => {
                 event.stopPropagation()
                 onSeek?.(comment.timestamp)
@@ -61,14 +64,16 @@ export function CommentMarkers({
             <div
               role="tooltip"
               className={cn(
-                "pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-max max-w-48 -translate-x-1/2 rounded-md bg-popover px-2.5 py-1.5 text-popover-foreground shadow-md transition-opacity",
+                "pointer-events-none absolute bottom-full left-1/2 z-50 mb-2.5 w-max max-w-48 -translate-x-1/2 rounded-md bg-black/90 px-2.5 py-1.5 text-white shadow-lg ring-1 ring-white/10 transition-opacity",
                 isHovered ? "opacity-100" : "opacity-0",
               )}
             >
-              <p className="type-micro font-medium text-muted-foreground">
-                {formatTime(comment.timestamp)} · {comment.author}
+              <p className="type-micro font-medium text-white/70">
+                {formatTimecode(comment.timestamp)} · {comment.author}
               </p>
-              <p className="mt-0.5 line-clamp-2 text-xs">{comment.body}</p>
+              <p className="mt-0.5 line-clamp-2 text-xs text-white/90">
+                {comment.body}
+              </p>
             </div>
           </div>
         )
