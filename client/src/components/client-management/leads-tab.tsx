@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import {
   Check,
   Minus,
@@ -67,6 +67,7 @@ type RepliedFilter = "all" | "yes" | "no"
 
 export function LeadsTab() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -151,6 +152,26 @@ export function LeadsTab() {
       cancelled = true
     }
   }, [repliedFilter, statusFilter])
+
+  const leadIdFromUrl = searchParams.get("lead")
+  const activeViewLeadId = viewLeadId ?? leadIdFromUrl
+
+  function openLeadDetail(leadId: string) {
+    setViewLeadId(leadId)
+    const next = new URLSearchParams(searchParams)
+    next.delete("client")
+    next.set("lead", leadId)
+    setSearchParams(next, { replace: true })
+  }
+
+  function closeLeadDetail() {
+    setViewLeadId(null)
+    if (leadIdFromUrl) {
+      const next = new URLSearchParams(searchParams)
+      next.delete("lead")
+      setSearchParams(next, { replace: true })
+    }
+  }
 
   const filteredLeads = useMemo(
     () => filterLeadsBySearch(leads, searchQuery),
@@ -347,7 +368,7 @@ export function LeadsTab() {
                   <TableRow
                     key={lead.id}
                     className="cursor-pointer"
-                    onClick={() => setViewLeadId(lead.id)}
+                    onClick={() => openLeadDetail(lead.id)}
                   >
                     <TableCell className="font-medium">{lead.name}</TableCell>
                     <TableCell>{lead.company ?? "—"}</TableCell>
@@ -385,7 +406,7 @@ export function LeadsTab() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() => setViewLeadId(lead.id)}
+                            onClick={() => openLeadDetail(lead.id)}
                           >
                             View
                           </DropdownMenuItem>
@@ -466,11 +487,11 @@ export function LeadsTab() {
       />
 
       <LeadDetailSheet
-        leadId={viewLeadId}
-        open={viewLeadId !== null}
+        leadId={activeViewLeadId}
+        open={activeViewLeadId !== null}
         onOpenChange={(open) => {
           if (!open) {
-            setViewLeadId(null)
+            closeLeadDetail()
           }
         }}
         onLeadUpdated={(updated) => {
@@ -480,7 +501,7 @@ export function LeadsTab() {
         }}
         onLeadDeleted={() => void fetchLeads()}
         onEdit={(lead) => {
-          setViewLeadId(null)
+          closeLeadDetail()
           openEditModal(lead)
         }}
       />

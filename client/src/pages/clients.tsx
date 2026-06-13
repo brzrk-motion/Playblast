@@ -12,7 +12,10 @@ function parseTab(value: string | null): ClientsPageTab {
 
 export function ClientsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab = parseTab(searchParams.get(TAB_PARAM))
+  const activeTab =
+    searchParams.get("lead") !== null
+      ? "leads"
+      : parseTab(searchParams.get(TAB_PARAM))
 
   function handleTabChange(value: string) {
     const next = new URLSearchParams(searchParams)

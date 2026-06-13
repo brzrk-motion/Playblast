@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom"
 import { Building2, MoreHorizontal, Plus } from "lucide-react"
 import { AddClientModal } from "@/components/client-management/add-client-modal"
 import { EditClientModal } from "@/components/client-management/edit-client-modal"
-import { ClientDetailDialog } from "@/components/client-management/client-detail-dialog"
+import { ClientDetailSheet } from "@/components/client-management/client-detail-sheet"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -55,7 +55,7 @@ export function ClientsTab() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [viewClient, setViewClient] = useState<Client | null>(null)
+  const [viewClientId, setViewClientId] = useState<string | null>(null)
 
   const fetchClients = useCallback(async (options?: { showLoading?: boolean }) => {
     if (options?.showLoading) {
@@ -130,14 +130,24 @@ export function ClientsTab() {
   }, [])
 
   const clientIdFromUrl = searchParams.get("client")
-  const clientFromUrl = useMemo(
-    () =>
-      clientIdFromUrl
-        ? clients.find((client) => client.id === clientIdFromUrl)
-        : undefined,
-    [clientIdFromUrl, clients],
-  )
-  const activeViewClient = viewClient ?? clientFromUrl ?? null
+  const activeViewClientId = viewClientId ?? clientIdFromUrl
+
+  function openClientDetail(clientId: string) {
+    setViewClientId(clientId)
+    const next = new URLSearchParams(searchParams)
+    next.set("tab", "clients")
+    next.set("client", clientId)
+    setSearchParams(next, { replace: true })
+  }
+
+  function closeClientDetail() {
+    setViewClientId(null)
+    if (clientIdFromUrl) {
+      const next = new URLSearchParams(searchParams)
+      next.delete("client")
+      setSearchParams(next, { replace: true })
+    }
+  }
 
   const sortedClients = useMemo(
     () =>
@@ -282,7 +292,11 @@ export function ClientsTab() {
                   const linkedCount = projectCounts[client.id] ?? 0
 
                   return (
-                    <TableRow key={client.id}>
+                    <TableRow
+                      key={client.id}
+                      className="cursor-pointer"
+                      onClick={() => openClientDetail(client.id)}
+                    >
                       <TableCell className="font-medium">{client.name}</TableCell>
                       <TableCell>{client.company ?? "—"}</TableCell>
                       <TableCell>{client.email}</TableCell>
@@ -309,13 +323,14 @@ export function ClientsTab() {
                               variant="ghost"
                               size="icon-sm"
                               aria-label={`Actions for ${client.name}`}
+                              onClick={(event) => event.stopPropagation()}
                             >
                               <MoreHorizontal className="size-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => setViewClient(client)}
+                              onClick={() => openClientDetail(client.id)}
                             >
                               View
                             </DropdownMenuItem>
@@ -360,22 +375,19 @@ export function ClientsTab() {
         onSubmit={(values) => void handleEdit(values)}
       />
 
-      <ClientDetailDialog
-        open={activeViewClient !== null}
+      <ClientDetailSheet
+        clientId={activeViewClientId}
+        open={activeViewClientId !== null}
         onOpenChange={(open) => {
           if (!open) {
-            setViewClient(null)
-            if (clientIdFromUrl) {
-              const next = new URLSearchParams(searchParams)
-              next.delete("client")
-              setSearchParams(next, { replace: true })
-            }
+            closeClientDetail()
           }
         }}
-        client={activeViewClient}
-        linkedProjectCount={
-          activeViewClient ? (projectCounts[activeViewClient.id] ?? 0) : 0
-        }
+        onClientDeleted={() => void fetchClients()}
+        onEdit={(client) => {
+          closeClientDetail()
+          openEditModal(client)
+        }}
       />
     </div>
   )
