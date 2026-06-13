@@ -15,6 +15,27 @@ export const LEAD_STATUSES: LeadStatus[] = [
   "lost",
 ]
 
+/** Statuses available in add/edit lead forms. */
+export const LEAD_FORM_STATUSES = [
+  "new",
+  "contacted",
+  "replied",
+  "negotiating",
+] as const satisfies readonly LeadStatus[]
+
+export type LeadFormStatus = (typeof LEAD_FORM_STATUSES)[number]
+
+export const LEAD_SOURCES = [
+  "Instagram",
+  "Referral",
+  "Cold Outreach",
+  "Website",
+  "Event",
+  "Other",
+] as const
+
+export type LeadSource = (typeof LEAD_SOURCES)[number]
+
 export interface Lead {
   id: string
   name: string
