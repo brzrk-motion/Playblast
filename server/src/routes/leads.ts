@@ -192,7 +192,10 @@ leadsRouter.delete("/:id/log/:logId", (req, res) => {
 
 leadsRouter.post("/:id/convert", (req, res) => {
   const leadId = getLeadIdParam(req)
-  const result = convertLeadToClient(leadId)
+  const body = req.body as { notes?: unknown } | undefined
+  const notes =
+    typeof body?.notes === "string" ? body.notes.trim() || undefined : undefined
+  const result = convertLeadToClient(leadId, notes ? { notes } : undefined)
 
   if (result === "not_found") {
     res.status(404).json({ error: "Lead not found." })

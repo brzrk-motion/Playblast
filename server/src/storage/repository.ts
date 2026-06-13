@@ -1411,6 +1411,7 @@ export function deleteClient(
 
 export function convertLeadToClient(
   leadId: string,
+  options?: { notes?: string },
 ): Client | "not_found" | "already_converted" {
   return withTransaction(() => {
     const lead = getLead(leadId)
@@ -1432,6 +1433,7 @@ export function convertLeadToClient(
     }
 
     const now = new Date().toISOString()
+    const notes = options?.notes?.trim() || undefined
     const client: Client = {
       id: randomUUID(),
       name: lead.name,
@@ -1441,6 +1443,7 @@ export function convertLeadToClient(
       updatedAt: now,
       ...(lead.company ? { company: lead.company } : {}),
       ...(lead.phone ? { phone: lead.phone } : {}),
+      ...(notes ? { notes } : {}),
     }
 
     getDb()
@@ -1457,7 +1460,7 @@ export function convertLeadToClient(
         client.email,
         client.phone ?? null,
         null,
-        null,
+        client.notes ?? null,
         client.convertedFromLeadId ?? null,
         client.createdAt,
         client.updatedAt,
