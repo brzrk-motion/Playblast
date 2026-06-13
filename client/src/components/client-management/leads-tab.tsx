@@ -7,10 +7,8 @@ import {
   Search,
   UserPlus,
 } from "lucide-react"
-import {
-  AddLeadModal,
-  type LeadFormValues,
-} from "@/components/client-management/add-lead-modal"
+import { AddLeadModal } from "@/components/client-management/add-lead-modal"
+import { EditLeadModal } from "@/components/client-management/edit-lead-modal"
 import { LeadDetailDialog } from "@/components/client-management/lead-detail-dialog"
 import { LeadStatusBadge } from "@/components/client-management/lead-status-badge"
 import { Button } from "@/components/ui/button"
@@ -59,22 +57,11 @@ import {
   LEAD_STATUS_LABELS,
 } from "@/lib/leads"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { leadFormToPayload, type LeadFormValues } from "@/lib/lead-form"
 import type { Lead, LeadStatus } from "@/types/lead"
 import { LEAD_STATUSES } from "@/types/lead"
 
 type RepliedFilter = "all" | "yes" | "no"
-
-function leadFormToPayload(values: LeadFormValues) {
-  return {
-    name: values.name.trim(),
-    email: values.email.trim(),
-    company: values.company.trim() || undefined,
-    phone: values.phone.trim() || undefined,
-    source: values.source.trim() || undefined,
-    status: values.status,
-    notes: values.notes.trim() || undefined,
-  }
-}
 
 export function LeadsTab() {
   const [leads, setLeads] = useState<Lead[]>([])
@@ -83,8 +70,8 @@ export function LeadsTab() {
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all")
   const [repliedFilter, setRepliedFilter] = useState<RepliedFilter>("all")
   const [searchQuery, setSearchQuery] = useState("")
-  const [modalOpen, setModalOpen] = useState(false)
-  const [modalMode, setModalMode] = useState<"create" | "edit">("create")
+  const [addModalOpen, setAddModalOpen] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -167,33 +154,52 @@ export function LeadsTab() {
   )
 
   function openCreateModal() {
-    setModalMode("create")
-    setSelectedLead(null)
     setFormError(null)
-    setModalOpen(true)
+    setAddModalOpen(true)
   }
 
   function openEditModal(lead: Lead) {
-    setModalMode("edit")
     setSelectedLead(lead)
     setFormError(null)
-    setModalOpen(true)
+    setEditModalOpen(true)
   }
 
-  async function handleSubmit(values: LeadFormValues) {
+  async function handleCreate(values: LeadFormValues) {
     setSubmitting(true)
     setFormError(null)
 
     try {
-      if (modalMode === "create") {
-        await createLead(leadFormToPayload(values))
-        showSuccessToast("Lead added")
-      } else if (selectedLead) {
-        await updateLead(selectedLead.id, leadFormToPayload(values))
-        showSuccessToast("Lead updated")
-      }
-      setModalOpen(false)
+      await createLead(leadFormToPayload(values))
+      showSuccessToast("Lead added")
+      setAddModalOpen(false)
       await fetchLeads()
+    } catch (err) {
+      const message = humanizeApiError(err, "Failed to save lead")
+      setFormError(message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleEdit(values: LeadFormValues) {
+    if (!selectedLead) {
+      return
+    }
+
+    setSubmitting(true)
+    setFormError(null)
+
+    try {
+      const updated = await updateLead(
+        selectedLead.id,
+        leadFormToPayload(values),
+      )
+      showSuccessToast("Lead updated")
+      setEditModalOpen(false)
+      setSelectedLead(null)
+      setLeads((current) =>
+        current.map((lead) => (lead.id === updated.id ? updated : lead)),
+      )
     } catch (err) {
       const message = humanizeApiError(err, "Failed to save lead")
       setFormError(message)
@@ -412,13 +418,31 @@ export function LeadsTab() {
       </Card>
 
       <AddLeadModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        mode={modalMode}
+        open={addModalOpen}
+        onOpenChange={(open) => {
+          setAddModalOpen(open)
+          if (!open) {
+            setFormError(null)
+          }
+        }}
+        submitting={submitting}
+        error={formError}
+        onSubmit={(values) => void handleCreate(values)}
+      />
+
+      <EditLeadModal
+        open={editModalOpen}
+        onOpenChange={(open) => {
+          setEditModalOpen(open)
+          if (!open) {
+            setSelectedLead(null)
+            setFormError(null)
+          }
+        }}
         lead={selectedLead}
         submitting={submitting}
         error={formError}
-        onSubmit={(values) => void handleSubmit(values)}
+        onSubmit={(values) => void handleEdit(values)}
       />
 
       <LeadDetailDialog
