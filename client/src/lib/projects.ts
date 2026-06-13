@@ -21,17 +21,25 @@ export const PROJECT_STATUS_ORDER: ProjectStatus[] = PROJECT_STATUSES
 export function filterProjectsByName(
   projects: ProjectSummary[],
   query: string,
+  clientLookup?: Map<string, { name: string; company?: string }>,
 ): ProjectSummary[] {
   const normalized = query.trim().toLowerCase()
   if (!normalized) {
     return projects
   }
 
-  return projects.filter(
-    (project) =>
+  return projects.filter((project) => {
+    const linkedClient = project.clientId
+      ? clientLookup?.get(project.clientId)
+      : undefined
+
+    return (
       project.name.toLowerCase().includes(normalized) ||
-      (project.client?.toLowerCase().includes(normalized) ?? false),
-  )
+      (project.client?.toLowerCase().includes(normalized) ?? false) ||
+      (linkedClient?.name.toLowerCase().includes(normalized) ?? false) ||
+      (linkedClient?.company?.toLowerCase().includes(normalized) ?? false)
+    )
+  })
 }
 
 export function sortProjects(

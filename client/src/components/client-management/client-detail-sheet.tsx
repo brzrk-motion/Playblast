@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
-import { ExternalLink, FolderKanban, Pencil, Trash2 } from "lucide-react"
+import { ExternalLink, FolderKanban, Link2, Pencil, Trash2 } from "lucide-react"
 import { Link } from "react-router-dom"
+import { LinkProjectModal } from "@/components/client-management/link-project-modal"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -102,6 +103,7 @@ export function ClientDetailSheet({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [linkModalOpen, setLinkModalOpen] = useState(false)
 
   const hasActiveProjects = useMemo(
     () => client?.projects.some((project) => project.status !== "archived") ?? false,
@@ -337,7 +339,18 @@ export function ClientDetailSheet({
               </section>
 
               <section className="space-y-4">
-                <h3 className="text-sm font-medium">Linked Projects</h3>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-medium">Linked Projects</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLinkModalOpen(true)}
+                  >
+                    <Link2 className="size-4" />
+                    Link a Project
+                  </Button>
+                </div>
 
                 {client.projects.length === 0 ? (
                   <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed p-8 text-center">
@@ -358,6 +371,15 @@ export function ClientDetailSheet({
           </div>
         ) : null}
       </SheetContent>
+
+      {client ? (
+        <LinkProjectModal
+          open={linkModalOpen}
+          onOpenChange={setLinkModalOpen}
+          clientId={client.id}
+          onLinked={() => void refreshClient()}
+        />
+      ) : null}
     </Sheet>
   )
 }

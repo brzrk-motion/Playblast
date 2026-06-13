@@ -19,16 +19,28 @@ import {
 } from "@/components/ui/sheet"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
+import { ClientSelector } from "@/components/project/client-selector"
 import type { ProjectFormValues } from "@/lib/project-form"
 import { PROJECT_STATUS_LABELS } from "@/lib/projects"
 import { PROJECT_STATUSES } from "@/types/project"
 import type { Project, ProjectStatus } from "@/types/project"
 
+type ProjectFormProject = Pick<
+  Project,
+  | "name"
+  | "clientId"
+  | "description"
+  | "status"
+  | "startDate"
+  | "endDate"
+  | "budget"
+>
+
 export interface ProjectFormSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   mode: "create" | "edit"
-  project?: Project | null
+  project?: ProjectFormProject | null
   submitting?: boolean
   error?: string | null
   onSubmit: (values: ProjectFormValues) => void
@@ -39,10 +51,10 @@ function toDateInput(value?: string): string {
   return value.slice(0, 10)
 }
 
-function initialValues(project?: Project | null): ProjectFormValues {
+function initialValues(project?: ProjectFormProject | null): ProjectFormValues {
   return {
     name: project?.name ?? "",
-    client: project?.client ?? "",
+    clientId: project?.clientId ?? null,
     description: project?.description ?? "",
     status: project?.status ?? "active",
     startDate: toDateInput(project?.startDate),
@@ -117,16 +129,11 @@ export function ProjectFormSheet({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="project-client">Client</Label>
-              <Input
-                id="project-client"
-                value={values.client}
-                onChange={(event) => update("client", event.target.value)}
-                placeholder="e.g. BRZRK"
-                disabled={submitting}
-              />
-            </div>
+            <ClientSelector
+              value={values.clientId}
+              onChange={(clientId) => update("clientId", clientId)}
+              disabled={submitting}
+            />
 
             <div className="space-y-2">
               <Label>Status</Label>

@@ -26,7 +26,9 @@ import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { DeliverableStatusBadge } from "@/components/project/deliverable-status-badge"
+import { ProjectClientBadge } from "@/components/project/project-client-badge"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
+import { ClientDetailSheet } from "@/components/client-management/client-detail-sheet"
 import {
   DeliverableDialog,
   type DeliverableFormValues,
@@ -60,7 +62,7 @@ import { cn } from "@/lib/utils"
 import { useProjectPageHeader } from "@/hooks/use-project-page-header"
 import type { DeliverableSummary } from "@/types/deliverable"
 import type { Milestone } from "@/types/milestone"
-import type { Project } from "@/types/project"
+import type { ProjectDetail } from "@/types/project"
 
 function formatDate(value?: string): string {
   if (!value) return "—"
@@ -73,7 +75,7 @@ function formatDate(value?: string): string {
 
 export function ProjectOverviewPage() {
   const { projectId = "" } = useParams()
-  const [project, setProject] = useState<Project | null>(null)
+  const [project, setProject] = useState<ProjectDetail | null>(null)
   const [deliverables, setDeliverables] = useState<DeliverableSummary[]>([])
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [loading, setLoading] = useState(true)
@@ -92,6 +94,7 @@ export function ProjectOverviewPage() {
   const [newMilestoneName, setNewMilestoneName] = useState("")
   const [newMilestoneDate, setNewMilestoneDate] = useState("")
   const [addingMilestone, setAddingMilestone] = useState(false)
+  const [viewClientId, setViewClientId] = useState<string | null>(null)
 
   useProjectPageHeader(projectId, project)
 
@@ -168,8 +171,9 @@ export function ProjectOverviewPage() {
     setSavingProject(true)
     setProjectError(null)
     try {
-      const updated = await updateProject(project.id, payload)
-      setProject(updated)
+      await updateProject(project.id, payload)
+      const refreshed = await getProject(project.id)
+      setProject(refreshed)
       setEditOpen(false)
       showSuccessToast("Project updated")
     } catch (err) {
@@ -348,7 +352,10 @@ export function ProjectOverviewPage() {
               <ProjectStatusBadge status={project.status} />
             </div>
             {project.client ? (
-              <p className="text-muted-foreground">{project.client}</p>
+              <ProjectClientBadge
+                client={project.client}
+                onClick={setViewClientId}
+              />
             ) : null}
             {project.description ? (
               <p className="max-w-2xl text-sm text-muted-foreground">
@@ -645,6 +652,16 @@ export function ProjectOverviewPage() {
         submitting={savingDeliverable}
         error={deliverableError}
         onSubmit={handleSaveDeliverable}
+      />
+
+      <ClientDetailSheet
+        clientId={viewClientId}
+        open={viewClientId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewClientId(null)
+          }
+        }}
       />
     </div>
   )
