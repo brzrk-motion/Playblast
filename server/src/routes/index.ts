@@ -4,6 +4,7 @@ import {
   validateProjectParams,
 } from "../middleware/validateParams.js"
 import commentsRouter, { commentByIdRouter } from "./comments.js"
+import clientsRouter from "./clients.js"
 import deliverablesRouter, { deliverableByIdRouter } from "./deliverables.js"
 import leadsRouter from "./leads.js"
 import milestonesRouter, { milestoneByIdRouter } from "./milestones.js"
@@ -14,6 +15,7 @@ import versionsRouter from "./versions.js"
 const apiRouter = Router()
 
 apiRouter.use("/leads", leadsRouter)
+apiRouter.use("/clients", clientsRouter)
 apiRouter.use("/projects", projectsRouter)
 apiRouter.use(
   "/projects/:projectId/deliverables",

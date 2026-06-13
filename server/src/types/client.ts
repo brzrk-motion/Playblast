@@ -1,3 +1,5 @@
+import type { Project } from "./project.js"
+
 /** Converted lead or manually added business contact. */
 export interface Client {
   id: string
@@ -31,4 +33,8 @@ export interface UpdateClientInput {
   website?: string | null
   notes?: string | null
   convertedFromLeadId?: string | null
+}
+
+export interface ClientWithProjects extends Client {
+  projects: Project[]
 }

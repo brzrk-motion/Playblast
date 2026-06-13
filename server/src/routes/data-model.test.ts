@@ -643,4 +643,114 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const missingResponse = await fetch(`${baseUrl}/api/leads/${created.id}`)
     assert.equal(missingResponse.status, 404)
   })
+
+  it("creates, converts, updates, and deletes clients via API routes", async () => {
+    const leadResponse = await fetch(`${baseUrl}/api/leads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Avery Chen",
+        email: "avery@example.com",
+        company: "Lumen Co",
+        phone: "555-0100",
+        status: "negotiating",
+      }),
+    })
+    assert.equal(leadResponse.status, 201)
+    const lead = (await leadResponse.json()) as { id: string }
+
+    const convertResponse = await fetch(
+      `${baseUrl}/api/leads/${lead.id}/convert`,
+      { method: "POST" },
+    )
+    assert.equal(convertResponse.status, 201)
+    const converted = (await convertResponse.json()) as {
+      id: string
+      convertedFromLeadId: string
+      company: string
+    }
+    assert.equal(converted.convertedFromLeadId, lead.id)
+    assert.equal(converted.company, "Lumen Co")
+
+    const duplicateConvertResponse = await fetch(
+      `${baseUrl}/api/leads/${lead.id}/convert`,
+      { method: "POST" },
+    )
+    assert.equal(duplicateConvertResponse.status, 409)
+
+    const leadGetResponse = await fetch(`${baseUrl}/api/leads/${lead.id}`)
+    const updatedLead = (await leadGetResponse.json()) as { status: string }
+    assert.equal(updatedLead.status, "converted")
+
+    const createResponse = await fetch(`${baseUrl}/api/clients`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Manual Client",
+        email: "manual@example.com",
+        website: "https://example.com",
+      }),
+    })
+    assert.equal(createResponse.status, 201)
+    const created = (await createResponse.json()) as { id: string }
+
+    const listResponse = await fetch(`${baseUrl}/api/clients`)
+    assert.equal(listResponse.status, 200)
+    const clients = (await listResponse.json()) as Array<{ id: string }>
+    assert.equal(clients.length, 2)
+
+    const { createProject: repoCreateProject } = await import(
+      "../storage/repository.js"
+    )
+    repoCreateProject({
+      id: "proj-client-api",
+      name: "Linked Project",
+      clientId: created.id,
+      status: "on_hold",
+    })
+
+    const getResponse = await fetch(`${baseUrl}/api/clients/${created.id}`)
+    assert.equal(getResponse.status, 200)
+    const clientWithProjects = (await getResponse.json()) as {
+      website: string
+      projects: Array<{ id: string }>
+    }
+    assert.equal(clientWithProjects.website, "https://example.com")
+    assert.equal(clientWithProjects.projects.length, 1)
+
+    const patchResponse = await fetch(`${baseUrl}/api/clients/${created.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notes: "Key account." }),
+    })
+    assert.equal(patchResponse.status, 200)
+    const patched = (await patchResponse.json()) as { notes: string }
+    assert.equal(patched.notes, "Key account.")
+
+    const blockedDeleteResponse = await fetch(
+      `${baseUrl}/api/clients/${created.id}`,
+      { method: "DELETE" },
+    )
+    assert.equal(blockedDeleteResponse.status, 409)
+
+    const archiveResponse = await fetch(
+      `${baseUrl}/api/projects/proj-client-api`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "archived" }),
+      },
+    )
+    assert.equal(archiveResponse.status, 200)
+
+    const deleteResponse = await fetch(`${baseUrl}/api/clients/${created.id}`, {
+      method: "DELETE",
+    })
+    assert.equal(deleteResponse.status, 204)
+
+    const missingResponse = await fetch(`${baseUrl}/api/clients/${created.id}`)
+    assert.equal(missingResponse.status, 404)
+
+    assert.equal(converted.id.length > 0, true)
+  })
 })

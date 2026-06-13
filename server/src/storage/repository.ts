@@ -9,6 +9,9 @@ import type {
   CreateCommentInput,
   CreateContactLogInput,
   CreateDeliverableInput,
+  Client,
+  ClientWithProjects,
+  CreateClientInput,
   CreateLeadInput,
   CreateMilestoneInput,
   CreateProjectInput,
@@ -24,6 +27,7 @@ import type {
   ProjectBudget,
   ProjectStatus,
   ProjectSummary,
+  UpdateClientInput,
   UpdateCommentInput,
   UpdateDeliverableInput,
   UpdateLeadInput,
@@ -114,6 +118,19 @@ interface ContactLogRow {
   notes: string | null
   contactedAt: string
   createdAt: string
+}
+
+interface ClientRow {
+  id: string
+  name: string
+  company: string | null
+  email: string
+  phone: string | null
+  website: string | null
+  notes: string | null
+  convertedFromLeadId: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 function emptyStatusCounts(): Record<DeliverableStatus, number> {
@@ -1197,5 +1214,251 @@ export function deleteContactLog(id: string): boolean {
       .prepare("DELETE FROM contact_log WHERE id = ?")
       .run(id)
     return result.changes > 0
+  })
+}
+
+// --- Clients ----------------------------------------------------------------
+
+function rowToClient(row: ClientRow): Client {
+  const client: Client = {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+
+  if (row.company) client.company = row.company
+  if (row.phone) client.phone = row.phone
+  if (row.website) client.website = row.website
+  if (row.notes) client.notes = row.notes
+  if (row.convertedFromLeadId) {
+    client.convertedFromLeadId = row.convertedFromLeadId
+  }
+
+  return client
+}
+
+export function listClients(): Client[] {
+  const rows = getDb()
+    .prepare(
+      "SELECT * FROM clients ORDER BY updatedAt DESC, createdAt DESC",
+    )
+    .all() as ClientRow[]
+
+  return rows.map(rowToClient)
+}
+
+export function getClient(id: string): Client | undefined {
+  const row = getDb()
+    .prepare("SELECT * FROM clients WHERE id = ?")
+    .get(id) as ClientRow | undefined
+
+  return row ? rowToClient(row) : undefined
+}
+
+export function listProjectsByClientId(clientId: string): Project[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM projects
+       WHERE clientId = ?
+       ORDER BY createdAt DESC`,
+    )
+    .all(clientId) as ProjectRow[]
+
+  return rows.map(rowToProject)
+}
+
+export function getClientWithProjects(
+  id: string,
+): ClientWithProjects | undefined {
+  const client = getClient(id)
+  if (!client) {
+    return undefined
+  }
+
+  return {
+    ...client,
+    projects: listProjectsByClientId(id),
+  }
+}
+
+export function createClient(input: CreateClientInput): Client {
+  return withTransaction(() => {
+    const now = new Date().toISOString()
+    const client: Client = {
+      id: randomUUID(),
+      name: input.name,
+      email: input.email,
+      createdAt: now,
+      updatedAt: now,
+      ...(input.company ? { company: input.company } : {}),
+      ...(input.phone ? { phone: input.phone } : {}),
+      ...(input.website ? { website: input.website } : {}),
+      ...(input.notes ? { notes: input.notes } : {}),
+      ...(input.convertedFromLeadId
+        ? { convertedFromLeadId: input.convertedFromLeadId }
+        : {}),
+    }
+
+    getDb()
+      .prepare(
+        `INSERT INTO clients (
+          id, name, company, email, phone, website, notes,
+          convertedFromLeadId, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        client.id,
+        client.name,
+        client.company ?? null,
+        client.email,
+        client.phone ?? null,
+        client.website ?? null,
+        client.notes ?? null,
+        client.convertedFromLeadId ?? null,
+        client.createdAt,
+        client.updatedAt,
+      )
+
+    return client
+  })
+}
+
+export function updateClient(
+  id: string,
+  input: UpdateClientInput,
+): Client | undefined {
+  return withTransaction(() => {
+    const client = getClient(id)
+
+    if (!client) {
+      return undefined
+    }
+
+    if (input.name !== undefined) client.name = input.name
+    if (input.email !== undefined) client.email = input.email
+    applyNullableString(client, "company", input.company)
+    applyNullableString(client, "phone", input.phone)
+    applyNullableString(client, "website", input.website)
+    applyNullableString(client, "notes", input.notes)
+    applyNullableString(client, "convertedFromLeadId", input.convertedFromLeadId)
+
+    client.updatedAt = new Date().toISOString()
+
+    getDb()
+      .prepare(
+        `UPDATE clients
+         SET name = ?, company = ?, email = ?, phone = ?, website = ?,
+             notes = ?, convertedFromLeadId = ?, updatedAt = ?
+         WHERE id = ?`,
+      )
+      .run(
+        client.name,
+        client.company ?? null,
+        client.email,
+        client.phone ?? null,
+        client.website ?? null,
+        client.notes ?? null,
+        client.convertedFromLeadId ?? null,
+        client.updatedAt,
+        id,
+      )
+
+    return client
+  })
+}
+
+export function countNonArchivedProjectsByClientId(clientId: string): number {
+  const row = getDb()
+    .prepare(
+      `SELECT COUNT(*) AS count FROM projects
+       WHERE clientId = ? AND status != 'archived'`,
+    )
+    .get(clientId) as { count: number }
+
+  return row.count
+}
+
+export function deleteClient(
+  id: string,
+): "deleted" | "not_found" | "has_active_projects" {
+  return withTransaction(() => {
+    if (!getClient(id)) {
+      return "not_found"
+    }
+
+    if (countNonArchivedProjectsByClientId(id) > 0) {
+      return "has_active_projects"
+    }
+
+    const result = getDb().prepare("DELETE FROM clients WHERE id = ?").run(id)
+    return result.changes > 0 ? "deleted" : "not_found"
+  })
+}
+
+export function convertLeadToClient(
+  leadId: string,
+): Client | "not_found" | "already_converted" {
+  return withTransaction(() => {
+    const lead = getLead(leadId)
+
+    if (!lead) {
+      return "not_found"
+    }
+
+    if (lead.status === "converted") {
+      return "already_converted"
+    }
+
+    const existingClient = getDb()
+      .prepare("SELECT id FROM clients WHERE convertedFromLeadId = ?")
+      .get(leadId) as { id: string } | undefined
+
+    if (existingClient) {
+      return "already_converted"
+    }
+
+    const now = new Date().toISOString()
+    const client: Client = {
+      id: randomUUID(),
+      name: lead.name,
+      email: lead.email,
+      convertedFromLeadId: leadId,
+      createdAt: now,
+      updatedAt: now,
+      ...(lead.company ? { company: lead.company } : {}),
+      ...(lead.phone ? { phone: lead.phone } : {}),
+    }
+
+    getDb()
+      .prepare(
+        `INSERT INTO clients (
+          id, name, company, email, phone, website, notes,
+          convertedFromLeadId, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        client.id,
+        client.name,
+        client.company ?? null,
+        client.email,
+        client.phone ?? null,
+        null,
+        null,
+        client.convertedFromLeadId ?? null,
+        client.createdAt,
+        client.updatedAt,
+      )
+
+    getDb()
+      .prepare(
+        `UPDATE leads
+         SET status = ?, updatedAt = ?
+         WHERE id = ?`,
+      )
+      .run("converted", now, leadId)
+
+    return client
   })
 }
