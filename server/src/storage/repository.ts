@@ -25,6 +25,7 @@ import type {
   Milestone,
   Project,
   ProjectBudget,
+  ProjectDetail,
   ProjectStatus,
   ProjectSummary,
   UpdateClientInput,
@@ -270,9 +271,9 @@ export function listProjects(): Project[] {
   return rows.map(rowToProject)
 }
 
-export function listProjectSummaries(): ProjectSummary[] {
+export function listProjectSummaries(clientId?: string): ProjectSummary[] {
   const db = getDb()
-  const projects = listProjects()
+  const projects = clientId ? listProjectsByClientId(clientId) : listProjects()
 
   return projects.map((project) => {
     const deliverables = listDeliverables(project.id)
@@ -331,6 +332,17 @@ export function getProject(id: string): Project | undefined {
     .get(id) as ProjectRow | undefined
 
   return row ? rowToProject(row) : undefined
+}
+
+export function getProjectWithClient(id: string): ProjectDetail | undefined {
+  const project = getProject(id)
+  if (!project) {
+    return undefined
+  }
+
+  const client = project.clientId ? (getClient(project.clientId) ?? null) : null
+
+  return { ...project, client }
 }
 
 export function createProject(input: CreateProjectInput): Project {
