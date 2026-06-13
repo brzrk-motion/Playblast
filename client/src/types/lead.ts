@@ -36,6 +36,8 @@ export const LEAD_SOURCES = [
 
 export type LeadSource = (typeof LEAD_SOURCES)[number]
 
+import type { ContactLog } from "@/types/contact-log"
+
 export interface Lead {
   id: string
   name: string
@@ -49,6 +51,10 @@ export interface Lead {
   replied: boolean
   createdAt: string
   updatedAt: string
+}
+
+export interface LeadWithContactLog extends Lead {
+  contactLog: ContactLog[]
 }
 
 export interface CreateLeadInput {

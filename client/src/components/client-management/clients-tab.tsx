@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { Building2, MoreHorizontal, Plus } from "lucide-react"
 import {
   AddClientModal,
@@ -54,6 +54,7 @@ function clientFormToPayload(values: ClientFormValues) {
 }
 
 export function ClientsTab() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [clients, setClients] = useState<Client[]>([])
   const [projectCounts, setProjectCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
@@ -136,6 +137,16 @@ export function ClientsTab() {
       cancelled = true
     }
   }, [])
+
+  const clientIdFromUrl = searchParams.get("client")
+  const clientFromUrl = useMemo(
+    () =>
+      clientIdFromUrl
+        ? clients.find((client) => client.id === clientIdFromUrl)
+        : undefined,
+    [clientIdFromUrl, clients],
+  )
+  const activeViewClient = viewClient ?? clientFromUrl ?? null
 
   const sortedClients = useMemo(
     () =>
@@ -331,15 +342,20 @@ export function ClientsTab() {
       />
 
       <ClientDetailDialog
-        open={viewClient !== null}
+        open={activeViewClient !== null}
         onOpenChange={(open) => {
           if (!open) {
             setViewClient(null)
+            if (clientIdFromUrl) {
+              const next = new URLSearchParams(searchParams)
+              next.delete("client")
+              setSearchParams(next, { replace: true })
+            }
           }
         }}
-        client={viewClient}
+        client={activeViewClient}
         linkedProjectCount={
-          viewClient ? (projectCounts[viewClient.id] ?? 0) : 0
+          activeViewClient ? (projectCounts[activeViewClient.id] ?? 0) : 0
         }
       />
     </div>

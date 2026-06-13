@@ -5,7 +5,11 @@ import type { Deliverable,
   DeliverableStatus,
   DeliverableSummary,
 } from "@/types/deliverable"
-import type { CreateLeadInput, Lead, UpdateLeadInput } from "@/types/lead"
+import type {
+  ContactLog,
+  CreateContactLogBody,
+} from "@/types/contact-log"
+import type { CreateLeadInput, Lead, LeadWithContactLog, UpdateLeadInput } from "@/types/lead"
 import type { Milestone } from "@/types/milestone"
 import type {
   Project,
@@ -452,9 +456,42 @@ export async function listLeads(
   return parseJsonResponse<Lead[]>(response)
 }
 
-export async function getLead(id: string): Promise<Lead> {
+export async function getLead(id: string): Promise<LeadWithContactLog> {
   const response = await fetch(`/api/leads/${encodeURIComponent(id)}`)
-  return parseJsonResponse<Lead>(response)
+  return parseJsonResponse<LeadWithContactLog>(response)
+}
+
+export async function listContactLog(leadId: string): Promise<ContactLog[]> {
+  const response = await fetch(
+    `/api/leads/${encodeURIComponent(leadId)}/log`,
+  )
+  return parseJsonResponse<ContactLog[]>(response)
+}
+
+export async function createContactLog(
+  leadId: string,
+  body: CreateContactLogBody,
+): Promise<ContactLog> {
+  const response = await fetch(
+    `/api/leads/${encodeURIComponent(leadId)}/log`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  )
+  return parseJsonResponse<ContactLog>(response)
+}
+
+export async function deleteContactLog(
+  leadId: string,
+  logId: string,
+): Promise<void> {
+  const response = await fetch(
+    `/api/leads/${encodeURIComponent(leadId)}/log/${encodeURIComponent(logId)}`,
+    { method: "DELETE" },
+  )
+  await expectOk(response)
 }
 
 export async function createLead(body: CreateLeadInput): Promise<Lead> {
