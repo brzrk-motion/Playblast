@@ -151,6 +151,101 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(invalid.status, 400)
   })
 
+  it("links projects to clients via POST, PATCH, GET detail, and list filter", async () => {
+    const clientResponse = await fetch(`${baseUrl}/api/clients`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Acme Corp",
+        email: "contact@acme.example",
+        company: "Acme",
+      }),
+    })
+    assert.equal(clientResponse.status, 201)
+    const client = (await clientResponse.json()) as { id: string; name: string }
+
+    const otherClientResponse = await fetch(`${baseUrl}/api/clients`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Other Co",
+        email: "other@example.com",
+      }),
+    })
+    const otherClient = (await otherClientResponse.json()) as { id: string }
+
+    const createResponse = await createProject("spot-client-link", "Linked Spot", {
+      client_id: client.id,
+    })
+    assert.equal(createResponse.status, 201)
+    const created = (await createResponse.json()) as {
+      id: string
+      clientId: string
+    }
+    assert.equal(created.clientId, client.id)
+
+    const invalidClientResponse = await createProject("spot-bad-client", "Bad", {
+      clientId: "missing-client-id",
+    })
+    assert.equal(invalidClientResponse.status, 400)
+
+    const detailResponse = await fetch(`${baseUrl}/api/projects/spot-client-link`)
+    assert.equal(detailResponse.status, 200)
+    const detail = (await detailResponse.json()) as {
+      clientId: string
+      client: { id: string; name: string; email: string } | null
+    }
+    assert.equal(detail.clientId, client.id)
+    assert.equal(detail.client?.id, client.id)
+    assert.equal(detail.client?.name, "Acme Corp")
+
+    await createProject("spot-unlinked", "Unlinked Spot")
+
+    const filteredResponse = await fetch(
+      `${baseUrl}/api/projects?clientId=${client.id}`,
+    )
+    assert.equal(filteredResponse.status, 200)
+    const filtered = (await filteredResponse.json()) as Array<{ id: string }>
+    assert.equal(filtered.length, 1)
+    assert.equal(filtered[0]?.id, "spot-client-link")
+
+    const clearResponse = await fetch(`${baseUrl}/api/projects/spot-client-link`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId: null }),
+    })
+    assert.equal(clearResponse.status, 200)
+    const cleared = (await clearResponse.json()) as { clientId?: string }
+    assert.equal(cleared.clientId, undefined)
+
+    const clearedDetailResponse = await fetch(
+      `${baseUrl}/api/projects/spot-client-link`,
+    )
+    const clearedDetail = (await clearedDetailResponse.json()) as {
+      client: null
+    }
+    assert.equal(clearedDetail.client, null)
+
+    const relinkResponse = await fetch(`${baseUrl}/api/projects/spot-client-link`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ client_id: otherClient.id }),
+    })
+    assert.equal(relinkResponse.status, 200)
+    const relinked = (await relinkResponse.json()) as { clientId: string }
+    assert.equal(relinked.clientId, otherClient.id)
+
+    const invalidPatchResponse = await fetch(
+      `${baseUrl}/api/projects/spot-client-link`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId: "missing-client-id" }),
+      },
+    )
+    assert.equal(invalidPatchResponse.status, 400)
+  })
+
   it("creates, lists, updates, and deletes deliverables", async () => {
     await createProject("spot-deliv", "Spot Deliverables")
 
@@ -697,7 +792,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const listResponse = await fetch(`${baseUrl}/api/clients`)
     assert.equal(listResponse.status, 200)
     const clients = (await listResponse.json()) as Array<{ id: string }>
-    assert.equal(clients.length, 2)
+    const clientIds = clients.map((item) => item.id)
+    assert.ok(clientIds.includes(converted.id))
+    assert.ok(clientIds.includes(created.id))
 
     const { createProject: repoCreateProject } = await import(
       "../storage/repository.js"

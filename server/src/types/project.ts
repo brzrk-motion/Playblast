@@ -1,3 +1,4 @@
+import type { Client } from "./client.js"
 import type { DeliverableStatus } from "./deliverable.js"
 
 export type ProjectStatus = "active" | "on_hold" | "completed" | "archived"
@@ -50,6 +51,11 @@ export interface Project {
   /** ISO date string. */
   endDate?: string
   budget?: ProjectBudget
+}
+
+/** Project detail with the linked client record populated (or null). */
+export interface ProjectDetail extends Project {
+  client: Client | null
 }
 
 export interface ProjectSummary extends Project {

@@ -8,19 +8,28 @@ import {
 import {
   createProject,
   deleteProject,
+  getClient,
   getProject,
+  getProjectWithClient,
   listProjectSummaries,
   listVersionsByProject,
   updateProject,
 } from "../storage/index.js"
-import { parseProjectBudget, parseProjectPatch } from "../lib/project-input.js"
+import {
+  parseOptionalClientId,
+  parseProjectBudget,
+  parseProjectPatch,
+} from "../lib/project-input.js"
 import { isProjectStatus } from "../types/index.js"
 import { getParam } from "../utils/params.js"
 
 const projectsRouter = Router()
 
-projectsRouter.get("/", (_req, res) => {
-  res.json(listProjectSummaries())
+projectsRouter.get("/", (req, res) => {
+  const clientId =
+    typeof req.query.clientId === "string" ? req.query.clientId.trim() : undefined
+
+  res.json(listProjectSummaries(clientId || undefined))
 })
 
 projectsRouter.post("/", (req, res) => {
@@ -58,11 +67,23 @@ projectsRouter.post("/", (req, res) => {
     budget = parsedBudget.budget
   }
 
+  const parsedClientId = parseOptionalClientId(req.body)
+  if ("error" in parsedClientId) {
+    res.status(400).json({ error: parsedClientId.error })
+    return
+  }
+
+  if (parsedClientId.clientId && !getClient(parsedClientId.clientId)) {
+    res.status(400).json({ error: "clientId does not match a client." })
+    return
+  }
+
   const project = createProject({
     name,
     id,
     status,
     client: typeof req.body?.client === "string" ? req.body.client.trim() : undefined,
+    clientId: parsedClientId.clientId,
     description:
       typeof req.body?.description === "string"
         ? req.body.description.trim()
@@ -77,7 +98,7 @@ projectsRouter.post("/", (req, res) => {
 
 projectsRouter.get("/:projectId", (req, res) => {
   const projectId = getParam(req.params.projectId)
-  const project = getProject(projectId)
+  const project = getProjectWithClient(projectId)
 
   if (!project) {
     res.status(404).json({ error: "Project not found." })
@@ -99,6 +120,15 @@ projectsRouter.patch("/:projectId", (req, res) => {
   const parsed = parseProjectPatch(req.body)
   if ("error" in parsed) {
     res.status(400).json({ error: parsed.error })
+    return
+  }
+
+  if (
+    parsed.input.clientId !== undefined &&
+    parsed.input.clientId !== null &&
+    !getClient(parsed.input.clientId)
+  ) {
+    res.status(400).json({ error: "clientId does not match a client." })
     return
   }
 

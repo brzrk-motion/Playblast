@@ -26,6 +26,7 @@ export {
   getLeadWithContactLog,
   getMilestone,
   getProject,
+  getProjectWithClient,
   getVersion,
   getVersionByLabel,
   listClients,

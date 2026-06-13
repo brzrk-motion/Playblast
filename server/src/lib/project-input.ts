@@ -99,6 +99,46 @@ function parseNullableTrimmed(value: unknown): string | null | undefined {
   return undefined
 }
 
+/** Reads `clientId` or `client_id` from a request body. */
+export function parseOptionalClientId(
+  body: unknown,
+): { clientId: string } | { clientId: undefined } | ParseError {
+  if (!body || typeof body !== "object") {
+    return { clientId: undefined }
+  }
+
+  const raw = body as Record<string, unknown>
+  const value = raw.clientId !== undefined ? raw.clientId : raw.client_id
+
+  if (value === undefined || value === null) {
+    return { clientId: undefined }
+  }
+
+  if (typeof value !== "string") {
+    return { error: "clientId must be a string." }
+  }
+
+  const trimmed = value.trim()
+  return trimmed ? { clientId: trimmed } : { clientId: undefined }
+}
+
+function parseNullableClientId(value: unknown): string | null | undefined {
+  if (value === null) return null
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    return trimmed ? trimmed : null
+  }
+  return undefined
+}
+
+function readNullableClientIdField(
+  raw: Record<string, unknown>,
+): string | null | undefined {
+  if (raw.clientId !== undefined) return parseNullableClientId(raw.clientId)
+  if (raw.client_id !== undefined) return parseNullableClientId(raw.client_id)
+  return undefined
+}
+
 export function parseProjectPatch(
   body: unknown,
 ): { input: UpdateProjectInput } | ParseError {
@@ -126,6 +166,8 @@ export function parseProjectPatch(
   }
 
   if (raw.client !== undefined) input.client = parseNullableTrimmed(raw.client)
+  const clientId = readNullableClientIdField(raw)
+  if (clientId !== undefined) input.clientId = clientId
   if (raw.description !== undefined)
     input.description = parseNullableTrimmed(raw.description)
   if (raw.startDate !== undefined)

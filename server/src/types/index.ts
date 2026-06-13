@@ -46,6 +46,7 @@ export type {
   CreateProjectInput,
   Project,
   ProjectBudget,
+  ProjectDetail,
   ProjectStatus,
   ProjectSummary,
   UpdateProjectInput,
