@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { randomUUID } from "node:crypto"
+import type { Database } from "better-sqlite3"
 import { getUploadDir } from "../config/paths.js"
 import type {
   Comment,
@@ -14,6 +15,8 @@ import type {
   DeliverableSummary,
   Milestone,
   Project,
+  ProjectBudget,
+  ProjectStatus,
   ProjectSummary,
   UpdateCommentInput,
   UpdateDeliverableInput,
@@ -23,7 +26,62 @@ import type {
   VersionStatus,
 } from "../types/index.js"
 import { DELIVERABLE_STATUSES } from "../types/index.js"
-import { readStore, withStore } from "./json-store.js"
+import type { FrameAnnotation } from "../types/annotation.js"
+import { getDb, withTransaction } from "./db.js"
+
+interface ProjectRow {
+  id: string
+  name: string
+  createdAt: string
+  status: string
+  client: string | null
+  description: string | null
+  startDate: string | null
+  endDate: string | null
+  budget: string | null
+}
+
+interface DeliverableRow {
+  id: string
+  projectId: string
+  name: string
+  description: string | null
+  status: string
+  dueDate: string | null
+  createdAt: string
+  order: number
+}
+
+interface MilestoneRow {
+  id: string
+  projectId: string
+  name: string
+  dueDate: string | null
+  done: number
+  order: number
+  createdAt: string
+}
+
+interface VersionRow {
+  id: string
+  projectId: string
+  deliverableId: string
+  label: string
+  filename: string
+  uploadedAt: string
+  status: string
+}
+
+interface CommentRow {
+  id: string
+  versionId: string
+  timestamp: number
+  body: string
+  author: string
+  createdAt: string
+  resolved: number
+  annotation: string | null
+}
 
 function emptyStatusCounts(): Record<DeliverableStatus, number> {
   return DELIVERABLE_STATUSES.reduce(
@@ -33,6 +91,84 @@ function emptyStatusCounts(): Record<DeliverableStatus, number> {
     },
     {} as Record<DeliverableStatus, number>,
   )
+}
+
+function rowToProject(row: ProjectRow): Project {
+  const project: Project = {
+    id: row.id,
+    name: row.name,
+    createdAt: row.createdAt,
+    status: row.status as ProjectStatus,
+  }
+
+  if (row.client) project.client = row.client
+  if (row.description) project.description = row.description
+  if (row.startDate) project.startDate = row.startDate
+  if (row.endDate) project.endDate = row.endDate
+  if (row.budget) project.budget = JSON.parse(row.budget) as ProjectBudget
+
+  return project
+}
+
+function rowToDeliverable(row: DeliverableRow): Deliverable {
+  const deliverable: Deliverable = {
+    id: row.id,
+    projectId: row.projectId,
+    name: row.name,
+    status: row.status as DeliverableStatus,
+    createdAt: row.createdAt,
+    order: row.order,
+  }
+
+  if (row.description) deliverable.description = row.description
+  if (row.dueDate) deliverable.dueDate = row.dueDate
+
+  return deliverable
+}
+
+function rowToMilestone(row: MilestoneRow): Milestone {
+  const milestone: Milestone = {
+    id: row.id,
+    projectId: row.projectId,
+    name: row.name,
+    done: row.done === 1,
+    order: row.order,
+    createdAt: row.createdAt,
+  }
+
+  if (row.dueDate) milestone.dueDate = row.dueDate
+
+  return milestone
+}
+
+function rowToVersion(row: VersionRow): Version {
+  return {
+    id: row.id,
+    projectId: row.projectId,
+    deliverableId: row.deliverableId,
+    label: row.label,
+    filename: row.filename,
+    uploadedAt: row.uploadedAt,
+    status: row.status as VersionStatus,
+  }
+}
+
+function rowToComment(row: CommentRow): Comment {
+  const comment: Comment = {
+    id: row.id,
+    versionId: row.versionId,
+    timestamp: row.timestamp,
+    body: row.body,
+    author: row.author,
+    createdAt: row.createdAt,
+    resolved: row.resolved === 1,
+  }
+
+  if (row.annotation) {
+    comment.annotation = JSON.parse(row.annotation) as FrameAnnotation
+  }
+
+  return comment
 }
 
 function latestVersion(versions: Version[]): Version | undefined {
@@ -57,27 +193,51 @@ function latestVersion(versions: Version[]): Version | undefined {
   return latest
 }
 
+function countOpenComments(db: Database, versionIds: string[]): number {
+  if (versionIds.length === 0) {
+    return 0
+  }
+
+  const placeholders = versionIds.map(() => "?").join(", ")
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS count FROM comments
+       WHERE versionId IN (${placeholders}) AND resolved = 0`,
+    )
+    .get(...versionIds) as { count: number }
+
+  return row.count
+}
+
 // --- Projects ---------------------------------------------------------------
 
 export function listProjects(): Project[] {
-  return readStore().projects
+  const rows = getDb()
+    .prepare("SELECT * FROM projects ORDER BY createdAt ASC")
+    .all() as ProjectRow[]
+
+  return rows.map(rowToProject)
 }
 
 export function listProjectSummaries(): ProjectSummary[] {
-  const store = readStore()
+  const db = getDb()
+  const projects = listProjects()
 
-  return store.projects.map((project) => {
-    const deliverables = store.deliverables.filter(
-      (deliverable) => deliverable.projectId === project.id,
-    )
-    const deliverableIds = new Set(deliverables.map((item) => item.id))
-    const versions = store.versions.filter((version) =>
-      deliverableIds.has(version.deliverableId),
-    )
-    const versionIds = new Set(versions.map((version) => version.id))
-    const openCommentCount = store.comments.filter(
-      (comment) => versionIds.has(comment.versionId) && !comment.resolved,
-    ).length
+  return projects.map((project) => {
+    const deliverables = listDeliverables(project.id)
+    const deliverableIds = deliverables.map((item) => item.id)
+    const versions =
+      deliverableIds.length === 0
+        ? []
+        : (db
+            .prepare(
+              `SELECT * FROM versions
+               WHERE deliverableId IN (${deliverableIds.map(() => "?").join(", ")})`,
+            )
+            .all(...deliverableIds) as VersionRow[]).map(rowToVersion)
+
+    const versionIds = versions.map((version) => version.id)
+    const openCommentCount = countOpenComments(db, versionIds)
 
     const deliverableStatusCounts = emptyStatusCounts()
     for (const deliverable of deliverables) {
@@ -92,13 +252,9 @@ export function listProjectSummaries(): ProjectSummary[] {
     ]
     const updatedAt = updatedCandidates.reduce((a, b) => (a > b ? a : b))
 
-    const nextMilestone = store.milestones
-      .filter((milestone) => milestone.projectId === project.id && !milestone.done)
-      .sort((a, b) => {
-        if (!a.dueDate) return 1
-        if (!b.dueDate) return -1
-        return a.dueDate.localeCompare(b.dueDate)
-      })[0]
+    const nextMilestone = listMilestones(project.id).find(
+      (milestone) => !milestone.done,
+    )
 
     return {
       ...project,
@@ -119,11 +275,15 @@ export function listProjectSummaries(): ProjectSummary[] {
 }
 
 export function getProject(id: string): Project | undefined {
-  return readStore().projects.find((project) => project.id === id)
+  const row = getDb()
+    .prepare("SELECT * FROM projects WHERE id = ?")
+    .get(id) as ProjectRow | undefined
+
+  return row ? rowToProject(row) : undefined
 }
 
 export function createProject(input: CreateProjectInput): Project {
-  return withStore((store) => {
+  return withTransaction(() => {
     const id = input.id ?? randomUUID()
     const project: Project = {
       id,
@@ -137,7 +297,24 @@ export function createProject(input: CreateProjectInput): Project {
       ...(input.budget ? { budget: input.budget } : {}),
     }
 
-    store.projects.push(project)
+    getDb()
+      .prepare(
+        `INSERT INTO projects (
+          id, name, createdAt, status, client, description, startDate, endDate, budget
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        project.id,
+        project.name,
+        project.createdAt,
+        project.status,
+        project.client ?? null,
+        project.description ?? null,
+        project.startDate ?? null,
+        project.endDate ?? null,
+        project.budget ? JSON.stringify(project.budget) : null,
+      )
+
     return project
   })
 }
@@ -146,8 +323,8 @@ export function updateProject(
   id: string,
   input: UpdateProjectInput,
 ): Project | undefined {
-  return withStore((store) => {
-    const project = store.projects.find((item) => item.id === id)
+  return withTransaction(() => {
+    const project = getProject(id)
     if (!project) {
       return undefined
     }
@@ -165,6 +342,24 @@ export function updateProject(
     } else if (input.budget !== undefined) {
       project.budget = input.budget
     }
+
+    getDb()
+      .prepare(
+        `UPDATE projects
+         SET name = ?, status = ?, client = ?, description = ?,
+             startDate = ?, endDate = ?, budget = ?
+         WHERE id = ?`,
+      )
+      .run(
+        project.name,
+        project.status,
+        project.client ?? null,
+        project.description ?? null,
+        project.startDate ?? null,
+        project.endDate ?? null,
+        project.budget ? JSON.stringify(project.budget) : null,
+        id,
+      )
 
     return project
   })
@@ -185,38 +380,9 @@ function applyNullableString<T extends object>(
 }
 
 export function deleteProject(id: string): boolean {
-  return withStore((store) => {
-    const index = store.projects.findIndex((project) => project.id === id)
-
-    if (index === -1) {
-      return false
-    }
-
-    const deliverableIds = new Set(
-      store.deliverables
-        .filter((deliverable) => deliverable.projectId === id)
-        .map((deliverable) => deliverable.id),
-    )
-    const versionIds = new Set(
-      store.versions
-        .filter((version) => deliverableIds.has(version.deliverableId))
-        .map((version) => version.id),
-    )
-
-    store.comments = store.comments.filter(
-      (comment) => !versionIds.has(comment.versionId),
-    )
-    store.versions = store.versions.filter(
-      (version) => !deliverableIds.has(version.deliverableId),
-    )
-    store.deliverables = store.deliverables.filter(
-      (deliverable) => deliverable.projectId !== id,
-    )
-    store.milestones = store.milestones.filter(
-      (milestone) => milestone.projectId !== id,
-    )
-    store.projects.splice(index, 1)
-    return true
+  return withTransaction(() => {
+    const result = getDb().prepare("DELETE FROM projects WHERE id = ?").run(id)
+    return result.changes > 0
   })
 }
 
@@ -232,25 +398,25 @@ export function ensureProject(id: string, name?: string): Project {
 // --- Deliverables -----------------------------------------------------------
 
 export function listDeliverables(projectId: string): Deliverable[] {
-  return readStore()
-    .deliverables.filter((deliverable) => deliverable.projectId === projectId)
-    .sort((a, b) => a.order - b.order || a.createdAt.localeCompare(b.createdAt))
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM deliverables
+       WHERE projectId = ?
+       ORDER BY "order" ASC, createdAt ASC`,
+    )
+    .all(projectId) as DeliverableRow[]
+
+  return rows.map(rowToDeliverable)
 }
 
 export function listDeliverableSummaries(projectId: string): DeliverableSummary[] {
-  const store = readStore()
-  const deliverables = store.deliverables
-    .filter((deliverable) => deliverable.projectId === projectId)
-    .sort((a, b) => a.order - b.order || a.createdAt.localeCompare(b.createdAt))
+  const db = getDb()
+  const deliverables = listDeliverables(projectId)
 
   return deliverables.map((deliverable) => {
-    const versions = store.versions.filter(
-      (version) => version.deliverableId === deliverable.id,
-    )
-    const versionIds = new Set(versions.map((version) => version.id))
-    const openCommentCount = store.comments.filter(
-      (comment) => versionIds.has(comment.versionId) && !comment.resolved,
-    ).length
+    const versions = listVersions(deliverable.id)
+    const versionIds = versions.map((version) => version.id)
+    const openCommentCount = countOpenComments(db, versionIds)
     const latest = latestVersion(versions)
 
     return {
@@ -264,16 +430,21 @@ export function listDeliverableSummaries(projectId: string): DeliverableSummary[
 }
 
 export function getDeliverable(id: string): Deliverable | undefined {
-  return readStore().deliverables.find((deliverable) => deliverable.id === id)
+  const row = getDb()
+    .prepare("SELECT * FROM deliverables WHERE id = ?")
+    .get(id) as DeliverableRow | undefined
+
+  return row ? rowToDeliverable(row) : undefined
 }
 
 export function createDeliverable(input: CreateDeliverableInput): Deliverable {
-  return withStore((store) => {
-    const siblings = store.deliverables.filter(
-      (deliverable) => deliverable.projectId === input.projectId,
-    )
-    const order =
-      siblings.reduce((max, item) => Math.max(max, item.order), -1) + 1
+  return withTransaction(() => {
+    const row = getDb()
+      .prepare(
+        `SELECT COALESCE(MAX("order"), -1) AS maxOrder
+         FROM deliverables WHERE projectId = ?`,
+      )
+      .get(input.projectId) as { maxOrder: number }
 
     const deliverable: Deliverable = {
       id: randomUUID(),
@@ -281,12 +452,28 @@ export function createDeliverable(input: CreateDeliverableInput): Deliverable {
       name: input.name,
       status: input.status ?? "not_started",
       createdAt: new Date().toISOString(),
-      order,
+      order: row.maxOrder + 1,
       ...(input.description ? { description: input.description } : {}),
       ...(input.dueDate ? { dueDate: input.dueDate } : {}),
     }
 
-    store.deliverables.push(deliverable)
+    getDb()
+      .prepare(
+        `INSERT INTO deliverables (
+          id, projectId, name, description, status, dueDate, createdAt, "order"
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        deliverable.id,
+        deliverable.projectId,
+        deliverable.name,
+        deliverable.description ?? null,
+        deliverable.status,
+        deliverable.dueDate ?? null,
+        deliverable.createdAt,
+        deliverable.order,
+      )
+
     return deliverable
   })
 }
@@ -295,8 +482,8 @@ export function updateDeliverable(
   id: string,
   input: UpdateDeliverableInput,
 ): Deliverable | undefined {
-  return withStore((store) => {
-    const deliverable = store.deliverables.find((item) => item.id === id)
+  return withTransaction(() => {
+    const deliverable = getDeliverable(id)
     if (!deliverable) {
       return undefined
     }
@@ -306,6 +493,20 @@ export function updateDeliverable(
 
     applyNullableString(deliverable, "description", input.description)
     applyNullableString(deliverable, "dueDate", input.dueDate)
+
+    getDb()
+      .prepare(
+        `UPDATE deliverables
+         SET name = ?, description = ?, status = ?, dueDate = ?
+         WHERE id = ?`,
+      )
+      .run(
+        deliverable.name,
+        deliverable.description ?? null,
+        deliverable.status,
+        deliverable.dueDate ?? null,
+        id,
+      )
 
     return deliverable
   })
@@ -319,67 +520,74 @@ export function updateDeliverableStatus(
 }
 
 export function deleteDeliverable(id: string): boolean {
-  return withStore((store) => {
-    const index = store.deliverables.findIndex(
-      (deliverable) => deliverable.id === id,
-    )
-    if (index === -1) {
-      return false
-    }
-
-    const versionIds = new Set(
-      store.versions
-        .filter((version) => version.deliverableId === id)
-        .map((version) => version.id),
-    )
-
-    store.comments = store.comments.filter(
-      (comment) => !versionIds.has(comment.versionId),
-    )
-    store.versions = store.versions.filter(
-      (version) => version.deliverableId !== id,
-    )
-    store.deliverables.splice(index, 1)
-    return true
+  return withTransaction(() => {
+    const result = getDb()
+      .prepare("DELETE FROM deliverables WHERE id = ?")
+      .run(id)
+    return result.changes > 0
   })
 }
 
 // --- Milestones -------------------------------------------------------------
 
 export function listMilestones(projectId: string): Milestone[] {
-  return readStore()
-    .milestones.filter((milestone) => milestone.projectId === projectId)
-    .sort((a, b) => {
-      if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
-      if (a.dueDate) return -1
-      if (b.dueDate) return 1
-      return a.order - b.order
-    })
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM milestones
+       WHERE projectId = ?
+       ORDER BY
+         CASE WHEN dueDate IS NULL THEN 1 ELSE 0 END,
+         dueDate ASC,
+         "order" ASC`,
+    )
+    .all(projectId) as MilestoneRow[]
+
+  return rows.map(rowToMilestone)
 }
 
 export function getMilestone(id: string): Milestone | undefined {
-  return readStore().milestones.find((milestone) => milestone.id === id)
+  const row = getDb()
+    .prepare("SELECT * FROM milestones WHERE id = ?")
+    .get(id) as MilestoneRow | undefined
+
+  return row ? rowToMilestone(row) : undefined
 }
 
 export function createMilestone(input: CreateMilestoneInput): Milestone {
-  return withStore((store) => {
-    const siblings = store.milestones.filter(
-      (milestone) => milestone.projectId === input.projectId,
-    )
-    const order =
-      siblings.reduce((max, item) => Math.max(max, item.order), -1) + 1
+  return withTransaction(() => {
+    const row = getDb()
+      .prepare(
+        `SELECT COALESCE(MAX("order"), -1) AS maxOrder
+         FROM milestones WHERE projectId = ?`,
+      )
+      .get(input.projectId) as { maxOrder: number }
 
     const milestone: Milestone = {
       id: randomUUID(),
       projectId: input.projectId,
       name: input.name,
       done: input.done ?? false,
-      order,
+      order: row.maxOrder + 1,
       createdAt: new Date().toISOString(),
       ...(input.dueDate ? { dueDate: input.dueDate } : {}),
     }
 
-    store.milestones.push(milestone)
+    getDb()
+      .prepare(
+        `INSERT INTO milestones (
+          id, projectId, name, dueDate, done, "order", createdAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        milestone.id,
+        milestone.projectId,
+        milestone.name,
+        milestone.dueDate ?? null,
+        milestone.done ? 1 : 0,
+        milestone.order,
+        milestone.createdAt,
+      )
+
     return milestone
   })
 }
@@ -388,8 +596,8 @@ export function updateMilestone(
   id: string,
   input: UpdateMilestoneInput,
 ): Milestone | undefined {
-  return withStore((store) => {
-    const milestone = store.milestones.find((item) => item.id === id)
+  return withTransaction(() => {
+    const milestone = getMilestone(id)
     if (!milestone) {
       return undefined
     }
@@ -399,69 +607,98 @@ export function updateMilestone(
 
     applyNullableString(milestone, "dueDate", input.dueDate)
 
+    getDb()
+      .prepare(
+        `UPDATE milestones
+         SET name = ?, dueDate = ?, done = ?
+         WHERE id = ?`,
+      )
+      .run(
+        milestone.name,
+        milestone.dueDate ?? null,
+        milestone.done ? 1 : 0,
+        id,
+      )
+
     return milestone
   })
 }
 
 export function deleteMilestone(id: string): boolean {
-  return withStore((store) => {
-    const index = store.milestones.findIndex((milestone) => milestone.id === id)
-    if (index === -1) {
-      return false
-    }
-
-    store.milestones.splice(index, 1)
-    return true
+  return withTransaction(() => {
+    const result = getDb().prepare("DELETE FROM milestones WHERE id = ?").run(id)
+    return result.changes > 0
   })
 }
 
 // --- Versions ---------------------------------------------------------------
 
 export function listVersions(deliverableId: string): Version[] {
-  return readStore()
-    .versions.filter((version) => version.deliverableId === deliverableId)
-    .sort(
-      (a, b) =>
-        new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM versions
+       WHERE deliverableId = ?
+       ORDER BY uploadedAt DESC`,
     )
+    .all(deliverableId) as VersionRow[]
+
+  return rows.map(rowToVersion)
 }
 
 export function listVersionsByProject(projectId: string): Version[] {
-  return readStore()
-    .versions.filter((version) => version.projectId === projectId)
-    .sort(
-      (a, b) =>
-        new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM versions
+       WHERE projectId = ?
+       ORDER BY uploadedAt DESC`,
     )
+    .all(projectId) as VersionRow[]
+
+  return rows.map(rowToVersion)
 }
 
 export function getVersion(id: string): Version | undefined {
-  return readStore().versions.find((version) => version.id === id)
+  const row = getDb()
+    .prepare("SELECT * FROM versions WHERE id = ?")
+    .get(id) as VersionRow | undefined
+
+  return row ? rowToVersion(row) : undefined
 }
 
 export function getVersionByLabel(
   deliverableId: string,
   label: string,
 ): Version | undefined {
-  return readStore().versions.find(
-    (version) =>
-      version.deliverableId === deliverableId && version.label === label,
-  )
+  const row = getDb()
+    .prepare(
+      `SELECT * FROM versions
+       WHERE deliverableId = ? AND label = ?`,
+    )
+    .get(deliverableId, label) as VersionRow | undefined
+
+  return row ? rowToVersion(row) : undefined
 }
 
 export function createVersion(input: CreateVersionInput): Version {
-  return withStore((store) => {
-    const existing = store.versions.find(
-      (version) =>
-        version.deliverableId === input.deliverableId &&
-        version.label === input.label,
-    )
+  return withTransaction(() => {
+    const existing = getVersionByLabel(input.deliverableId, input.label)
 
     if (existing) {
-      existing.filename = input.filename
-      existing.uploadedAt = new Date().toISOString()
-      existing.status = "pending_review"
-      return existing
+      const uploadedAt = new Date().toISOString()
+      getDb()
+        .prepare(
+          `UPDATE versions
+           SET filename = ?, uploadedAt = ?, status = ?
+           WHERE id = ?`,
+        )
+        .run(input.filename, uploadedAt, "pending_review", existing.id)
+
+      return {
+        ...existing,
+        filename: input.filename,
+        uploadedAt,
+        status: "pending_review",
+      }
     }
 
     const version: Version = {
@@ -474,7 +711,22 @@ export function createVersion(input: CreateVersionInput): Version {
       status: "pending_review",
     }
 
-    store.versions.push(version)
+    getDb()
+      .prepare(
+        `INSERT INTO versions (
+          id, projectId, deliverableId, label, filename, uploadedAt, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        version.id,
+        version.projectId,
+        version.deliverableId,
+        version.label,
+        version.filename,
+        version.uploadedAt,
+        version.status,
+      )
+
     return version
   })
 }
@@ -483,15 +735,18 @@ export function updateVersionStatus(
   id: string,
   status: VersionStatus,
 ): Version | undefined {
-  return withStore((store) => {
-    const version = store.versions.find((item) => item.id === id)
+  return withTransaction(() => {
+    const version = getVersion(id)
 
     if (!version) {
       return undefined
     }
 
-    version.status = status
-    return version
+    getDb()
+      .prepare("UPDATE versions SET status = ? WHERE id = ?")
+      .run(status, id)
+
+    return { ...version, status }
   })
 }
 
@@ -499,8 +754,8 @@ export function updateVersionLabel(
   id: string,
   label: string,
 ): Version | "not_found" | "conflict" {
-  return withStore((store) => {
-    const version = store.versions.find((item) => item.id === id)
+  return withTransaction(() => {
+    const version = getVersion(id)
 
     if (!version) {
       return "not_found"
@@ -510,14 +765,9 @@ export function updateVersionLabel(
       return version
     }
 
-    const conflict = store.versions.find(
-      (item) =>
-        item.deliverableId === version.deliverableId &&
-        item.label === label &&
-        item.id !== id,
-    )
+    const conflict = getVersionByLabel(version.deliverableId, label)
 
-    if (conflict) {
+    if (conflict && conflict.id !== id) {
       return "conflict"
     }
 
@@ -533,25 +783,38 @@ export function updateVersionLabel(
       fs.renameSync(oldDir, newDir)
     }
 
-    version.label = label
-    return version
+    getDb()
+      .prepare("UPDATE versions SET label = ? WHERE id = ?")
+      .run(label, id)
+
+    return { ...version, label }
   })
 }
 
 // --- Comments ---------------------------------------------------------------
 
 export function listComments(versionId: string): Comment[] {
-  return readStore()
-    .comments.filter((comment) => comment.versionId === versionId)
-    .sort((a, b) => a.timestamp - b.timestamp)
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM comments
+       WHERE versionId = ?
+       ORDER BY timestamp ASC`,
+    )
+    .all(versionId) as CommentRow[]
+
+  return rows.map(rowToComment)
 }
 
 export function getComment(id: string): Comment | undefined {
-  return readStore().comments.find((comment) => comment.id === id)
+  const row = getDb()
+    .prepare("SELECT * FROM comments WHERE id = ?")
+    .get(id) as CommentRow | undefined
+
+  return row ? rowToComment(row) : undefined
 }
 
 export function createComment(input: CreateCommentInput): Comment {
-  return withStore((store) => {
+  return withTransaction(() => {
     const comment: Comment = {
       id: randomUUID(),
       versionId: input.versionId,
@@ -563,7 +826,23 @@ export function createComment(input: CreateCommentInput): Comment {
       ...(input.annotation ? { annotation: input.annotation } : {}),
     }
 
-    store.comments.push(comment)
+    getDb()
+      .prepare(
+        `INSERT INTO comments (
+          id, versionId, timestamp, body, author, createdAt, resolved, annotation
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        comment.id,
+        comment.versionId,
+        comment.timestamp,
+        comment.body,
+        comment.author,
+        comment.createdAt,
+        0,
+        comment.annotation ? JSON.stringify(comment.annotation) : null,
+      )
+
     return comment
   })
 }
@@ -572,8 +851,8 @@ export function updateComment(
   id: string,
   input: UpdateCommentInput,
 ): Comment | undefined {
-  return withStore((store) => {
-    const comment = store.comments.find((item) => item.id === id)
+  return withTransaction(() => {
+    const comment = getComment(id)
 
     if (!comment) {
       return undefined
@@ -587,19 +866,21 @@ export function updateComment(
       comment.resolved = input.resolved
     }
 
+    getDb()
+      .prepare(
+        `UPDATE comments
+         SET body = ?, resolved = ?
+         WHERE id = ?`,
+      )
+      .run(comment.body, comment.resolved ? 1 : 0, id)
+
     return comment
   })
 }
 
 export function deleteComment(id: string): boolean {
-  return withStore((store) => {
-    const index = store.comments.findIndex((comment) => comment.id === id)
-
-    if (index === -1) {
-      return false
-    }
-
-    store.comments.splice(index, 1)
-    return true
+  return withTransaction(() => {
+    const result = getDb().prepare("DELETE FROM comments WHERE id = ?").run(id)
+    return result.changes > 0
   })
 }

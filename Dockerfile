@@ -1,6 +1,8 @@
 # Stage 1: build the Vite client and compile the Express server
 FROM node:20-alpine AS builder
 
+RUN apk add --no-cache python3 make g++
+
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -22,13 +24,16 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV UPLOAD_DIR=/app/uploads
+ENV DB_PATH=/app/data/playblast.db
 ENV MAX_UPLOAD_SIZE=5000
 
 COPY package.json package-lock.json ./
 COPY client/package.json ./client/
 COPY server/package.json ./server/
 
-RUN npm ci --omit=dev --workspace=server
+RUN apk add --no-cache python3 make g++ \
+  && npm ci --omit=dev --workspace=server \
+  && apk del python3 make g++
 
 COPY --from=builder /app/client/dist ./client/dist
 COPY --from=builder /app/server/dist ./server/dist

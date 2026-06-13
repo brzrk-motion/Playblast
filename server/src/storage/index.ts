@@ -1,10 +1,4 @@
-export {
-  getDataDir,
-  getStorePath,
-  readStore,
-  writeStore,
-  withStore,
-} from "./json-store.js"
+export { closeDatabase, getDb, getDbPath, initDatabase, withTransaction } from "./db.js"
 export {
   createComment,
   createDeliverable,

@@ -9,6 +9,7 @@ dotenv.config({ path: path.join(REPO_ROOT, ".env") })
 
 const DEFAULT_PORT = 3000
 const DEFAULT_UPLOAD_DIR = "/app/uploads"
+const DEFAULT_DB_PATH = "/app/data/playblast.db"
 const DEFAULT_MAX_UPLOAD_SIZE_MB = 5000
 
 function parsePort(value: string | undefined, fallback: number): number {
@@ -51,6 +52,9 @@ export const config = {
   },
   get uploadDir(): string {
     return path.resolve(process.env.UPLOAD_DIR ?? DEFAULT_UPLOAD_DIR)
+  },
+  get dbPath(): string {
+    return path.resolve(process.env.DB_PATH ?? DEFAULT_DB_PATH)
   },
   get maxUploadSizeMb(): number {
     return parseMaxUploadSizeMb(

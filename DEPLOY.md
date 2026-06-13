@@ -30,11 +30,12 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - playblast_uploads:/app/server/uploads
-      - playblast_data:/app/server/data
+      - playblast_uploads:/app/uploads
+      - playblast_data:/app/data
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - DB_PATH=/app/data/playblast.db
     restart: unless-stopped
 
 volumes:
@@ -50,8 +51,8 @@ volumes:
 2. **Image:** `playblast:latest`
 3. **Port mapping:** `3000:3000` (host → container)
 4. **Volumes:**
-   - Named volume → container path `/app/server/uploads`
-   - Named volume → container path `/app/server/data` (persists projects, versions, comments)
+   - Named volume → container path `/app/uploads`
+   - Named volume → container path `/app/data` (persists SQLite database)
 5. **Env vars:** see table below.
 6. **Restart policy:** `Unless stopped`
 7. Deploy the container.
@@ -64,11 +65,25 @@ The app serves the UI and API on port **3000** inside the container.
 |----------|---------|-------------|
 | `PORT` | `3000` | HTTP port the Express server listens on |
 | `NODE_ENV` | `production` | Set by the Dockerfile; leave as `production` in deploy |
-| `UPLOAD_DIR` | `/app/server/uploads` | Not configurable today — mount a volume at this path for uploaded videos |
-| `MAX_UPLOAD_SIZE` | `2147483648` (2 GB) | Not configurable today — hard-coded upload limit per file |
-| `PLAYBLAST_DATA_DIR` | `/app/server/data` | Directory for `store.json` (projects, versions, comments) |
+| `UPLOAD_DIR` | `/app/uploads` | Mount a volume at this path for uploaded videos |
+| `DB_PATH` | `/app/data/playblast.db` | SQLite database file for projects, versions, comments |
+| `MAX_UPLOAD_SIZE` | `5000` | Max upload size in megabytes |
 
 No secrets or API keys are required for the current build.
+
+## Migrating from JSON storage
+
+If you have an existing `store.json` from a previous deployment:
+
+1. Back up the JSON file.
+2. Set `DB_PATH` to the target database path (must not already exist).
+3. Run the migration script from the repository root:
+
+```bash
+DB_PATH=/path/to/playblast.db node scripts/migrate-json-to-sqlite.js /path/to/store.json
+```
+
+Or point `PLAYBLAST_DATA_DIR` at the directory containing `store.json` and omit the path argument.
 
 ## Updating
 
@@ -89,8 +104,8 @@ Uploaded videos and app data live on Docker named volumes, not inside the image.
 
 | Path in container | Contents |
 |-------------------|----------|
-| `/app/server/uploads` | Video files (`{projectId}/{version}/`) |
-| `/app/server/data` | `store.json` — projects, versions, comments |
+| `/app/uploads` | Video files (`{projectId}/{deliverableId}/{version}/`) |
+| `/app/data` | `playblast.db` — projects, deliverables, versions, comments |
 
 **Back up uploads** (replace `playblast_uploads` with your volume name):
 
