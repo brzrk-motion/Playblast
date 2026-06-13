@@ -2,6 +2,7 @@ import { Router } from "express"
 import {
   createContactLog,
   createLead,
+  convertLeadToClient,
   deleteContactLog,
   deleteLead,
   getContactLog,
@@ -187,6 +188,23 @@ leadsRouter.delete("/:id/log/:logId", (req, res) => {
 
   deleteContactLog(logId)
   res.status(204).send()
+})
+
+leadsRouter.post("/:id/convert", (req, res) => {
+  const leadId = getLeadIdParam(req)
+  const result = convertLeadToClient(leadId)
+
+  if (result === "not_found") {
+    res.status(404).json({ error: "Lead not found." })
+    return
+  }
+
+  if (result === "already_converted") {
+    res.status(409).json({ error: "Lead has already been converted to a client." })
+    return
+  }
+
+  res.status(201).json(result)
 })
 
 leadsRouter.get("/:id", (req, res) => {

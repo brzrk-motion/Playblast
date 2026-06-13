@@ -5,13 +5,16 @@ import { after, before, describe, it } from "node:test"
 import assert from "node:assert/strict"
 import Database from "better-sqlite3"
 import {
+  convertLeadToClient,
   createComment,
   createContactLog,
+  createClient,
   createDeliverable,
   createLead,
   createMilestone,
   createProject,
   createVersion,
+  deleteClient,
   deleteComment,
   deleteContactLog,
   deleteDeliverable,
@@ -19,13 +22,17 @@ import {
   deleteMilestone,
   deleteProject,
   ensureProject,
+  getClient,
+  getClientWithProjects,
   getComment,
   getContactLog,
   getDeliverable,
   getLead,
   getLeadWithContactLog,
   getMilestone,
+  getProject,
   getVersionByLabel,
+  listClients,
   listComments,
   listContactLog,
   listDeliverables,
@@ -35,6 +42,7 @@ import {
   listProjectSummaries,
   listProjects,
   listVersions,
+  updateClient,
   updateComment,
   updateDeliverable,
   updateLead,
@@ -523,5 +531,65 @@ describe("SQLite data store", () => {
     assert.equal(getContactLog(entry.id), undefined)
     assert.ok(deleteLead(otherLead.id))
     assert.equal(getLead(otherLead.id), undefined)
+  })
+
+  it("persists clients, converts leads, and blocks delete when projects are linked", () => {
+    const lead = createLead({
+      name: "Avery Chen",
+      email: "avery@example.com",
+      company: "Lumen Co",
+      phone: "555-0100",
+      status: "negotiating",
+    })
+
+    const converted = convertLeadToClient(lead.id)
+    assert.notEqual(converted, "not_found")
+    assert.notEqual(converted, "already_converted")
+
+    if (typeof converted === "string") {
+      throw new Error("expected converted client")
+    }
+
+    assert.equal(converted.name, "Avery Chen")
+    assert.equal(converted.company, "Lumen Co")
+    assert.equal(converted.email, "avery@example.com")
+    assert.equal(converted.phone, "555-0100")
+    assert.equal(converted.convertedFromLeadId, lead.id)
+    assert.equal(getLead(lead.id)?.status, "converted")
+    assert.equal(convertLeadToClient(lead.id), "already_converted")
+
+    const manual = createClient({
+      name: "Manual Client",
+      email: "manual@example.com",
+      website: "https://example.com",
+    })
+
+    assert.equal(listClients().length, 2)
+    assert.equal(getClient(manual.id)?.website, "https://example.com")
+
+    const withProjects = getClientWithProjects(manual.id)
+    assert.ok(withProjects)
+    assert.equal(withProjects.projects.length, 0)
+
+    createProject({
+      id: "proj-client",
+      name: "Linked Project",
+      clientId: manual.id,
+      status: "active",
+    })
+
+    assert.equal(getClientWithProjects(manual.id)?.projects.length, 1)
+    assert.equal(deleteClient(manual.id), "has_active_projects")
+
+    updateProject("proj-client", { status: "archived" })
+    assert.equal(deleteClient(manual.id), "deleted")
+    assert.equal(getProject("proj-client")?.clientId, undefined)
+
+    const patched = updateClient(converted.id, {
+      notes: "Converted account.",
+      phone: null,
+    })
+    assert.equal(patched?.notes, "Converted account.")
+    assert.equal(patched?.phone, undefined)
   })
 })
