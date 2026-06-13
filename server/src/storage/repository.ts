@@ -5,14 +5,20 @@ import type { Database } from "better-sqlite3"
 import { getUploadDir } from "../config/paths.js"
 import type {
   Comment,
+  ContactLog,
   CreateCommentInput,
+  CreateContactLogInput,
   CreateDeliverableInput,
+  CreateLeadInput,
   CreateMilestoneInput,
   CreateProjectInput,
   CreateVersionInput,
   Deliverable,
   DeliverableStatus,
   DeliverableSummary,
+  Lead,
+  LeadStatus,
+  LeadWithContactLog,
   Milestone,
   Project,
   ProjectBudget,
@@ -20,11 +26,13 @@ import type {
   ProjectSummary,
   UpdateCommentInput,
   UpdateDeliverableInput,
+  UpdateLeadInput,
   UpdateMilestoneInput,
   UpdateProjectInput,
   Version,
   VersionStatus,
 } from "../types/index.js"
+import { contactLogTypeIndicatesResponse } from "../types/index.js"
 import { DELIVERABLE_STATUSES } from "../types/index.js"
 import type { FrameAnnotation } from "../types/annotation.js"
 import { getDb, withTransaction } from "./db.js"
@@ -82,6 +90,30 @@ interface CommentRow {
   createdAt: string
   resolved: number
   annotation: string | null
+}
+
+interface LeadRow {
+  id: string
+  name: string
+  company: string | null
+  email: string
+  phone: string | null
+  source: string | null
+  status: string
+  notes: string | null
+  lastContactedAt: string | null
+  replied: number
+  createdAt: string
+  updatedAt: string
+}
+
+interface ContactLogRow {
+  id: string
+  leadId: string
+  type: string
+  notes: string | null
+  contactedAt: string
+  createdAt: string
 }
 
 function emptyStatusCounts(): Record<DeliverableStatus, number> {
@@ -887,6 +919,283 @@ export function updateComment(
 export function deleteComment(id: string): boolean {
   return withTransaction(() => {
     const result = getDb().prepare("DELETE FROM comments WHERE id = ?").run(id)
+    return result.changes > 0
+  })
+}
+
+// --- Leads ------------------------------------------------------------------
+
+export interface ListLeadsFilters {
+  status?: LeadStatus
+  replied?: boolean
+}
+
+function rowToLead(row: LeadRow): Lead {
+  const lead: Lead = {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    status: row.status as LeadStatus,
+    replied: row.replied === 1,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+
+  if (row.company) lead.company = row.company
+  if (row.phone) lead.phone = row.phone
+  if (row.source) lead.source = row.source
+  if (row.notes) lead.notes = row.notes
+  if (row.lastContactedAt) lead.lastContactedAt = row.lastContactedAt
+
+  return lead
+}
+
+function rowToContactLog(row: ContactLogRow): ContactLog {
+  const entry: ContactLog = {
+    id: row.id,
+    leadId: row.leadId,
+    type: row.type as ContactLog["type"],
+    contactedAt: row.contactedAt,
+    createdAt: row.createdAt,
+  }
+
+  if (row.notes) entry.notes = row.notes
+
+  return entry
+}
+
+export function listLeads(filters: ListLeadsFilters = {}): Lead[] {
+  const conditions: string[] = []
+  const params: Array<string | number> = []
+
+  if (filters.status !== undefined) {
+    conditions.push("status = ?")
+    params.push(filters.status)
+  }
+
+  if (filters.replied !== undefined) {
+    conditions.push("replied = ?")
+    params.push(filters.replied ? 1 : 0)
+  }
+
+  const where =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""
+
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM leads ${where} ORDER BY updatedAt DESC, createdAt DESC`,
+    )
+    .all(...params) as LeadRow[]
+
+  return rows.map(rowToLead)
+}
+
+export function getLead(id: string): Lead | undefined {
+  const row = getDb()
+    .prepare("SELECT * FROM leads WHERE id = ?")
+    .get(id) as LeadRow | undefined
+
+  return row ? rowToLead(row) : undefined
+}
+
+export function getLeadWithContactLog(id: string): LeadWithContactLog | undefined {
+  const lead = getLead(id)
+  if (!lead) {
+    return undefined
+  }
+
+  return {
+    ...lead,
+    contactLog: listContactLog(id),
+  }
+}
+
+export function createLead(input: CreateLeadInput): Lead {
+  return withTransaction(() => {
+    const now = new Date().toISOString()
+    const lead: Lead = {
+      id: randomUUID(),
+      name: input.name,
+      email: input.email,
+      status: input.status ?? "new",
+      replied: input.replied ?? false,
+      createdAt: now,
+      updatedAt: now,
+      ...(input.company ? { company: input.company } : {}),
+      ...(input.phone ? { phone: input.phone } : {}),
+      ...(input.source ? { source: input.source } : {}),
+      ...(input.notes ? { notes: input.notes } : {}),
+      ...(input.lastContactedAt
+        ? { lastContactedAt: input.lastContactedAt }
+        : {}),
+    }
+
+    getDb()
+      .prepare(
+        `INSERT INTO leads (
+          id, name, company, email, phone, source, status, notes,
+          lastContactedAt, replied, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        lead.id,
+        lead.name,
+        lead.company ?? null,
+        lead.email,
+        lead.phone ?? null,
+        lead.source ?? null,
+        lead.status,
+        lead.notes ?? null,
+        lead.lastContactedAt ?? null,
+        lead.replied ? 1 : 0,
+        lead.createdAt,
+        lead.updatedAt,
+      )
+
+    return lead
+  })
+}
+
+export function updateLead(
+  id: string,
+  input: UpdateLeadInput,
+): Lead | undefined {
+  return withTransaction(() => {
+    const lead = getLead(id)
+
+    if (!lead) {
+      return undefined
+    }
+
+    if (input.name !== undefined) lead.name = input.name
+    if (input.email !== undefined) lead.email = input.email
+    if (input.status !== undefined) lead.status = input.status
+    if (input.replied !== undefined) lead.replied = input.replied
+    applyNullableString(lead, "company", input.company)
+    applyNullableString(lead, "phone", input.phone)
+    applyNullableString(lead, "source", input.source)
+    applyNullableString(lead, "notes", input.notes)
+    applyNullableString(lead, "lastContactedAt", input.lastContactedAt)
+
+    lead.updatedAt = new Date().toISOString()
+
+    getDb()
+      .prepare(
+        `UPDATE leads
+         SET name = ?, company = ?, email = ?, phone = ?, source = ?,
+             status = ?, notes = ?, lastContactedAt = ?, replied = ?,
+             updatedAt = ?
+         WHERE id = ?`,
+      )
+      .run(
+        lead.name,
+        lead.company ?? null,
+        lead.email,
+        lead.phone ?? null,
+        lead.source ?? null,
+        lead.status,
+        lead.notes ?? null,
+        lead.lastContactedAt ?? null,
+        lead.replied ? 1 : 0,
+        lead.updatedAt,
+        id,
+      )
+
+    return lead
+  })
+}
+
+export function deleteLead(id: string): boolean {
+  return withTransaction(() => {
+    const result = getDb().prepare("DELETE FROM leads WHERE id = ?").run(id)
+    return result.changes > 0
+  })
+}
+
+// --- Contact log ------------------------------------------------------------
+
+export function listContactLog(leadId: string): ContactLog[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM contact_log
+       WHERE leadId = ?
+       ORDER BY contactedAt DESC, createdAt DESC`,
+    )
+    .all(leadId) as ContactLogRow[]
+
+  return rows.map(rowToContactLog)
+}
+
+export function getContactLog(id: string): ContactLog | undefined {
+  const row = getDb()
+    .prepare("SELECT * FROM contact_log WHERE id = ?")
+    .get(id) as ContactLogRow | undefined
+
+  return row ? rowToContactLog(row) : undefined
+}
+
+export function createContactLog(input: CreateContactLogInput): ContactLog {
+  return withTransaction(() => {
+    const now = new Date().toISOString()
+    const entry: ContactLog = {
+      id: randomUUID(),
+      leadId: input.leadId,
+      type: input.type,
+      contactedAt: input.contactedAt,
+      createdAt: now,
+      ...(input.notes ? { notes: input.notes } : {}),
+    }
+
+    getDb()
+      .prepare(
+        `INSERT INTO contact_log (
+          id, leadId, type, notes, contactedAt, createdAt
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        entry.id,
+        entry.leadId,
+        entry.type,
+        entry.notes ?? null,
+        entry.contactedAt,
+        entry.createdAt,
+      )
+
+    const indicatesResponse =
+      input.indicatesResponse === true ||
+      contactLogTypeIndicatesResponse(input.type)
+
+    const lead = getLead(input.leadId)
+    if (lead) {
+      lead.lastContactedAt = input.contactedAt
+      if (indicatesResponse) {
+        lead.replied = true
+      }
+      lead.updatedAt = now
+
+      getDb()
+        .prepare(
+          `UPDATE leads
+           SET lastContactedAt = ?, replied = ?, updatedAt = ?
+           WHERE id = ?`,
+        )
+        .run(
+          lead.lastContactedAt,
+          lead.replied ? 1 : 0,
+          lead.updatedAt,
+          input.leadId,
+        )
+    }
+
+    return entry
+  })
+}
+
+export function deleteContactLog(id: string): boolean {
+  return withTransaction(() => {
+    const result = getDb()
+      .prepare("DELETE FROM contact_log WHERE id = ?")
+      .run(id)
     return result.changes > 0
   })
 }

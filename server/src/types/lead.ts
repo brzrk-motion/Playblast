@@ -19,6 +19,8 @@ export function isLeadStatus(value: unknown): value is LeadStatus {
   return typeof value === "string" && (LEAD_STATUSES as string[]).includes(value)
 }
 
+import type { ContactLog } from "./contact-log.js"
+
 /** Sales pipeline contact before conversion to a client. */
 export interface Lead {
   id: string
@@ -58,4 +60,8 @@ export interface UpdateLeadInput {
   notes?: string | null
   lastContactedAt?: string | null
   replied?: boolean
+}
+
+export interface LeadWithContactLog extends Lead {
+  contactLog: ContactLog[]
 }

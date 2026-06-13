@@ -537,4 +537,110 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
 
     assert.equal(mismatchResponse.status, 400)
   })
+
+  it("creates, filters, updates, and deletes leads with contact log routes", async () => {
+    const createResponse = await fetch(`${baseUrl}/api/leads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Jordan Ellis",
+        email: "jordan@example.com",
+        status: "new",
+      }),
+    })
+    assert.equal(createResponse.status, 201)
+    const created = (await createResponse.json()) as {
+      id: string
+      replied: boolean
+    }
+    assert.equal(created.replied, false)
+
+    await fetch(`${baseUrl}/api/leads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Sam Rivera",
+        email: "sam@example.com",
+        status: "contacted",
+        replied: true,
+      }),
+    })
+
+    const filteredResponse = await fetch(
+      `${baseUrl}/api/leads?status=new&replied=false`,
+    )
+    assert.equal(filteredResponse.status, 200)
+    const filtered = (await filteredResponse.json()) as Array<{ id: string }>
+    assert.equal(filtered.length, 1)
+    assert.equal(filtered[0]?.id, created.id)
+
+    const badFilterResponse = await fetch(`${baseUrl}/api/leads?replied=maybe`)
+    assert.equal(badFilterResponse.status, 400)
+
+    const logResponse = await fetch(`${baseUrl}/api/leads/${created.id}/log`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "email",
+        notes: "Sent portfolio.",
+        contactedAt: "2026-06-10T10:00:00.000Z",
+      }),
+    })
+    assert.equal(logResponse.status, 201)
+
+    const repliedLogResponse = await fetch(
+      `${baseUrl}/api/leads/${created.id}/log`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "call",
+          notes: "Lead replied.",
+          contactedAt: "2026-06-11T14:00:00.000Z",
+          indicatesResponse: true,
+        }),
+      },
+    )
+    assert.equal(repliedLogResponse.status, 201)
+    const logEntry = (await repliedLogResponse.json()) as { id: string }
+
+    const getResponse = await fetch(`${baseUrl}/api/leads/${created.id}`)
+    assert.equal(getResponse.status, 200)
+    const lead = (await getResponse.json()) as {
+      replied: boolean
+      lastContactedAt: string
+      contactLog: Array<{ id: string }>
+    }
+    assert.equal(lead.replied, true)
+    assert.equal(lead.lastContactedAt, "2026-06-11T14:00:00.000Z")
+    assert.equal(lead.contactLog.length, 2)
+
+    const listLogResponse = await fetch(`${baseUrl}/api/leads/${created.id}/log`)
+    assert.equal(listLogResponse.status, 200)
+    const logEntries = (await listLogResponse.json()) as unknown[]
+    assert.equal(logEntries.length, 2)
+
+    const patchResponse = await fetch(`${baseUrl}/api/leads/${created.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "negotiating", notes: "Budget discussion." }),
+    })
+    assert.equal(patchResponse.status, 200)
+    const patched = (await patchResponse.json()) as { status: string }
+    assert.equal(patched.status, "negotiating")
+
+    const deleteLogResponse = await fetch(
+      `${baseUrl}/api/leads/${created.id}/log/${logEntry.id}`,
+      { method: "DELETE" },
+    )
+    assert.equal(deleteLogResponse.status, 204)
+
+    const deleteResponse = await fetch(`${baseUrl}/api/leads/${created.id}`, {
+      method: "DELETE",
+    })
+    assert.equal(deleteResponse.status, 204)
+
+    const missingResponse = await fetch(`${baseUrl}/api/leads/${created.id}`)
+    assert.equal(missingResponse.status, 404)
+  })
 })

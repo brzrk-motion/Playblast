@@ -6,28 +6,38 @@ import assert from "node:assert/strict"
 import Database from "better-sqlite3"
 import {
   createComment,
+  createContactLog,
   createDeliverable,
+  createLead,
   createMilestone,
   createProject,
   createVersion,
   deleteComment,
+  deleteContactLog,
   deleteDeliverable,
+  deleteLead,
   deleteMilestone,
   deleteProject,
   ensureProject,
   getComment,
+  getContactLog,
   getDeliverable,
+  getLead,
+  getLeadWithContactLog,
   getMilestone,
   getVersionByLabel,
   listComments,
+  listContactLog,
   listDeliverables,
   listDeliverableSummaries,
+  listLeads,
   listMilestones,
   listProjectSummaries,
   listProjects,
   listVersions,
   updateComment,
   updateDeliverable,
+  updateLead,
   updateMilestone,
   updateProject,
   updateVersionLabel,
@@ -451,5 +461,67 @@ describe("SQLite data store", () => {
     assert.equal(getVersionByLabel(deliverable.id, "v1-final")?.id, version.id)
     assert.equal(updateVersionLabel(version.id, "v2"), "conflict")
     assert.equal(updateVersionLabel("missing-id", "v9"), "not_found")
+  })
+
+  it("persists leads, filters them, and manages contact log side effects", () => {
+    const lead = createLead({
+      name: "Jordan Ellis",
+      email: "jordan@example.com",
+      company: "Northlight",
+      status: "new",
+    })
+
+    const otherLead = createLead({
+      name: "Sam Rivera",
+      email: "sam@example.com",
+      status: "contacted",
+      replied: true,
+    })
+
+    assert.equal(listLeads().length, 2)
+    assert.equal(listLeads({ status: "new" }).length, 1)
+    assert.equal(listLeads({ replied: false }).length, 1)
+    assert.equal(listLeads({ replied: true }).length, 1)
+
+    const entry = createContactLog({
+      leadId: lead.id,
+      type: "email",
+      notes: "Intro email sent.",
+      contactedAt: "2026-06-10T10:00:00.000Z",
+    })
+
+    const updatedLead = getLead(lead.id)
+    assert.ok(updatedLead)
+    assert.equal(updatedLead.lastContactedAt, "2026-06-10T10:00:00.000Z")
+    assert.equal(updatedLead.replied, false)
+
+    createContactLog({
+      leadId: lead.id,
+      type: "call",
+      notes: "Lead replied on the call.",
+      contactedAt: "2026-06-11T14:00:00.000Z",
+      indicatesResponse: true,
+    })
+
+    const repliedLead = getLead(lead.id)
+    assert.ok(repliedLead)
+    assert.equal(repliedLead.replied, true)
+    assert.equal(listContactLog(lead.id).length, 2)
+
+    const withLog = getLeadWithContactLog(lead.id)
+    assert.ok(withLog)
+    assert.equal(withLog.contactLog.length, 2)
+    assert.ok(withLog.contactLog.some((item) => item.id === entry.id))
+
+    const patched = updateLead(lead.id, {
+      status: "negotiating",
+      notes: "Budget discussion underway.",
+    })
+    assert.equal(patched?.status, "negotiating")
+
+    assert.ok(deleteContactLog(entry.id))
+    assert.equal(getContactLog(entry.id), undefined)
+    assert.ok(deleteLead(otherLead.id))
+    assert.equal(getLead(otherLead.id), undefined)
   })
 })

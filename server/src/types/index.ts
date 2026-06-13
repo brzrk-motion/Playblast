@@ -15,6 +15,7 @@ export type {
   CreateContactLogInput,
 } from "./contact-log.js"
 export {
+  contactLogTypeIndicatesResponse,
   CONTACT_LOG_TYPES,
   isContactLogType,
 } from "./contact-log.js"
@@ -30,6 +31,7 @@ export type {
   CreateLeadInput,
   Lead,
   LeadStatus,
+  LeadWithContactLog,
   UpdateLeadInput,
 } from "./lead.js"
 export { isLeadStatus, LEAD_STATUSES } from "./lead.js"
