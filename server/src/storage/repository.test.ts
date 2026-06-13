@@ -3,6 +3,7 @@ import os from "node:os"
 import path from "node:path"
 import { after, before, describe, it } from "node:test"
 import assert from "node:assert/strict"
+import Database from "better-sqlite3"
 import {
   createComment,
   createDeliverable,
@@ -32,17 +33,21 @@ import {
   updateVersionLabel,
   updateVersionStatus,
 } from "./repository.js"
-import { getStorePath } from "./json-store.js"
+import { closeDatabase, getDbPath, initDatabase } from "./db.js"
 
 let tempDir = ""
+let dbPath = ""
 
 before(() => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "playblast-data-"))
-  process.env.PLAYBLAST_DATA_DIR = tempDir
+  dbPath = path.join(tempDir, "test.db")
+  process.env.DB_PATH = dbPath
+  initDatabase(dbPath)
 })
 
 after(() => {
-  delete process.env.PLAYBLAST_DATA_DIR
+  closeDatabase()
+  delete process.env.DB_PATH
   fs.rmSync(tempDir, { recursive: true, force: true })
 })
 
@@ -52,8 +57,8 @@ function setupDeliverable(projectId: string, name = "Hero Spot") {
   return { project, deliverable }
 }
 
-describe("JSON data store", () => {
-  it("persists projects, deliverables, versions, and comments to store.json", () => {
+describe("SQLite data store", () => {
+  it("persists projects, deliverables, versions, and comments to SQLite", () => {
     const project = createProject({ id: "demo", name: "Demo Project" })
     const deliverable = createDeliverable({
       projectId: project.id,
@@ -78,20 +83,38 @@ describe("JSON data store", () => {
     assert.equal(listComments(version.id).length, 1)
     assert.equal(comment.resolved, false)
 
-    const storePath = getStorePath()
+    const storePath = getDbPath()
     assert.equal(fs.existsSync(storePath), true)
 
-    const persisted = JSON.parse(fs.readFileSync(storePath, "utf8")) as {
-      projects: Array<{ id: string }>
-      deliverables: Array<{ name: string }>
-      versions: Array<{ label: string }>
-      comments: Array<{ body: string }>
-    }
+    const db = new Database(storePath, { readonly: true })
+    const projectCount = db
+      .prepare("SELECT COUNT(*) AS count FROM projects")
+      .get() as { count: number }
+    const deliverableCount = db
+      .prepare("SELECT COUNT(*) AS count FROM deliverables")
+      .get() as { count: number }
+    const versionCount = db
+      .prepare("SELECT COUNT(*) AS count FROM versions")
+      .get() as { count: number }
+    const commentCount = db
+      .prepare("SELECT COUNT(*) AS count FROM comments")
+      .get() as { count: number }
+    db.close()
 
-    assert.equal(persisted.projects[0]?.id, "demo")
-    assert.equal(persisted.deliverables[0]?.name, "Launch Film")
-    assert.equal(persisted.versions[0]?.label, "v1")
-    assert.equal(persisted.comments[0]?.body, "Adjust exposure")
+    assert.equal(projectCount.count, 1)
+    assert.equal(deliverableCount.count, 1)
+    assert.equal(versionCount.count, 1)
+    assert.equal(commentCount.count, 1)
+
+    const projectRow = listProjects()[0]
+    const deliverableRow = listDeliverables(project.id)[0]
+    const versionRow = listVersions(deliverable.id)[0]
+    const commentRow = listComments(version.id)[0]
+
+    assert.equal(projectRow?.id, "demo")
+    assert.equal(deliverableRow?.name, "Launch Film")
+    assert.equal(versionRow?.label, "v1")
+    assert.equal(commentRow?.body, "Adjust exposure")
   })
 
   it("creates projects with management defaults and updatable fields", () => {

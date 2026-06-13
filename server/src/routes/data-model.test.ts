@@ -5,14 +5,18 @@ import { after, before, describe, it } from "node:test"
 import assert from "node:assert/strict"
 import type { Server } from "node:http"
 import { createApp } from "../app.js"
+import { closeDatabase, initDatabase } from "../storage/db.js"
 
 let tempDir = ""
+let dbPath = ""
 let server: Server
 let baseUrl = ""
 
 before(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "playblast-api-"))
-  process.env.PLAYBLAST_DATA_DIR = tempDir
+  dbPath = path.join(tempDir, "test.db")
+  process.env.DB_PATH = dbPath
+  initDatabase(dbPath)
 
   const app = createApp()
   await new Promise<void>((resolve) => {
@@ -32,7 +36,8 @@ after(async () => {
     server.close((err) => (err ? reject(err) : resolve()))
   })
 
-  delete process.env.PLAYBLAST_DATA_DIR
+  delete process.env.DB_PATH
+  closeDatabase()
   fs.rmSync(tempDir, { recursive: true, force: true })
 })
 

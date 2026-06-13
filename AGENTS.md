@@ -17,9 +17,9 @@ There is **no authentication** — comment authors are supplied by the client at
 
 ### Data & storage
 
-- **Metadata** (projects, versions, comments, annotations) is persisted in `server/data/store.json` by default. Override with `PLAYBLAST_DATA_DIR`.
+- **Metadata** (projects, versions, comments, annotations) is persisted in SQLite via `better-sqlite3`. The database file defaults to `/app/data/playblast.db`; override with `DB_PATH`.
 - **Video uploads** are stored on the local filesystem under `UPLOAD_DIR` (default `/app/uploads`; see `.env.example` for local dev).
-- There is no database.
+- There is no database server — a single SQLite file holds all app data.
 
 ### Environment variables
 
@@ -29,9 +29,9 @@ Copy `.env.example` to `.env` at the repo root. Supported variables:
 |----------|---------|---------|
 | `PORT` | `3000` | Express listen port |
 | `UPLOAD_DIR` | `/app/uploads` | Absolute path for uploaded video files |
+| `DB_PATH` | `/app/data/playblast.db` | Absolute path to the SQLite database file |
 | `MAX_UPLOAD_SIZE` | `5000` | Max upload size in megabytes |
 | `NODE_ENV` | `development` | `production` or `development` |
-| `PLAYBLAST_DATA_DIR` | `server/data` | Directory for `store.json` (optional) |
 
 ### Standard commands
 
@@ -63,7 +63,7 @@ npm run start -w server    # Run compiled server (after build)
 ### Deployment
 
 - `Dockerfile` builds both workspaces and runs a single Node process that serves API + static client on port `3000`.
-- `docker-compose.yml` mounts a named volume at `/app/uploads` for upload persistence.
+- `docker-compose.yml` mounts named volumes at `/app/uploads` and `/app/data` for upload and database persistence.
 - `scripts/validate-upload-volume.sh` smoke-tests Docker volume persistence (requires Docker).
 
 ### Notes
