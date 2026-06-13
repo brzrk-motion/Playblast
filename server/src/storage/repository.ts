@@ -35,6 +35,7 @@ interface ProjectRow {
   createdAt: string
   status: string
   client: string | null
+  clientId: string | null
   description: string | null
   startDate: string | null
   endDate: string | null
@@ -102,6 +103,7 @@ function rowToProject(row: ProjectRow): Project {
   }
 
   if (row.client) project.client = row.client
+  if (row.clientId) project.clientId = row.clientId
   if (row.description) project.description = row.description
   if (row.startDate) project.startDate = row.startDate
   if (row.endDate) project.endDate = row.endDate
@@ -291,6 +293,7 @@ export function createProject(input: CreateProjectInput): Project {
       createdAt: new Date().toISOString(),
       status: input.status ?? "active",
       ...(input.client ? { client: input.client } : {}),
+      ...(input.clientId ? { clientId: input.clientId } : {}),
       ...(input.description ? { description: input.description } : {}),
       ...(input.startDate ? { startDate: input.startDate } : {}),
       ...(input.endDate ? { endDate: input.endDate } : {}),
@@ -300,8 +303,8 @@ export function createProject(input: CreateProjectInput): Project {
     getDb()
       .prepare(
         `INSERT INTO projects (
-          id, name, createdAt, status, client, description, startDate, endDate, budget
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, name, createdAt, status, client, clientId, description, startDate, endDate, budget
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         project.id,
@@ -309,6 +312,7 @@ export function createProject(input: CreateProjectInput): Project {
         project.createdAt,
         project.status,
         project.client ?? null,
+        project.clientId ?? null,
         project.description ?? null,
         project.startDate ?? null,
         project.endDate ?? null,
@@ -333,6 +337,7 @@ export function updateProject(
     if (input.status !== undefined) project.status = input.status
 
     applyNullableString(project, "client", input.client)
+    applyNullableString(project, "clientId", input.clientId)
     applyNullableString(project, "description", input.description)
     applyNullableString(project, "startDate", input.startDate)
     applyNullableString(project, "endDate", input.endDate)
@@ -346,7 +351,7 @@ export function updateProject(
     getDb()
       .prepare(
         `UPDATE projects
-         SET name = ?, status = ?, client = ?, description = ?,
+         SET name = ?, status = ?, client = ?, clientId = ?, description = ?,
              startDate = ?, endDate = ?, budget = ?
          WHERE id = ?`,
       )
@@ -354,6 +359,7 @@ export function updateProject(
         project.name,
         project.status,
         project.client ?? null,
+        project.clientId ?? null,
         project.description ?? null,
         project.startDate ?? null,
         project.endDate ?? null,
