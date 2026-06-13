@@ -9,6 +9,7 @@ server/dist
 server/uploads
 server/data/*
 !server/data/store.json
+!server/data/seed-client-management.sql
 
 # Deployment artifacts
 deploy

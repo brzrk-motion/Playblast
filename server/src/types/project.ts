@@ -40,7 +40,10 @@ export interface Project {
   name: string
   createdAt: string
   status: ProjectStatus
+  /** Legacy free-text client label; prefer `clientId` when linked to a client record. */
   client?: string
+  /** FK → clients.id when the project is linked to a managed client. */
+  clientId?: string
   description?: string
   /** ISO date string. */
   startDate?: string
@@ -66,6 +69,7 @@ export interface CreateProjectInput {
   id?: string
   status?: ProjectStatus
   client?: string
+  clientId?: string
   description?: string
   startDate?: string
   endDate?: string
@@ -76,6 +80,7 @@ export interface UpdateProjectInput {
   name?: string
   status?: ProjectStatus
   client?: string | null
+  clientId?: string | null
   description?: string | null
   startDate?: string | null
   endDate?: string | null
