@@ -522,10 +522,21 @@ export async function deleteLead(id: string): Promise<void> {
   await expectOk(response)
 }
 
-export async function convertLeadToClient(id: string): Promise<Client> {
+export interface ConvertLeadInput {
+  notes?: string
+}
+
+export async function convertLeadToClient(
+  id: string,
+  body?: ConvertLeadInput,
+): Promise<Client> {
   const response = await fetch(
     `/api/leads/${encodeURIComponent(id)}/convert`,
-    { method: "POST" },
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body ?? {}),
+    },
   )
   return parseJsonResponse<Client>(response)
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import {
   Check,
   Minus,
@@ -8,6 +9,8 @@ import {
   UserPlus,
 } from "lucide-react"
 import { AddLeadModal } from "@/components/client-management/add-lead-modal"
+import { ConfirmConvertModal } from "@/components/client-management/confirm-convert-modal"
+import { ConvertToClientMenuItem } from "@/components/client-management/convert-to-client-action"
 import { EditLeadModal } from "@/components/client-management/edit-lead-modal"
 import { LeadDetailSheet } from "@/components/client-management/lead-detail-sheet"
 import { LeadStatusBadge } from "@/components/client-management/lead-status-badge"
@@ -45,7 +48,6 @@ import {
 } from "@/components/ui/table"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
-  convertLeadToClient,
   createLead,
   deleteLead,
   listLeads,
@@ -64,6 +66,7 @@ import { LEAD_STATUSES } from "@/types/lead"
 type RepliedFilter = "all" | "yes" | "no"
 
 export function LeadsTab() {
+  const navigate = useNavigate()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -76,6 +79,7 @@ export function LeadsTab() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [viewLeadId, setViewLeadId] = useState<string | null>(null)
+  const [convertLead, setConvertLead] = useState<Lead | null>(null)
 
   const fetchLeads = useCallback(
     async (options?: { showLoading?: boolean }) => {
@@ -208,22 +212,11 @@ export function LeadsTab() {
     }
   }
 
-  async function handleConvert(lead: Lead) {
-    if (
-      !window.confirm(
-        `Convert "${lead.name}" to a client? This will mark the lead as converted.`,
-      )
-    ) {
+  function openConvertModal(lead: Lead) {
+    if (lead.status === "converted") {
       return
     }
-
-    try {
-      await convertLeadToClient(lead.id)
-      showSuccessToast("Lead converted to client")
-      await fetchLeads()
-    } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to convert lead"))
-    }
+    setConvertLead(lead)
   }
 
   async function handleDelete(lead: Lead) {
@@ -401,13 +394,10 @@ export function LeadsTab() {
                           >
                             Edit
                           </DropdownMenuItem>
-                          {lead.status !== "converted" ? (
-                            <DropdownMenuItem
-                              onClick={() => void handleConvert(lead)}
-                            >
-                              Convert to Client
-                            </DropdownMenuItem>
-                          ) : null}
+                          <ConvertToClientMenuItem
+                            lead={lead}
+                            onConvert={() => openConvertModal(lead)}
+                          />
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             variant="destructive"
@@ -452,6 +442,27 @@ export function LeadsTab() {
         submitting={submitting}
         error={formError}
         onSubmit={(values) => void handleEdit(values)}
+      />
+
+      <ConfirmConvertModal
+        lead={convertLead}
+        open={convertLead !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConvertLead(null)
+          }
+        }}
+        onSuccess={(client, updatedLead) => {
+          setLeads((current) =>
+            current.map((lead) =>
+              lead.id === updatedLead.id ? updatedLead : lead,
+            ),
+          )
+          setConvertLead(null)
+          navigate(
+            `/clients?tab=clients&client=${encodeURIComponent(client.id)}`,
+          )
+        }}
       />
 
       <LeadDetailSheet

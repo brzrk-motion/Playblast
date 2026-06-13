@@ -558,13 +558,27 @@ describe("SQLite data store", () => {
     assert.equal(getLead(lead.id)?.status, "converted")
     assert.equal(convertLeadToClient(lead.id), "already_converted")
 
+    const notesLead = createLead({
+      name: "Notes Lead",
+      email: "notes@example.com",
+      status: "contacted",
+    })
+    const withNotes = convertLeadToClient(notesLead.id, {
+      notes: "VIP referral from partner",
+    })
+    assert.notEqual(typeof withNotes, "string")
+    if (typeof withNotes === "string") {
+      throw new Error("expected converted client with notes")
+    }
+    assert.equal(withNotes.notes, "VIP referral from partner")
+
     const manual = createClient({
       name: "Manual Client",
       email: "manual@example.com",
       website: "https://example.com",
     })
 
-    assert.equal(listClients().length, 2)
+    assert.equal(listClients().length, 3)
     assert.equal(getClient(manual.id)?.website, "https://example.com")
 
     const withProjects = getClientWithProjects(manual.id)

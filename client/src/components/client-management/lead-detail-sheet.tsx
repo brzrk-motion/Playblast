@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Pencil, Trash2, UserPlus } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
+import { ConfirmConvertModal } from "@/components/client-management/confirm-convert-modal"
+import { ConvertToClientButton } from "@/components/client-management/convert-to-client-action"
 import { LeadStatusBadge } from "@/components/client-management/lead-status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,7 +25,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  convertLeadToClient,
   createContactLog,
   deleteContactLog,
   deleteLead,
@@ -81,7 +82,7 @@ export function LeadDetailSheet({
   const [lead, setLead] = useState<LeadWithContactLog | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [converting, setConverting] = useState(false)
+  const [convertModalOpen, setConvertModalOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [logType, setLogType] = useState<ContactLogType>("email")
   const [logDate, setLogDate] = useState(toDateInputValue())
@@ -166,33 +167,6 @@ export function LeadDetailSheet({
       cancelled = true
     }
   }, [leadId, open])
-
-  async function handleConvert() {
-    if (!lead || lead.status === "converted") {
-      return
-    }
-
-    if (
-      !window.confirm(
-        `Convert "${lead.name}" to a client? This will mark the lead as converted.`,
-      )
-    ) {
-      return
-    }
-
-    setConverting(true)
-
-    try {
-      const client = await convertLeadToClient(lead.id)
-      showSuccessToast("Lead converted to client")
-      onOpenChange(false)
-      navigate(`/clients?tab=clients&client=${encodeURIComponent(client.id)}`)
-    } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to convert lead"))
-    } finally {
-      setConverting(false)
-    }
-  }
 
   async function handleDelete() {
     if (!lead) {
@@ -322,20 +296,10 @@ export function LeadDetailSheet({
                     <Pencil className="size-4" />
                     Edit
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={lead.status === "converted" || converting}
-                    onClick={() => void handleConvert()}
-                  >
-                    {converting ? (
-                      <Spinner className="size-4" />
-                    ) : (
-                      <UserPlus className="size-4" />
-                    )}
-                    Convert to Client
-                  </Button>
+                  <ConvertToClientButton
+                    lead={lead}
+                    onConvert={() => setConvertModalOpen(true)}
+                  />
                   <Button
                     type="button"
                     variant="outline"
@@ -531,6 +495,22 @@ export function LeadDetailSheet({
           </div>
         ) : null}
       </SheetContent>
+
+      <ConfirmConvertModal
+        lead={lead}
+        open={convertModalOpen}
+        onOpenChange={setConvertModalOpen}
+        onSuccess={(client, updatedLead) => {
+          setLead((current) =>
+            current ? { ...current, ...updatedLead } : current,
+          )
+          onLeadUpdated?.(updatedLead)
+          onOpenChange(false)
+          navigate(
+            `/clients?tab=clients&client=${encodeURIComponent(client.id)}`,
+          )
+        }}
+      />
     </Sheet>
   )
 }
