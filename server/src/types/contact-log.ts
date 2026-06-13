@@ -30,4 +30,10 @@ export interface CreateContactLogInput {
   type: ContactLogType
   notes?: string
   contactedAt: string
+  /** When true, or when type includes "response", marks the lead as replied. */
+  indicatesResponse?: boolean
+}
+
+export function contactLogTypeIndicatesResponse(type: string): boolean {
+  return type.toLowerCase().includes("response")
 }
