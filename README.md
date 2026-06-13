@@ -59,10 +59,11 @@ Playblast ships as a single Docker image that serves the API and the built clien
 ### Prerequisites
 
 - A Synology NAS that supports Docker/Container Manager (x86_64 Plus-series, or a supported ARM model — see [Synology's package compatibility list](https://www.synology.com/en-global/dsm/packages/ContainerManager)).
-- **DSM 7.2 or newer**.
-- At least 4 GB RAM (8 GB+ recommended).
-- An admin account on the NAS, and (for the build step) SSH access enabled.
-- The **Container Manager** package installed from Package Center.
+- **DSM 7.2 or newer**, with the **Container Manager** package installed from Package Center.
+- An admin account on the NAS with **SSH access** enabled (Control Panel → Terminal & SNMP → Enable SSH service).
+- A **build machine** (e.g. your dev laptop) with **Docker** and **bash** installed. This is where the image is built.
+
+> **Why build off the NAS?** Compiling the client and the native `better-sqlite3` module during `npm ci` is memory-hungry. Low-RAM models (e.g. the DS220+ with 2 GB) run out of memory and the build is killed by the OOM killer — you'll see `npm ci` exit with code **137** or an `unexpected EOF`. Building on a machine with more RAM and shipping the finished image avoids this entirely. Most Plus-series NAS units are x86_64/amd64, the same architecture as a typical PC, so an image built locally for `linux/amd64` runs on the NAS unchanged.
 
 ### Step 1 — Create the folder structure
 
@@ -79,34 +80,44 @@ Confirm the absolute path on **Control Panel → Shared Folder** — most system
 
 > Ensure the shared folder grants read/write to your user, `administrators`, and `Container Manager` (Control Panel → Shared Folder → Edit → Permissions). Native-module data (the SQLite DB) needs write access.
 
-### Step 2 — Get the source onto the NAS
+### Step 2 — Build the image locally
 
-The image is built from this repository's `Dockerfile`, so the NAS needs the full source. Either:
+On your build machine, from the repository root, run:
 
-- **Clone via SSH** (recommended). Enable SSH in **Control Panel → Terminal & SNMP → Enable SSH service**, then:
+```bash
+npm run build:deploy
+```
+
+This runs `scripts/build-deploy.sh`, which builds the image for `linux/amd64` and writes a compressed tarball to `deploy/playblast.tar.gz`. The `deploy/` folder is git-ignored.
+
+The script accepts two optional environment variables:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `IMAGE_NAME` | `playblast:latest` | Tag for the built image |
+| `PLATFORM` | `linux/amd64` | Target architecture — set to `linux/arm64` for ARM-based NAS models |
+
+```bash
+# Example: build for an ARM-based NAS
+PLATFORM=linux/arm64 npm run build:deploy
+```
+
+### Step 3 — Copy the image to the NAS and load it
+
+Transfer `deploy/playblast.tar.gz` to the NAS (via File Station, or `scp` from the build machine):
+
+```bash
+scp deploy/playblast.tar.gz admin@<nas-ip>:/volume1/docker/playblast/
+```
+
+Then SSH in and load the image into Container Manager's image store:
 
 ```bash
 ssh admin@<nas-ip>
-cd /volume1/docker/playblast
-git clone <your-repo-url> src
+sudo docker load < /volume1/docker/playblast/playblast.tar.gz
 ```
 
-- **Or upload** a copy of the repo into `/volume1/docker/playblast/src` using File Station.
-
-You should end up with the repo (including `Dockerfile`, `client/`, and `server/`) at `/volume1/docker/playblast/src`.
-
-### Step 3 — Build the image
-
-Container Manager's GUI cannot build from a `Dockerfile`, so build once over SSH. The repo's multi-stage `Dockerfile` compiles the client and server and the native `better-sqlite3` module:
-
-```bash
-cd /volume1/docker/playblast/src
-sudo docker build -t playblast:latest .
-```
-
-The built image then appears under **Container Manager → Image**.
-
-> The build needs to compile a native module, which is CPU-intensive. On lower-powered/ARM models it can take several minutes — that's expected.
+The image then appears under **Container Manager → Image** as `playblast:latest`, ready to use in a Project. You can delete the `.tar.gz` from the NAS afterwards.
 
 ### Step 4 — Create the Project (Docker Compose)
 
@@ -151,15 +162,22 @@ services:
 
 ### Updating to a new version
 
-When you pull new code, rebuild the image and recreate the project:
+When you pull new code, rebuild the image locally and ship it again:
 
 ```bash
-cd /volume1/docker/playblast/src
 git pull
-sudo docker build -t playblast:latest .
+npm run build:deploy
+scp deploy/playblast.tar.gz admin@<nas-ip>:/volume1/docker/playblast/
 ```
 
-Then in **Container Manager → Project → playblast**, click **Action → Build** / **Stop** then **Start** (or **Reset**) to recreate the container on the new image. Your `uploads/` and `data/` folders are untouched by rebuilds.
+Then on the NAS:
+
+```bash
+ssh admin@<nas-ip>
+sudo docker load < /volume1/docker/playblast/playblast.tar.gz
+```
+
+Finally, in **Container Manager → Project → playblast**, **Stop** then **Start** (or use **Action → Reset**) to recreate the container on the new image. Your `uploads/` and `data/` folders are untouched by updates.
 
 ### Backups
 
@@ -173,4 +191,5 @@ Back up `/volume1/docker/playblast/data` (the SQLite database) and `/volume1/doc
 | `EACCES` / permission errors | Grant the `Container Manager` and your user read/write on the `docker` shared folder. |
 | Can't reach the web UI | Confirm the host port, that DSM's firewall (Control Panel → Security → Firewall) allows it, and that you're using the NAS's LAN IP. |
 | Uploads fail for large files | Increase `MAX_UPLOAD_SIZE` (in MB). If you front the app with a reverse proxy, also raise its request body size limit. |
-| Build fails compiling `better-sqlite3` | Ensure you're building on the NAS itself (so the native module matches the NAS architecture), not copying an image built on a different CPU. |
+| `npm ci` killed with exit code 137 / `unexpected EOF` when building on the NAS | The NAS ran out of memory. Build on your dev machine with `npm run build:deploy` and load the image instead (Steps 2–3). |
+| `exec format error` when starting the container | The image was built for the wrong architecture. Rebuild with the matching `PLATFORM` (`linux/amd64` for Intel NAS, `linux/arm64` for ARM). |

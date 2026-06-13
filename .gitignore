@@ -10,6 +10,9 @@ server/uploads
 server/data/*
 !server/data/store.json
 
+# Deployment artifacts
+deploy
+
 # Logs
 logs
 *.log
