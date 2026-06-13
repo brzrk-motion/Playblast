@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { Building2, MoreHorizontal, Plus } from "lucide-react"
-import {
-  AddClientModal,
-  type ClientFormValues,
-} from "@/components/client-management/add-client-modal"
+import { AddClientModal } from "@/components/client-management/add-client-modal"
+import { EditClientModal } from "@/components/client-management/edit-client-modal"
 import { ClientDetailDialog } from "@/components/client-management/client-detail-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -39,19 +37,12 @@ import {
   updateClient,
 } from "@/lib/api"
 import { formatDateAdded } from "@/lib/dates"
+import {
+  clientFormToPayload,
+  type ClientFormValues,
+} from "@/lib/client-form"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import type { Client } from "@/types/client"
-
-function clientFormToPayload(values: ClientFormValues) {
-  return {
-    name: values.name.trim(),
-    email: values.email.trim(),
-    company: values.company.trim() || undefined,
-    phone: values.phone.trim() || undefined,
-    website: values.website.trim() || undefined,
-    notes: values.notes.trim() || undefined,
-  }
-}
 
 export function ClientsTab() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -59,8 +50,8 @@ export function ClientsTab() {
   const [projectCounts, setProjectCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [modalMode, setModalMode] = useState<"create" | "edit">("create")
+  const [addModalOpen, setAddModalOpen] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -159,36 +150,57 @@ export function ClientsTab() {
   )
 
   function openCreateModal() {
-    setModalMode("create")
-    setSelectedClient(null)
     setFormError(null)
-    setModalOpen(true)
+    setAddModalOpen(true)
   }
 
   function openEditModal(client: Client) {
-    setModalMode("edit")
     setSelectedClient(client)
     setFormError(null)
-    setModalOpen(true)
+    setEditModalOpen(true)
   }
 
-  async function handleSubmit(values: ClientFormValues) {
+  async function handleCreate(values: ClientFormValues) {
     setSubmitting(true)
     setFormError(null)
 
     try {
-      if (modalMode === "create") {
-        await createClient(clientFormToPayload(values))
-        showSuccessToast("Client added")
-      } else if (selectedClient) {
-        await updateClient(selectedClient.id, clientFormToPayload(values))
-        showSuccessToast("Client updated")
-      }
-      setModalOpen(false)
+      await createClient(clientFormToPayload(values))
+      showSuccessToast("Client added")
+      setAddModalOpen(false)
       await fetchClients()
     } catch (err) {
       const message = humanizeApiError(err, "Failed to save client")
       setFormError(message)
+      showErrorToast(message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleEdit(values: ClientFormValues) {
+    if (!selectedClient) {
+      return
+    }
+
+    setSubmitting(true)
+    setFormError(null)
+
+    try {
+      const updated = await updateClient(
+        selectedClient.id,
+        clientFormToPayload(values),
+      )
+      showSuccessToast("Client updated")
+      setEditModalOpen(false)
+      setSelectedClient(null)
+      setClients((current) =>
+        current.map((client) => (client.id === updated.id ? updated : client)),
+      )
+    } catch (err) {
+      const message = humanizeApiError(err, "Failed to save client")
+      setFormError(message)
+      showErrorToast(message)
     } finally {
       setSubmitting(false)
     }
@@ -332,13 +344,20 @@ export function ClientsTab() {
       </Card>
 
       <AddClientModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        mode={modalMode}
+        open={addModalOpen}
+        onOpenChange={setAddModalOpen}
+        submitting={submitting}
+        error={formError}
+        onSubmit={(values) => void handleCreate(values)}
+      />
+
+      <EditClientModal
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
         client={selectedClient}
         submitting={submitting}
         error={formError}
-        onSubmit={(values) => void handleSubmit(values)}
+        onSubmit={(values) => void handleEdit(values)}
       />
 
       <ClientDetailDialog

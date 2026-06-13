@@ -12,26 +12,29 @@ import { Spinner } from "@/components/ui/spinner"
 import { ClientFormFields } from "@/components/client-management/client-form-fields"
 import { useClientForm } from "@/components/client-management/use-client-form"
 import { validateClientForm, type ClientFormValues } from "@/lib/client-form"
+import type { Client } from "@/types/client"
 
-interface AddClientModalProps {
+interface EditClientModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  client: Client | null
   submitting?: boolean
   error?: string | null
   onSubmit: (values: ClientFormValues) => void
 }
 
-export function AddClientModal({
+export function EditClientModal({
   open,
   onOpenChange,
+  client,
   submitting = false,
   error,
   onSubmit,
-}: AddClientModalProps) {
-  const { values, update, syncOpenState, handleOpenChange } = useClientForm()
+}: EditClientModalProps) {
+  const { values, update, syncOpenState, handleOpenChange } = useClientForm(client)
   const [validationError, setValidationError] = useState<string | null>(null)
 
-  syncOpenState(open)
+  syncOpenState(open, client)
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -52,9 +55,9 @@ export function AddClientModal({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add Client</DialogTitle>
+            <DialogTitle>Edit Client</DialogTitle>
             <DialogDescription>
-              Add a client directly without converting from a lead.
+              Update contact details for this client.
             </DialogDescription>
           </DialogHeader>
 
@@ -70,10 +73,10 @@ export function AddClientModal({
               {submitting ? (
                 <>
                   <Spinner className="size-4" />
-                  Adding…
+                  Saving…
                 </>
               ) : (
-                "Add Client"
+                "Save Changes"
               )}
             </Button>
           </DialogFooter>
