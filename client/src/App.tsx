@@ -3,6 +3,7 @@ import { ThemeProvider } from "@/components/layout/theme-provider"
 import { AppLayout } from "@/components/layout/app-layout"
 import { ComparePage } from "@/pages/compare"
 import { ComingSoonPage } from "@/pages/coming-soon"
+import { ClientsPage } from "@/pages/clients"
 import { DashboardPage } from "@/pages/dashboard"
 import { DeliverablePage } from "@/pages/deliverable"
 import { ProjectOverviewPage } from "@/pages/project-overview"
@@ -21,6 +22,7 @@ function App() {
             <Route element={<AppLayout />}>
               <Route index element={<DashboardPage />} />
               <Route path="projects" element={<ProjectsPage />} />
+              <Route path="clients" element={<ClientsPage />} />
               <Route path="projects/:projectId" element={<ProjectOverviewPage />} />
               <Route
                 path="projects/:projectId/deliverables/:deliverableId"
