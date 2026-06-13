@@ -9,7 +9,7 @@ import {
 } from "lucide-react"
 import { AddLeadModal } from "@/components/client-management/add-lead-modal"
 import { EditLeadModal } from "@/components/client-management/edit-lead-modal"
-import { LeadDetailDialog } from "@/components/client-management/lead-detail-dialog"
+import { LeadDetailSheet } from "@/components/client-management/lead-detail-sheet"
 import { LeadStatusBadge } from "@/components/client-management/lead-status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -75,7 +75,7 @@ export function LeadsTab() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [viewLead, setViewLead] = useState<Lead | null>(null)
+  const [viewLeadId, setViewLeadId] = useState<string | null>(null)
 
   const fetchLeads = useCallback(
     async (options?: { showLoading?: boolean }) => {
@@ -351,7 +351,11 @@ export function LeadsTab() {
               </TableHeader>
               <TableBody>
                 {filteredLeads.map((lead) => (
-                  <TableRow key={lead.id}>
+                  <TableRow
+                    key={lead.id}
+                    className="cursor-pointer"
+                    onClick={() => setViewLeadId(lead.id)}
+                  >
                     <TableCell className="font-medium">{lead.name}</TableCell>
                     <TableCell>{lead.company ?? "—"}</TableCell>
                     <TableCell>
@@ -381,15 +385,20 @@ export function LeadsTab() {
                             variant="ghost"
                             size="icon-sm"
                             aria-label={`Actions for ${lead.name}`}
+                            onClick={(event) => event.stopPropagation()}
                           >
                             <MoreHorizontal className="size-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setViewLead(lead)}>
+                          <DropdownMenuItem
+                            onClick={() => setViewLeadId(lead.id)}
+                          >
                             View
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEditModal(lead)}>
+                          <DropdownMenuItem
+                            onClick={() => openEditModal(lead)}
+                          >
                             Edit
                           </DropdownMenuItem>
                           {lead.status !== "converted" ? (
@@ -445,14 +454,24 @@ export function LeadsTab() {
         onSubmit={(values) => void handleEdit(values)}
       />
 
-      <LeadDetailDialog
-        open={viewLead !== null}
+      <LeadDetailSheet
+        leadId={viewLeadId}
+        open={viewLeadId !== null}
         onOpenChange={(open) => {
           if (!open) {
-            setViewLead(null)
+            setViewLeadId(null)
           }
         }}
-        lead={viewLead}
+        onLeadUpdated={(updated) => {
+          setLeads((current) =>
+            current.map((lead) => (lead.id === updated.id ? updated : lead)),
+          )
+        }}
+        onLeadDeleted={() => void fetchLeads()}
+        onEdit={(lead) => {
+          setViewLeadId(null)
+          openEditModal(lead)
+        }}
       />
     </div>
   )
