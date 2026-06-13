@@ -1,10 +1,11 @@
 import type { FrameAnnotation } from "@/types/annotation"
+import type { Client, ClientWithProjects, CreateClientInput, UpdateClientInput } from "@/types/client"
 import type { Comment } from "@/types/comment"
-import type {
-  Deliverable,
+import type { Deliverable,
   DeliverableStatus,
   DeliverableSummary,
 } from "@/types/deliverable"
+import type { CreateLeadInput, Lead, UpdateLeadInput } from "@/types/lead"
 import type { Milestone } from "@/types/milestone"
 import type {
   Project,
@@ -426,4 +427,108 @@ export function uploadVersion(
     )
     xhr.send(formData)
   })
+}
+
+// --- Leads ------------------------------------------------------------------
+
+export interface ListLeadsFilters {
+  status?: Lead["status"]
+  replied?: boolean
+}
+
+export async function listLeads(
+  filters: ListLeadsFilters = {},
+): Promise<Lead[]> {
+  const params = new URLSearchParams()
+  if (filters.status) {
+    params.set("status", filters.status)
+  }
+  if (filters.replied !== undefined) {
+    params.set("replied", String(filters.replied))
+  }
+
+  const query = params.toString()
+  const response = await fetch(`/api/leads${query ? `?${query}` : ""}`)
+  return parseJsonResponse<Lead[]>(response)
+}
+
+export async function getLead(id: string): Promise<Lead> {
+  const response = await fetch(`/api/leads/${encodeURIComponent(id)}`)
+  return parseJsonResponse<Lead>(response)
+}
+
+export async function createLead(body: CreateLeadInput): Promise<Lead> {
+  const response = await fetch("/api/leads", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+  return parseJsonResponse<Lead>(response)
+}
+
+export async function updateLead(
+  id: string,
+  body: UpdateLeadInput,
+): Promise<Lead> {
+  const response = await fetch(`/api/leads/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+  return parseJsonResponse<Lead>(response)
+}
+
+export async function deleteLead(id: string): Promise<void> {
+  const response = await fetch(`/api/leads/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  })
+  await expectOk(response)
+}
+
+export async function convertLeadToClient(id: string): Promise<Client> {
+  const response = await fetch(
+    `/api/leads/${encodeURIComponent(id)}/convert`,
+    { method: "POST" },
+  )
+  return parseJsonResponse<Client>(response)
+}
+
+// --- Clients ----------------------------------------------------------------
+
+export async function listClients(): Promise<Client[]> {
+  const response = await fetch("/api/clients")
+  return parseJsonResponse<Client[]>(response)
+}
+
+export async function getClient(id: string): Promise<ClientWithProjects> {
+  const response = await fetch(`/api/clients/${encodeURIComponent(id)}`)
+  return parseJsonResponse<ClientWithProjects>(response)
+}
+
+export async function createClient(body: CreateClientInput): Promise<Client> {
+  const response = await fetch("/api/clients", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+  return parseJsonResponse<Client>(response)
+}
+
+export async function updateClient(
+  id: string,
+  body: UpdateClientInput,
+): Promise<Client> {
+  const response = await fetch(`/api/clients/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+  return parseJsonResponse<Client>(response)
+}
+
+export async function deleteClient(id: string): Promise<void> {
+  const response = await fetch(`/api/clients/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  })
+  await expectOk(response)
 }
