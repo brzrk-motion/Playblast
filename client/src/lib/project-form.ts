@@ -2,7 +2,7 @@ import type { ProjectStatus } from "@/types/project"
 
 export interface ProjectFormValues {
   name: string
-  client: string
+  clientId: string | null
   description: string
   status: ProjectStatus
   startDate: string
@@ -29,7 +29,7 @@ export function projectFormToPayload(values: ProjectFormValues) {
 
   return {
     name: values.name.trim(),
-    client: values.client.trim() || null,
+    clientId: values.clientId,
     description: values.description.trim() || null,
     status: values.status,
     startDate: values.startDate || null,

@@ -1,10 +1,10 @@
 import { useEffect } from "react"
 import { usePageHeaderContext } from "@/hooks/use-page-header-context"
-import type { Project } from "@/types/project"
+import type { ProjectDetail } from "@/types/project"
 
 export function useProjectPageHeader(
   projectId: string,
-  project: Project | null,
+  project: ProjectDetail | null,
 ) {
   const { setProjectName } = usePageHeaderContext()
 

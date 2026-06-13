@@ -27,13 +27,16 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { ProjectCardSkeleton } from "@/components/dashboard/project-card-skeleton"
+import { ClientDetailSheet } from "@/components/client-management/client-detail-sheet"
+import { ProjectClientBadge } from "@/components/project/project-client-badge"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
 import { ProjectFormSheet } from "@/components/project/project-form-sheet"
 import {
   projectFormToPayload,
   type ProjectFormValues,
 } from "@/lib/project-form"
-import { createProject, listProjects } from "@/lib/api"
+import { createProject, listClients, listProjects } from "@/lib/api"
+import { clientsById } from "@/lib/clients"
 import { formatCurrency } from "@/lib/budget"
 import {
   DASHBOARD_FILTER_PARAM,
@@ -46,6 +49,7 @@ import {
   type ProjectSortField,
 } from "@/lib/projects"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import type { Client } from "@/types/client"
 import type { ProjectSummary } from "@/types/project"
 
 function formatRelativeDate(value: string): string {
@@ -63,7 +67,15 @@ function formatRelativeDate(value: string): string {
   })
 }
 
-function ProjectCard({ project }: { project: ProjectSummary }) {
+function ProjectCard({
+  project,
+  linkedClient,
+  onClientClick,
+}: {
+  project: ProjectSummary
+  linkedClient?: Client
+  onClientClick: (clientId: string) => void
+}) {
   return (
     <Link
       to={`/projects/${encodeURIComponent(project.id)}`}
@@ -76,7 +88,14 @@ function ProjectCard({ project }: { project: ProjectSummary }) {
               <CardTitle className="text-base leading-snug">
                 {project.name}
               </CardTitle>
-              {project.client ? (
+              {linkedClient ? (
+                <div className="mt-1">
+                  <ProjectClientBadge
+                    client={linkedClient}
+                    onClick={onClientClick}
+                  />
+                </div>
+              ) : project.client ? (
                 <p className="truncate text-sm text-muted-foreground">
                   {project.client}
                 </p>
@@ -114,6 +133,7 @@ function ProjectCard({ project }: { project: ProjectSummary }) {
 export function ProjectsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [projects, setProjects] = useState<ProjectSummary[]>([])
+  const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -121,6 +141,9 @@ export function ProjectsPage() {
   const [createError, setCreateError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [sortField, setSortField] = useState<ProjectSortField>("updatedAt")
+  const [viewClientId, setViewClientId] = useState<string | null>(null)
+
+  const clientLookup = useMemo(() => clientsById(clients), [clients])
 
   const activeFilter = useMemo(
     () => parseDashboardFilterFromSearchParams(searchParams),
@@ -135,8 +158,12 @@ export function ProjectsPage() {
 
   const loadProjects = useCallback(async () => {
     try {
-      const data = await listProjects()
-      setProjects(data)
+      const [projectData, clientData] = await Promise.all([
+        listProjects(),
+        listClients(),
+      ])
+      setProjects(projectData)
+      setClients(clientData)
       setError(null)
     } catch (err) {
       const message = humanizeApiError(err, "Failed to load projects")
@@ -152,9 +179,13 @@ export function ProjectsPage() {
 
     async function fetchProjects() {
       try {
-        const data = await listProjects()
+        const [projectData, clientData] = await Promise.all([
+          listProjects(),
+          listClients(),
+        ])
         if (!cancelled) {
-          setProjects(data)
+          setProjects(projectData)
+          setClients(clientData)
           setError(null)
         }
       } catch (err) {
@@ -190,7 +221,7 @@ export function ProjectsPage() {
       await createProject({
         name: payload.name,
         status: payload.status,
-        client: payload.client ?? undefined,
+        clientId: payload.clientId ?? undefined,
         description: payload.description ?? undefined,
         startDate: payload.startDate ?? undefined,
         endDate: payload.endDate ?? undefined,
@@ -212,12 +243,12 @@ export function ProjectsPage() {
     () =>
       sortProjects(
         filterProjectsByDashboardFilter(
-          filterProjectsByName(projects, searchQuery),
+          filterProjectsByName(projects, searchQuery, clientLookup),
           activeFilter,
         ),
         sortField,
       ),
-    [projects, searchQuery, sortField, activeFilter],
+    [projects, searchQuery, sortField, activeFilter, clientLookup],
   )
 
   return (
@@ -353,7 +384,16 @@ export function ProjectsPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  linkedClient={
+                    project.clientId
+                      ? clientLookup.get(project.clientId)
+                      : undefined
+                  }
+                  onClientClick={setViewClientId}
+                />
               ))}
             </div>
           )}
@@ -367,6 +407,16 @@ export function ProjectsPage() {
         submitting={creating}
         error={createError}
         onSubmit={handleCreateProject}
+      />
+
+      <ClientDetailSheet
+        clientId={viewClientId}
+        open={viewClientId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewClientId(null)
+          }
+        }}
       />
     </div>
   )

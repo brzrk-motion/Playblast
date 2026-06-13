@@ -31,7 +31,7 @@ import {
 import { sortVersionsByDate, VERSION_STATUS_LABELS } from "@/lib/versions"
 import type { Comment } from "@/types/comment"
 import type { Deliverable, DeliverableStatus } from "@/types/deliverable"
-import type { Project } from "@/types/project"
+import type { ProjectDetail } from "@/types/project"
 import type { Version, VersionStatus } from "@/types/version"
 import { ArrowLeft, ChevronDown, Film, GitCompare, Link2, Upload } from "lucide-react"
 import { useProjectPageHeader } from "@/hooks/use-project-page-header"
@@ -49,7 +49,7 @@ export function DeliverablePage() {
   const { projectId = "", deliverableId = "" } = useParams()
   const [searchParams] = useSearchParams()
   const versionFromUrl = searchParams.get("version")
-  const [project, setProject] = useState<Project | null>(null)
+  const [project, setProject] = useState<ProjectDetail | null>(null)
   const [deliverable, setDeliverable] = useState<Deliverable | null>(null)
   const [versions, setVersions] = useState<Version[]>([])
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null)

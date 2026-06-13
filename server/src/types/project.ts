@@ -54,7 +54,7 @@ export interface Project {
 }
 
 /** Project detail with the linked client record populated (or null). */
-export interface ProjectDetail extends Project {
+export interface ProjectDetail extends Omit<Project, "client"> {
   client: Client | null
 }
 

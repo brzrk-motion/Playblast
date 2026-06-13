@@ -9,7 +9,7 @@ import { getDeliverable, getProject, listVersions } from "@/lib/api"
 import { humanizeApiError, showErrorToast } from "@/lib/toast"
 import { pickCompareVersionLabels, sortVersionsByDate } from "@/lib/versions"
 import type { Deliverable } from "@/types/deliverable"
-import type { Project } from "@/types/project"
+import type { ProjectDetail } from "@/types/project"
 import type { Version } from "@/types/version"
 import { useProjectPageHeader } from "@/hooks/use-project-page-header"
 import { ArrowLeft, GitCompare } from "lucide-react"
@@ -17,7 +17,7 @@ import { ArrowLeft, GitCompare } from "lucide-react"
 export function ComparePage() {
   const { projectId = "", deliverableId = "" } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [project, setProject] = useState<Project | null>(null)
+  const [project, setProject] = useState<ProjectDetail | null>(null)
   const [deliverable, setDeliverable] = useState<Deliverable | null>(null)
   const [versions, setVersions] = useState<Version[]>([])
   const [loading, setLoading] = useState(true)

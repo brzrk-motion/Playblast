@@ -14,6 +14,7 @@ import type { Milestone } from "@/types/milestone"
 import type {
   Project,
   ProjectBudget,
+  ProjectDetail,
   ProjectStatus,
   ProjectSummary,
 } from "@/types/project"
@@ -81,14 +82,23 @@ async function expectOk(response: Response): Promise<void> {
 
 // --- Projects ---------------------------------------------------------------
 
-export async function listProjects(): Promise<ProjectSummary[]> {
-  const response = await fetch("/api/projects")
+export async function listProjects(options?: {
+  clientId?: string
+}): Promise<ProjectSummary[]> {
+  const params = new URLSearchParams()
+  if (options?.clientId) {
+    params.set("clientId", options.clientId)
+  }
+  const query = params.toString()
+  const response = await fetch(
+    `/api/projects${query ? `?${query}` : ""}`,
+  )
   return parseJsonResponse<ProjectSummary[]>(response)
 }
 
-export async function getProject(id: string): Promise<Project> {
+export async function getProject(id: string): Promise<ProjectDetail> {
   const response = await fetch(`/api/projects/${encodeURIComponent(id)}`)
-  return parseJsonResponse<Project>(response)
+  return parseJsonResponse<ProjectDetail>(response)
 }
 
 export interface CreateProjectInput {
@@ -96,6 +106,7 @@ export interface CreateProjectInput {
   id?: string
   status?: ProjectStatus
   client?: string
+  clientId?: string
   description?: string
   startDate?: string
   endDate?: string
@@ -115,6 +126,7 @@ export interface UpdateProjectInput {
   name?: string
   status?: ProjectStatus
   client?: string | null
+  clientId?: string | null
   description?: string | null
   startDate?: string | null
   endDate?: string | null
