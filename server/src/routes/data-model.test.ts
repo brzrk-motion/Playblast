@@ -850,4 +850,86 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
 
     assert.equal(converted.id.length > 0, true)
   })
+
+  it("creates, updates, lists, and deletes services via API routes", async () => {
+    const createResponse = await fetch(`${baseUrl}/api/services`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Explainer Video",
+        hourEstimate: 20,
+        hourlyRate: 200,
+        type: "animated",
+      }),
+    })
+    assert.equal(createResponse.status, 201)
+    const created = (await createResponse.json()) as {
+      id: string
+      name: string
+      type: string
+    }
+    assert.equal(created.name, "Explainer Video")
+    assert.equal(created.type, "animated")
+
+    const invalidTypeResponse = await fetch(`${baseUrl}/api/services`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Invalid",
+        hourEstimate: 1,
+        hourlyRate: 100,
+        type: "video",
+      }),
+    })
+    assert.equal(invalidTypeResponse.status, 400)
+
+    const listResponse = await fetch(`${baseUrl}/api/services`)
+    assert.equal(listResponse.status, 200)
+    const services = (await listResponse.json()) as Array<{ id: string }>
+    assert.ok(services.some((service) => service.id === created.id))
+
+    const updateResponse = await fetch(`${baseUrl}/api/services/${created.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Explainer Video (Revised)",
+        hourEstimate: 24,
+        hourlyRate: 210,
+        type: "animated",
+      }),
+    })
+    assert.equal(updateResponse.status, 200)
+    const updated = (await updateResponse.json()) as {
+      name: string
+      hourEstimate: number
+    }
+    assert.equal(updated.name, "Explainer Video (Revised)")
+    assert.equal(updated.hourEstimate, 24)
+
+    const missingUpdateResponse = await fetch(
+      `${baseUrl}/api/services/missing-service-id`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Ghost",
+          hourEstimate: 1,
+          hourlyRate: 1,
+          type: "static",
+        }),
+      },
+    )
+    assert.equal(missingUpdateResponse.status, 404)
+
+    const deleteResponse = await fetch(`${baseUrl}/api/services/${created.id}`, {
+      method: "DELETE",
+    })
+    assert.equal(deleteResponse.status, 204)
+
+    const missingDeleteResponse = await fetch(
+      `${baseUrl}/api/services/${created.id}`,
+      { method: "DELETE" },
+    )
+    assert.equal(missingDeleteResponse.status, 404)
+  })
 })

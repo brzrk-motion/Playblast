@@ -106,3 +106,16 @@ CREATE INDEX IF NOT EXISTS idx_milestones_projectId ON milestones(projectId);
 CREATE INDEX IF NOT EXISTS idx_versions_deliverableId ON versions(deliverableId);
 CREATE INDEX IF NOT EXISTS idx_versions_projectId ON versions(projectId);
 CREATE INDEX IF NOT EXISTS idx_comments_versionId ON comments(versionId);
+
+-- Services catalog (hard delete; see migrations/002_services.sql)
+CREATE TABLE IF NOT EXISTS services (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  hourEstimate REAL NOT NULL,
+  hourlyRate REAL NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('static', 'animated')),
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_services_type ON services(type);

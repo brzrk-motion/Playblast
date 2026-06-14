@@ -9,6 +9,7 @@ import deliverablesRouter, { deliverableByIdRouter } from "./deliverables.js"
 import leadsRouter from "./leads.js"
 import milestonesRouter, { milestoneByIdRouter } from "./milestones.js"
 import projectsRouter from "./projects.js"
+import servicesRouter from "./services.js"
 import uploadRouter from "./upload.js"
 import versionsRouter from "./versions.js"
 
@@ -16,6 +17,7 @@ const apiRouter = Router()
 
 apiRouter.use("/leads", leadsRouter)
 apiRouter.use("/clients", clientsRouter)
+apiRouter.use("/services", servicesRouter)
 apiRouter.use("/projects", projectsRouter)
 apiRouter.use(
   "/projects/:projectId/deliverables",
