@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useParams, useSearchParams } from "react-router-dom"
 import {
   ArrowLeft,
   CalendarDays,
@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DeliverableStatusBadge } from "@/components/project/deliverable-status-badge"
 import { ProjectClientBadge } from "@/components/project/project-client-badge"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
@@ -65,6 +66,14 @@ import type { DeliverableSummary } from "@/types/deliverable"
 import type { Milestone } from "@/types/milestone"
 import type { ProjectDetail } from "@/types/project"
 
+const TAB_PARAM = "tab"
+type ProjectOverviewTab = "milestones" | "deliverables" | "services"
+
+function parseTab(value: string | null): ProjectOverviewTab {
+  if (value === "deliverables" || value === "services") return value
+  return "milestones"
+}
+
 function formatDate(value?: string): string {
   if (!value) return "—"
   return new Date(value).toLocaleDateString(undefined, {
@@ -76,6 +85,8 @@ function formatDate(value?: string): string {
 
 export function ProjectOverviewPage() {
   const { projectId = "" } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = parseTab(searchParams.get(TAB_PARAM))
   const [project, setProject] = useState<ProjectDetail | null>(null)
   const [deliverables, setDeliverables] = useState<DeliverableSummary[]>([])
   const [milestones, setMilestones] = useState<Milestone[]>([])
@@ -98,6 +109,16 @@ export function ProjectOverviewPage() {
   const [viewClientId, setViewClientId] = useState<string | null>(null)
 
   useProjectPageHeader(projectId, project)
+
+  function handleTabChange(value: string) {
+    const next = new URLSearchParams(searchParams)
+    if (value === "milestones") {
+      next.delete(TAB_PARAM)
+    } else {
+      next.set(TAB_PARAM, value)
+    }
+    setSearchParams(next, { replace: true })
+  }
 
   const loadData = useCallback(async () => {
     if (!projectId) return
@@ -438,204 +459,238 @@ export function ProjectOverviewPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Milestones</CardTitle>
-          <CardDescription>
-            Track key dates and deadlines for this project.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {sortedMilestones.length > 0 ? (
-            <ul className="space-y-1">
-              {sortedMilestones.map((milestone) => (
-                <li
-                  key={milestone.id}
-                  className="interactive-row flex items-center gap-3 rounded-lg px-2 py-1.5"
-                >
-                  <button
-                    type="button"
-                    onClick={() => void handleToggleMilestone(milestone)}
-                    className="focus-ring rounded-full"
-                    aria-label={milestone.done ? "Mark incomplete" : "Mark complete"}
-                  >
-                    {milestone.done ? (
-                      <CheckCircle2 className="size-5 text-status-success-foreground" />
-                    ) : (
-                      <Circle className="size-5 text-muted-foreground" />
-                    )}
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={cn(
-                        "truncate text-sm font-medium",
-                        milestone.done && "text-muted-foreground line-through",
-                      )}
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsList>
+          <TabsTrigger value="milestones">Milestones</TabsTrigger>
+          <TabsTrigger value="deliverables">Deliverables</TabsTrigger>
+          <TabsTrigger value="services">Services</TabsTrigger>
+        </TabsList>
+
+        <TabsContent
+          value="milestones"
+          forceMount
+          className="mt-4 data-[state=inactive]:hidden"
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Milestones</CardTitle>
+              <CardDescription>
+                Track key dates and deadlines for this project.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {sortedMilestones.length > 0 ? (
+                <ul className="space-y-1">
+                  {sortedMilestones.map((milestone) => (
+                    <li
+                      key={milestone.id}
+                      className="interactive-row flex items-center gap-3 rounded-lg px-2 py-1.5"
                     >
-                      {milestone.name}
+                      <button
+                        type="button"
+                        onClick={() => void handleToggleMilestone(milestone)}
+                        className="focus-ring rounded-full"
+                        aria-label={milestone.done ? "Mark incomplete" : "Mark complete"}
+                      >
+                        {milestone.done ? (
+                          <CheckCircle2 className="size-5 text-status-success-foreground" />
+                        ) : (
+                          <Circle className="size-5 text-muted-foreground" />
+                        )}
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={cn(
+                            "truncate text-sm font-medium",
+                            milestone.done && "text-muted-foreground line-through",
+                          )}
+                        >
+                          {milestone.name}
+                        </p>
+                      </div>
+                      {milestone.dueDate ? (
+                        <span className="text-xs text-muted-foreground">
+                          {formatDate(milestone.dueDate)}
+                        </span>
+                      ) : null}
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => void handleDeleteMilestone(milestone.id)}
+                        aria-label="Delete milestone"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-8 text-center">
+                  <CalendarDays className="size-8 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">No milestones yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Add milestones to track key dates and deadlines for this project.
                     </p>
                   </div>
-                  {milestone.dueDate ? (
-                    <span className="text-xs text-muted-foreground">
-                      {formatDate(milestone.dueDate)}
-                    </span>
-                  ) : null}
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => void handleDeleteMilestone(milestone.id)}
-                    aria-label="Delete milestone"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">No milestones yet.</p>
-          )}
+                </div>
+              )}
 
-          <form
-            onSubmit={(event) => void handleAddMilestone(event)}
-            className="flex flex-col gap-2 sm:flex-row"
-          >
-            <Input
-              value={newMilestoneName}
-              onChange={(event) => setNewMilestoneName(event.target.value)}
-              placeholder="Add a milestone…"
-              disabled={addingMilestone}
-              className="flex-1"
-            />
-            <Input
-              type="date"
-              value={newMilestoneDate}
-              onChange={(event) => setNewMilestoneDate(event.target.value)}
-              disabled={addingMilestone}
-              className="sm:w-44"
-            />
-            <Button
-              type="submit"
-              variant="outline"
-              disabled={addingMilestone || !newMilestoneName.trim()}
-            >
-              {addingMilestone ? <Spinner className="size-4" /> : <Plus />}
-              Add
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <ProjectServicesSection
-        projectId={project.id}
-        currency={project.budget?.currency}
-      />
-
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle>Deliverables</CardTitle>
-              <CardDescription>
-                Upload videos, manage versions, and run proofing per deliverable.
-              </CardDescription>
-            </div>
-            <Button
-              onClick={() => {
-                setEditingDeliverable(null)
-                setDeliverableError(null)
-                setDeliverableDialogOpen(true)
-              }}
-            >
-              <Plus />
-              New Deliverable
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {deliverables.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-8 text-center">
-              <Film className="size-8 text-muted-foreground" />
-              <div>
-                <p className="font-medium">No deliverables yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Create a deliverable to start uploading and reviewing videos.
-                </p>
-              </div>
-              <Button
-                onClick={() => {
-                  setEditingDeliverable(null)
-                  setDeliverableDialogOpen(true)
-                }}
+              <form
+                onSubmit={(event) => void handleAddMilestone(event)}
+                className="flex flex-col gap-2 sm:flex-row"
               >
-                <Plus />
-                New Deliverable
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {deliverables.map((deliverable) => (
-                <Card
-                  key={deliverable.id}
-                  className="interactive-card relative h-full"
+                <Input
+                  value={newMilestoneName}
+                  onChange={(event) => setNewMilestoneName(event.target.value)}
+                  placeholder="Add a milestone…"
+                  disabled={addingMilestone}
+                  className="flex-1"
+                />
+                <Input
+                  type="date"
+                  value={newMilestoneDate}
+                  onChange={(event) => setNewMilestoneDate(event.target.value)}
+                  disabled={addingMilestone}
+                  className="sm:w-44"
+                />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  disabled={addingMilestone || !newMilestoneName.trim()}
                 >
-                  <Link
-                    to={`/projects/${project.id}/deliverables/${deliverable.id}`}
-                    className="focus-ring block rounded-t-xl"
+                  {addingMilestone ? <Spinner className="size-4" /> : <Plus />}
+                  Add
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent
+          value="deliverables"
+          forceMount
+          className="mt-4 data-[state=inactive]:hidden"
+        >
+          <Card>
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle>Deliverables</CardTitle>
+                  <CardDescription>
+                    Upload videos, manage versions, and run proofing per deliverable.
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={() => {
+                    setEditingDeliverable(null)
+                    setDeliverableError(null)
+                    setDeliverableDialogOpen(true)
+                  }}
+                >
+                  <Plus />
+                  New Deliverable
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {deliverables.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-8 text-center">
+                  <Film className="size-8 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">No deliverables yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Create a deliverable to start uploading and reviewing videos.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setEditingDeliverable(null)
+                      setDeliverableDialogOpen(true)
+                    }}
                   >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <CardTitle className="text-base leading-snug">
-                          {deliverable.name}
-                        </CardTitle>
-                        <DeliverableStatusBadge status={deliverable.status} />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-1 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-3">
-                        <span className="inline-flex items-center gap-1">
-                          <Film className="size-3.5" />
-                          {deliverable.versionCount}
-                        </span>
-                        {deliverable.openCommentCount > 0 ? (
-                          <span className="inline-flex items-center gap-1">
-                            <MessageSquare className="size-3.5" />
-                            {deliverable.openCommentCount}
-                          </span>
-                        ) : null}
-                      </div>
-                      {deliverable.dueDate ? (
-                        <p>Due {formatDate(deliverable.dueDate)}</p>
-                      ) : null}
-                    </CardContent>
-                  </Link>
-                  <CardContent className="flex justify-end gap-1 pt-0">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="Edit deliverable"
-                      onClick={() => {
-                        setEditingDeliverable(deliverable)
-                        setDeliverableError(null)
-                        setDeliverableDialogOpen(true)
-                      }}
+                    <Plus />
+                    New Deliverable
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {deliverables.map((deliverable) => (
+                    <Card
+                      key={deliverable.id}
+                      className="interactive-card relative h-full"
                     >
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="Delete deliverable"
-                      onClick={() => void handleDeleteDeliverable(deliverable.id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      <Link
+                        to={`/projects/${project.id}/deliverables/${deliverable.id}`}
+                        className="focus-ring block rounded-t-xl"
+                      >
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <CardTitle className="text-base leading-snug">
+                              {deliverable.name}
+                            </CardTitle>
+                            <DeliverableStatusBadge status={deliverable.status} />
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-1 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-3">
+                            <span className="inline-flex items-center gap-1">
+                              <Film className="size-3.5" />
+                              {deliverable.versionCount}
+                            </span>
+                            {deliverable.openCommentCount > 0 ? (
+                              <span className="inline-flex items-center gap-1">
+                                <MessageSquare className="size-3.5" />
+                                {deliverable.openCommentCount}
+                              </span>
+                            ) : null}
+                          </div>
+                          {deliverable.dueDate ? (
+                            <p>Due {formatDate(deliverable.dueDate)}</p>
+                          ) : null}
+                        </CardContent>
+                      </Link>
+                      <CardContent className="flex justify-end gap-1 pt-0">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Edit deliverable"
+                          onClick={() => {
+                            setEditingDeliverable(deliverable)
+                            setDeliverableError(null)
+                            setDeliverableDialogOpen(true)
+                          }}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Delete deliverable"
+                          onClick={() => void handleDeleteDeliverable(deliverable.id)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent
+          value="services"
+          forceMount
+          className="mt-4 data-[state=inactive]:hidden"
+        >
+          <ProjectServicesSection
+            projectId={project.id}
+            currency={project.budget?.currency}
+          />
+        </TabsContent>
+      </Tabs>
 
       <ProjectFormSheet
         open={editOpen}
