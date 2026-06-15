@@ -18,6 +18,11 @@ import type {
   ProjectStatus,
   ProjectSummary,
 } from "@/types/project"
+import type {
+  CreateServiceInput,
+  Service,
+  UpdateServiceInput,
+} from "@/types/service"
 import type { UploadProgress, UploadResponse } from "@/types/upload"
 import type { Version, VersionStatus } from "@/types/version"
 
@@ -588,6 +593,43 @@ export async function updateClient(
 
 export async function deleteClient(id: string): Promise<void> {
   const response = await fetch(`/api/clients/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  })
+  await expectOk(response)
+}
+
+// --- Services ---------------------------------------------------------------
+
+export async function listServices(): Promise<Service[]> {
+  const response = await fetch("/api/services")
+  return parseJsonResponse<Service[]>(response)
+}
+
+export async function createService(
+  body: CreateServiceInput,
+): Promise<Service> {
+  const response = await fetch("/api/services", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+  return parseJsonResponse<Service>(response)
+}
+
+export async function updateService(
+  id: string,
+  body: UpdateServiceInput,
+): Promise<Service> {
+  const response = await fetch(`/api/services/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+  return parseJsonResponse<Service>(response)
+}
+
+export async function deleteService(id: string): Promise<void> {
+  const response = await fetch(`/api/services/${encodeURIComponent(id)}`, {
     method: "DELETE",
   })
   await expectOk(response)

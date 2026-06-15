@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import { FolderKanban, LayoutDashboard, Settings, Users } from "lucide-react"
+import { Briefcase, FolderKanban, LayoutDashboard, Settings, Users } from "lucide-react"
 
 export type NavSubItem = {
   title: string
@@ -30,6 +30,11 @@ export const navMain: NavItem[] = [
     title: "Clients",
     icon: Users,
     url: "/clients",
+  },
+  {
+    title: "Services",
+    icon: Briefcase,
+    url: "/services",
   },
 ]
 
@@ -74,6 +79,10 @@ export function getPageHeader(pathname: string): { title: string; subtitle?: str
     return { title: "Clients", subtitle: "Lead & client management" }
   }
 
+  if (pathname === "/services") {
+    return { title: "Services", subtitle: "Catalog offerings & rates" }
+  }
+
   if (pathname === "/") {
     return { title: "Dashboard" }
   }
@@ -96,6 +105,9 @@ export function isNavItemActive(pathname: string, url: string): boolean {
   }
   if (url === "/clients") {
     return pathname === "/clients" || pathname.startsWith("/clients/")
+  }
+  if (url === "/services") {
+    return pathname === "/services" || pathname.startsWith("/services/")
   }
   return pathname === url
 }
