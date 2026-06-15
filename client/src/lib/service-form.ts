@@ -8,6 +8,12 @@ export interface ServiceFormValues {
   type: ServiceType
 }
 
+export type ServiceFormFieldErrors = Partial<
+  Record<keyof ServiceFormValues, string>
+>
+
+const MAX_NAME_LENGTH = 100
+
 export function serviceToFormValues(
   service?: Service | null,
 ): ServiceFormValues {
@@ -44,30 +50,57 @@ export function serviceFormToPayload(values: ServiceFormValues) {
   }
 }
 
-function parseNonNegativeNumber(value: string): number | null {
+function parsePositiveNumber(value: string): number | null {
   const parsed = Number(value)
-  if (!Number.isFinite(parsed) || parsed < 0) {
+  if (!Number.isFinite(parsed) || parsed <= 0) {
     return null
   }
   return parsed
 }
 
-export function validateServiceForm(values: ServiceFormValues): string | null {
-  if (!values.name.trim()) {
-    return "Name is required."
+function hasAtMostOneDecimalPlace(value: string): boolean {
+  const trimmed = value.trim()
+  if (!trimmed.includes(".")) {
+    return true
   }
 
-  if (parseNonNegativeNumber(values.hourEstimate) === null) {
-    return "Hour estimate must be a non-negative number."
+  const [, decimals = ""] = trimmed.split(".")
+  return decimals.length <= 1
+}
+
+export function hasServiceFormErrors(errors: ServiceFormFieldErrors): boolean {
+  return Object.keys(errors).length > 0
+}
+
+export function validateServiceForm(
+  values: ServiceFormValues,
+): ServiceFormFieldErrors {
+  const errors: ServiceFormFieldErrors = {}
+  const name = values.name.trim()
+
+  if (!name) {
+    errors.name = "Name is required."
+  } else if (name.length > MAX_NAME_LENGTH) {
+    errors.name = `Name must be ${MAX_NAME_LENGTH} characters or fewer.`
   }
 
-  if (parseNonNegativeNumber(values.hourlyRate) === null) {
-    return "Hourly rate must be a non-negative number."
+  if (!values.hourEstimate.trim()) {
+    errors.hourEstimate = "Hour estimate is required."
+  } else if (parsePositiveNumber(values.hourEstimate) === null) {
+    errors.hourEstimate = "Hour estimate must be greater than 0."
+  } else if (!hasAtMostOneDecimalPlace(values.hourEstimate)) {
+    errors.hourEstimate = "Hour estimate allows at most one decimal place."
+  }
+
+  if (!values.hourlyRate.trim()) {
+    errors.hourlyRate = "Hourly rate is required."
+  } else if (parsePositiveNumber(values.hourlyRate) === null) {
+    errors.hourlyRate = "Hourly rate must be greater than 0."
   }
 
   if (!(SERVICE_TYPES as string[]).includes(values.type)) {
-    return "Select a valid service type."
+    errors.type = "Select a service type."
   }
 
-  return null
+  return errors
 }

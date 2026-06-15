@@ -189,15 +189,33 @@ export function ServicesPage() {
     setSubmitting(true)
     setFormError(null)
 
+    const payload = serviceFormToPayload(values)
+    const optimisticId = `optimistic-${crypto.randomUUID()}`
+    const optimisticService: Service = {
+      id: optimisticId,
+      ...payload,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+
+    setServices((current) => [...current, optimisticService])
+
     try {
-      await createService(serviceFormToPayload(values))
+      const created = await createService(payload)
+      setServices((current) =>
+        current.map((service) =>
+          service.id === optimisticId ? created : service,
+        ),
+      )
       showSuccessToast("Service added")
-      setAddModalOpen(false)
-      await fetchServices()
     } catch (err) {
+      setServices((current) =>
+        current.filter((service) => service.id !== optimisticId),
+      )
       const message = humanizeApiError(err, "Failed to save service")
       setFormError(message)
       showErrorToast(message)
+      throw err
     } finally {
       setSubmitting(false)
     }

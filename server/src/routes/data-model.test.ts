@@ -883,6 +883,45 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     })
     assert.equal(invalidTypeResponse.status, 400)
 
+    const zeroHourEstimateResponse = await fetch(`${baseUrl}/api/services`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Zero Hours",
+        hourEstimate: 0,
+        hourlyRate: 100,
+        type: "static",
+      }),
+    })
+    assert.equal(zeroHourEstimateResponse.status, 400)
+
+    const invalidHourEstimatePrecisionResponse = await fetch(
+      `${baseUrl}/api/services`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Too Precise",
+          hourEstimate: 1.25,
+          hourlyRate: 100,
+          type: "static",
+        }),
+      },
+    )
+    assert.equal(invalidHourEstimatePrecisionResponse.status, 400)
+
+    const longNameResponse = await fetch(`${baseUrl}/api/services`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "x".repeat(101),
+        hourEstimate: 1,
+        hourlyRate: 100,
+        type: "static",
+      }),
+    })
+    assert.equal(longNameResponse.status, 400)
+
     const listResponse = await fetch(`${baseUrl}/api/services`)
     assert.equal(listResponse.status, 200)
     const services = (await listResponse.json()) as Array<{ id: string }>

@@ -62,11 +62,16 @@ export function useServiceForm(service?: Service | null) {
     onOpenChange(true)
   }
 
+  function reset(nextService?: Service | null) {
+    resetForOpen(nextService)
+  }
+
   return {
     values,
     update,
     syncOpenState,
     handleOpenChange,
     isDirty,
+    reset,
   }
 }

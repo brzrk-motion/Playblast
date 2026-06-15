@@ -12,7 +12,9 @@ import { Spinner } from "@/components/ui/spinner"
 import { ServiceFormFields } from "@/components/services/service-form-fields"
 import { useServiceForm } from "@/components/services/use-service-form"
 import {
+  hasServiceFormErrors,
   validateServiceForm,
+  type ServiceFormFieldErrors,
   type ServiceFormValues,
 } from "@/lib/service-form"
 
@@ -21,7 +23,7 @@ interface AddServiceModalProps {
   onOpenChange: (open: boolean) => void
   submitting?: boolean
   error?: string | null
-  onSubmit: (values: ServiceFormValues) => void
+  onSubmit: (values: ServiceFormValues) => void | Promise<void>
 }
 
 export function AddServiceModal({
@@ -31,20 +33,41 @@ export function AddServiceModal({
   error,
   onSubmit,
 }: AddServiceModalProps) {
-  const { values, update, syncOpenState, handleOpenChange } = useServiceForm()
-  const [validationError, setValidationError] = useState<string | null>(null)
+  const { values, update, syncOpenState, handleOpenChange, reset } =
+    useServiceForm()
+  const [fieldErrors, setFieldErrors] = useState<ServiceFormFieldErrors>({})
 
   syncOpenState(open)
 
-  function handleSubmit(event: FormEvent) {
+  function clearFieldError(key: keyof ServiceFormValues) {
+    setFieldErrors((current) => {
+      if (!current[key]) {
+        return current
+      }
+
+      const next = { ...current }
+      delete next[key]
+      return next
+    })
+  }
+
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    const message = validateServiceForm(values)
-    if (message) {
-      setValidationError(message)
+    const errors = validateServiceForm(values)
+    if (hasServiceFormErrors(errors)) {
+      setFieldErrors(errors)
       return
     }
-    setValidationError(null)
-    onSubmit(values)
+
+    setFieldErrors({})
+
+    try {
+      await onSubmit(values)
+      reset()
+      setFieldErrors({})
+    } catch {
+      // API errors are surfaced via the error prop.
+    }
   }
 
   return (
@@ -53,7 +76,7 @@ export function AddServiceModal({
       onOpenChange={(nextOpen) => handleOpenChange(nextOpen, onOpenChange)}
     >
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(event) => void handleSubmit(event)}>
           <DialogHeader>
             <DialogTitle>Add Service</DialogTitle>
             <DialogDescription>
@@ -65,10 +88,20 @@ export function AddServiceModal({
             values={values}
             onChange={update}
             submitting={submitting}
-            validationError={validationError ?? error}
+            fieldErrors={fieldErrors}
+            formError={error}
+            onClearFieldError={clearFieldError}
           />
 
           <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={submitting}
+              onClick={() => handleOpenChange(false, onOpenChange)}
+            >
+              Cancel
+            </Button>
             <Button type="submit" disabled={submitting}>
               {submitting ? (
                 <>

@@ -5,7 +5,7 @@ export type ServiceSortField = "name" | "type"
 export type SortDirection = "asc" | "desc"
 
 export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
-  static: "Static",
+  static: "Static Layout",
   animated: "Animated",
 }
 

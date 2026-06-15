@@ -7,7 +7,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { ServiceFormValues } from "@/lib/service-form"
+import type {
+  ServiceFormFieldErrors,
+  ServiceFormValues,
+} from "@/lib/service-form"
 import { SERVICE_TYPE_LABELS } from "@/lib/services"
 import { SERVICE_TYPES } from "@/types/service"
 
@@ -18,14 +21,26 @@ interface ServiceFormFieldsProps {
     value: ServiceFormValues[K],
   ) => void
   submitting?: boolean
-  validationError?: string | null
+  fieldErrors?: ServiceFormFieldErrors
+  formError?: string | null
+  onClearFieldError?: (key: keyof ServiceFormValues) => void
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) {
+    return null
+  }
+
+  return <p className="text-sm text-destructive">{message}</p>
 }
 
 export function ServiceFormFields({
   values,
   onChange,
   submitting = false,
-  validationError,
+  fieldErrors,
+  formError,
+  onClearFieldError,
 }: ServiceFormFieldsProps) {
   return (
     <div className="space-y-4 py-4">
@@ -35,24 +50,33 @@ export function ServiceFormFields({
           <Input
             id="service-name"
             value={values.name}
-            onChange={(event) => onChange("name", event.target.value)}
+            onChange={(event) => {
+              onChange("name", event.target.value)
+              onClearFieldError?.("name")
+            }}
             placeholder="e.g. Product hero render"
             autoFocus
             disabled={submitting}
-            required
+            maxLength={100}
+            aria-invalid={fieldErrors?.name ? true : undefined}
           />
+          <FieldError message={fieldErrors?.name} />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="service-type">Type</Label>
           <Select
             value={values.type}
-            onValueChange={(value) =>
+            onValueChange={(value) => {
               onChange("type", value as ServiceFormValues["type"])
-            }
+              onClearFieldError?.("type")
+            }}
             disabled={submitting}
           >
-            <SelectTrigger id="service-type">
+            <SelectTrigger
+              id="service-type"
+              aria-invalid={fieldErrors?.type ? true : undefined}
+            >
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent>
@@ -63,6 +87,7 @@ export function ServiceFormFields({
               ))}
             </SelectContent>
           </Select>
+          <FieldError message={fieldErrors?.type} />
         </div>
 
         <div className="space-y-2">
@@ -70,14 +95,18 @@ export function ServiceFormFields({
           <Input
             id="service-hour-estimate"
             type="number"
-            min={0}
-            step="0.5"
+            min={0.1}
+            step="0.1"
             value={values.hourEstimate}
-            onChange={(event) => onChange("hourEstimate", event.target.value)}
-            placeholder="0"
+            onChange={(event) => {
+              onChange("hourEstimate", event.target.value)
+              onClearFieldError?.("hourEstimate")
+            }}
+            placeholder="0.0"
             disabled={submitting}
-            required
+            aria-invalid={fieldErrors?.hourEstimate ? true : undefined}
           />
+          <FieldError message={fieldErrors?.hourEstimate} />
         </div>
 
         <div className="space-y-2 sm:col-span-2">
@@ -85,20 +114,22 @@ export function ServiceFormFields({
           <Input
             id="service-hourly-rate"
             type="number"
-            min={0}
-            step="1"
+            min={0.01}
+            step="0.01"
             value={values.hourlyRate}
-            onChange={(event) => onChange("hourlyRate", event.target.value)}
-            placeholder="0"
+            onChange={(event) => {
+              onChange("hourlyRate", event.target.value)
+              onClearFieldError?.("hourlyRate")
+            }}
+            placeholder="0.00"
             disabled={submitting}
-            required
+            aria-invalid={fieldErrors?.hourlyRate ? true : undefined}
           />
+          <FieldError message={fieldErrors?.hourlyRate} />
         </div>
       </div>
 
-      {validationError ? (
-        <p className="text-sm text-destructive">{validationError}</p>
-      ) : null}
+      {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
     </div>
   )
 }
