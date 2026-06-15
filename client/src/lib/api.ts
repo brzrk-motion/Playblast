@@ -603,6 +603,14 @@ export async function deleteClient(id: string): Promise<void> {
   await expectOk(response)
 }
 
+export async function revertClientToLead(id: string): Promise<Lead> {
+  const response = await fetch(
+    `/api/clients/${encodeURIComponent(id)}/revert-to-lead`,
+    { method: "POST" },
+  )
+  return parseJsonResponse<Lead>(response)
+}
+
 // --- Services ---------------------------------------------------------------
 
 export async function listServices(): Promise<Service[]> {

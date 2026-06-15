@@ -237,7 +237,14 @@ export function LeadsTab() {
     if (lead.status === "converted") {
       return
     }
-    setConvertLead(lead)
+    if (activeViewLeadId !== null) {
+      // Sheet is open — close it first and wait for its 300 ms exit animation
+      // before mounting the modal so both overlays are never visible at once.
+      closeLeadDetail()
+      setTimeout(() => setConvertLead(lead), 300)
+    } else {
+      setConvertLead(lead)
+    }
   }
 
   async function handleDelete(lead: Lead) {
@@ -404,7 +411,10 @@ export function LeadsTab() {
                             <MoreHorizontal className="size-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent
+                          align="end"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           <DropdownMenuItem
                             onClick={() => openLeadDetail(lead.id)}
                           >
@@ -504,6 +514,7 @@ export function LeadsTab() {
           closeLeadDetail()
           openEditModal(lead)
         }}
+        onConvert={openConvertModal}
       />
     </div>
   )

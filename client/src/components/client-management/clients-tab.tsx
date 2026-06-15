@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Link, useSearchParams } from "react-router-dom"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { Building2, MoreHorizontal, Plus } from "lucide-react"
 import { AddClientModal } from "@/components/client-management/add-client-modal"
 import { EditClientModal } from "@/components/client-management/edit-client-modal"
 import { ClientDetailSheet } from "@/components/client-management/client-detail-sheet"
+import { ConfirmRevertModal } from "@/components/client-management/confirm-revert-modal"
+import { LinkProjectModal } from "@/components/client-management/link-project-modal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -45,6 +47,7 @@ import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import type { Client } from "@/types/client"
 
 export function ClientsTab() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [clients, setClients] = useState<Client[]>([])
   const [projectCounts, setProjectCounts] = useState<Record<string, number>>({})
@@ -56,6 +59,8 @@ export function ClientsTab() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [viewClientId, setViewClientId] = useState<string | null>(null)
+  const [linkProjectClientId, setLinkProjectClientId] = useState<string | null>(null)
+  const [revertClient, setRevertClient] = useState<Client | null>(null)
 
   const fetchClients = useCallback(async (options?: { showLoading?: boolean }) => {
     if (options?.showLoading) {
@@ -232,6 +237,17 @@ export function ClientsTab() {
     }
   }
 
+  function openRevertModal(client: Client) {
+    if (activeViewClientId !== null) {
+      // Sheet is open — close it first and wait for its 300 ms exit animation
+      // before mounting the modal so both overlays are never visible at once.
+      closeClientDetail()
+      setTimeout(() => setRevertClient(client), 300)
+    } else {
+      setRevertClient(client)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -328,7 +344,10 @@ export function ClientsTab() {
                               <MoreHorizontal className="size-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent
+                            align="end"
+                            onClick={(event) => event.stopPropagation()}
+                          >
                             <DropdownMenuItem
                               onClick={() => openClientDetail(client.id)}
                             >
@@ -338,6 +357,11 @@ export function ClientsTab() {
                               onClick={() => openEditModal(client)}
                             >
                               Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => openRevertModal(client)}
+                            >
+                              Convert to Lead
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -387,6 +411,45 @@ export function ClientsTab() {
         onEdit={(client) => {
           closeClientDetail()
           openEditModal(client)
+        }}
+        onRevert={openRevertModal}
+        onProjectsChanged={() => void fetchClients()}
+        onLinkProject={(clientId) => {
+          closeClientDetail()
+          // Wait for the sheet's 300 ms exit animation before opening the modal.
+          setTimeout(() => setLinkProjectClientId(clientId), 300)
+        }}
+      />
+
+      <ConfirmRevertModal
+        client={revertClient}
+        open={revertClient !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRevertClient(null)
+          }
+        }}
+        onSuccess={(lead) => {
+          setRevertClient(null)
+          navigate(`/clients?lead=${encodeURIComponent(lead.id)}`)
+        }}
+      />
+
+      <LinkProjectModal
+        open={linkProjectClientId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setLinkProjectClientId(null)
+          }
+        }}
+        clientId={linkProjectClientId ?? ""}
+        onLinked={() => {
+          const id = linkProjectClientId
+          setLinkProjectClientId(null)
+          void fetchClients()
+          if (id) {
+            openClientDetail(id)
+          }
         }}
       />
     </div>

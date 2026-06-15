@@ -6,6 +6,7 @@ import {
   getClientWithProjects,
   getLead,
   listClients,
+  revertClientToLead,
   updateClient,
 } from "../storage/index.js"
 import type { UpdateClientInput } from "../types/index.js"
@@ -139,6 +140,26 @@ clientsRouter.patch("/:id", (req, res) => {
 
   const updated = updateClient(clientId, input)
   res.json(updated)
+})
+
+clientsRouter.post("/:id/revert-to-lead", (req, res) => {
+  const clientId = getClientIdParam(req)
+  const result = revertClientToLead(clientId)
+
+  if (result === "not_found") {
+    res.status(404).json({ error: "Client not found." })
+    return
+  }
+
+  if (result === "has_active_projects") {
+    res.status(409).json({
+      error:
+        "Client cannot be reverted to a lead while linked to active projects. Archive or unlink those projects first.",
+    })
+    return
+  }
+
+  res.status(201).json(result)
 })
 
 clientsRouter.delete("/:id", (req, res) => {

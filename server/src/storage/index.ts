@@ -49,6 +49,7 @@ export {
   listVersionsByProject,
   addProjectService,
   removeProjectService,
+  revertClientToLead,
   updateClient,
   updateComment,
   updateDeliverable,

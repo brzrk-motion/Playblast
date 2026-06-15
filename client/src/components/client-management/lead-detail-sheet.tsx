@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
 import { Pencil, Trash2 } from "lucide-react"
-import { ConfirmConvertModal } from "@/components/client-management/confirm-convert-modal"
 import { ConvertToClientButton } from "@/components/client-management/convert-to-client-action"
 import { LeadStatusBadge } from "@/components/client-management/lead-status-badge"
 import { Badge } from "@/components/ui/badge"
@@ -53,6 +51,7 @@ interface LeadDetailSheetProps {
   onLeadUpdated?: (lead: Lead) => void
   onLeadDeleted?: () => void
   onEdit?: (lead: Lead) => void
+  onConvert?: (lead: Lead) => void
 }
 
 function DetailRow({
@@ -77,12 +76,11 @@ export function LeadDetailSheet({
   onLeadUpdated,
   onLeadDeleted,
   onEdit,
+  onConvert,
 }: LeadDetailSheetProps) {
-  const navigate = useNavigate()
   const [lead, setLead] = useState<LeadWithContactLog | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [convertModalOpen, setConvertModalOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [logType, setLogType] = useState<ContactLogType>("email")
   const [logDate, setLogDate] = useState(toDateInputValue())
@@ -298,7 +296,7 @@ export function LeadDetailSheet({
                   </Button>
                   <ConvertToClientButton
                     lead={lead}
-                    onConvert={() => setConvertModalOpen(true)}
+                    onConvert={() => onConvert?.(lead)}
                   />
                   <Button
                     type="button"
@@ -496,21 +494,6 @@ export function LeadDetailSheet({
         ) : null}
       </SheetContent>
 
-      <ConfirmConvertModal
-        lead={lead}
-        open={convertModalOpen}
-        onOpenChange={setConvertModalOpen}
-        onSuccess={(client, updatedLead) => {
-          setLead((current) =>
-            current ? { ...current, ...updatedLead } : current,
-          )
-          onLeadUpdated?.(updatedLead)
-          onOpenChange(false)
-          navigate(
-            `/clients?tab=clients&client=${encodeURIComponent(client.id)}`,
-          )
-        }}
-      />
     </Sheet>
   )
 }

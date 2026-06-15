@@ -777,6 +777,22 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const updatedLead = (await leadGetResponse.json()) as { status: string }
     assert.equal(updatedLead.status, "converted")
 
+    // Converted leads drop out of the default pipeline list...
+    const defaultLeadsResponse = await fetch(`${baseUrl}/api/leads`)
+    const defaultLeads = (await defaultLeadsResponse.json()) as Array<{
+      id: string
+    }>
+    assert.ok(!defaultLeads.some((item) => item.id === lead.id))
+
+    // ...but remain reachable via an explicit status filter.
+    const convertedLeadsResponse = await fetch(
+      `${baseUrl}/api/leads?status=converted`,
+    )
+    const convertedLeads = (await convertedLeadsResponse.json()) as Array<{
+      id: string
+    }>
+    assert.ok(convertedLeads.some((item) => item.id === lead.id))
+
     const createResponse = await fetch(`${baseUrl}/api/clients`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -849,6 +865,109 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(missingResponse.status, 404)
 
     assert.equal(converted.id.length > 0, true)
+  })
+
+  it("reverts clients back to leads via API routes", async () => {
+    // A converted lead reverts onto its original lead record.
+    const leadResponse = await fetch(`${baseUrl}/api/leads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Revert Source",
+        email: "revert@example.com",
+        company: "Revert Co",
+        status: "negotiating",
+      }),
+    })
+    const lead = (await leadResponse.json()) as { id: string }
+
+    const convertResponse = await fetch(
+      `${baseUrl}/api/leads/${lead.id}/convert`,
+      { method: "POST" },
+    )
+    assert.equal(convertResponse.status, 201)
+    const client = (await convertResponse.json()) as { id: string }
+
+    const revertResponse = await fetch(
+      `${baseUrl}/api/clients/${client.id}/revert-to-lead`,
+      { method: "POST" },
+    )
+    assert.equal(revertResponse.status, 201)
+    const revertedLead = (await revertResponse.json()) as {
+      id: string
+      status: string
+    }
+    assert.equal(revertedLead.id, lead.id)
+    assert.equal(revertedLead.status, "negotiating")
+
+    // The client record is gone and the lead is back in the pipeline list.
+    const clientGone = await fetch(`${baseUrl}/api/clients/${client.id}`)
+    assert.equal(clientGone.status, 404)
+
+    const leadsList = (await (await fetch(`${baseUrl}/api/leads`)).json()) as Array<{
+      id: string
+    }>
+    assert.ok(leadsList.some((item) => item.id === lead.id))
+
+    // A manually created client reverts into a brand new lead.
+    const manualResponse = await fetch(`${baseUrl}/api/clients`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Manual Revert",
+        email: "manual-revert@example.com",
+      }),
+    })
+    const manualClient = (await manualResponse.json()) as { id: string }
+
+    const manualRevertResponse = await fetch(
+      `${baseUrl}/api/clients/${manualClient.id}/revert-to-lead`,
+      { method: "POST" },
+    )
+    assert.equal(manualRevertResponse.status, 201)
+    const manualLead = (await manualRevertResponse.json()) as {
+      id: string
+      name: string
+      status: string
+    }
+    assert.notEqual(manualLead.id, manualClient.id)
+    assert.equal(manualLead.name, "Manual Revert")
+    assert.equal(manualLead.status, "negotiating")
+
+    // Reverting is blocked while the client has active (non-archived) projects.
+    const blockedLeadResponse = await fetch(`${baseUrl}/api/leads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Blocked", email: "blocked@example.com" }),
+    })
+    const blockedLead = (await blockedLeadResponse.json()) as { id: string }
+    const blockedClient = (await (
+      await fetch(`${baseUrl}/api/leads/${blockedLead.id}/convert`, {
+        method: "POST",
+      })
+    ).json()) as { id: string }
+
+    const { createProject: repoCreateProject } = await import(
+      "../storage/repository.js"
+    )
+    repoCreateProject({
+      id: "proj-revert-block",
+      name: "Active Linked Project",
+      clientId: blockedClient.id,
+      status: "active",
+    })
+
+    const blockedRevertResponse = await fetch(
+      `${baseUrl}/api/clients/${blockedClient.id}/revert-to-lead`,
+      { method: "POST" },
+    )
+    assert.equal(blockedRevertResponse.status, 409)
+
+    const missingRevertResponse = await fetch(
+      `${baseUrl}/api/clients/does-not-exist/revert-to-lead`,
+      { method: "POST" },
+    )
+    assert.equal(missingRevertResponse.status, 404)
   })
 
   it("creates, updates, lists, and deletes services via API routes", async () => {

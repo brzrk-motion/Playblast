@@ -1015,6 +1015,11 @@ export function listLeads(filters: ListLeadsFilters = {}): Lead[] {
   if (filters.status !== undefined) {
     conditions.push("status = ?")
     params.push(filters.status)
+  } else {
+    // Converted leads become clients and are hidden from the pipeline list.
+    // They remain fetchable by id (and by an explicit status filter).
+    conditions.push("status != ?")
+    params.push("converted")
   }
 
   if (filters.replied !== undefined) {
@@ -1490,6 +1495,69 @@ export function convertLeadToClient(
       .run("converted", now, leadId)
 
     return client
+  })
+}
+
+/** Pipeline status assigned to a lead when a client is reverted back to one. */
+const REVERTED_LEAD_STATUS: LeadStatus = "negotiating"
+
+export function revertClientToLead(
+  clientId: string,
+): Lead | "not_found" | "has_active_projects" {
+  return withTransaction(() => {
+    const client = getClient(clientId)
+
+    if (!client) {
+      return "not_found"
+    }
+
+    if (countNonArchivedProjectsByClientId(clientId) > 0) {
+      return "has_active_projects"
+    }
+
+    const now = new Date().toISOString()
+    const originalLead = client.convertedFromLeadId
+      ? getLead(client.convertedFromLeadId)
+      : undefined
+
+    let lead: Lead
+
+    if (originalLead) {
+      // Restore the source lead, syncing the client's current contact details
+      // (which may have been edited after conversion). Its contact log and
+      // source are preserved.
+      getDb()
+        .prepare(
+          `UPDATE leads
+           SET name = ?, company = ?, email = ?, phone = ?, status = ?,
+               updatedAt = ?
+           WHERE id = ?`,
+        )
+        .run(
+          client.name,
+          client.company ?? null,
+          client.email,
+          client.phone ?? null,
+          REVERTED_LEAD_STATUS,
+          now,
+          originalLead.id,
+        )
+
+      lead = getLead(originalLead.id)!
+    } else {
+      lead = createLead({
+        name: client.name,
+        email: client.email,
+        status: REVERTED_LEAD_STATUS,
+        ...(client.company ? { company: client.company } : {}),
+        ...(client.phone ? { phone: client.phone } : {}),
+        ...(client.notes ? { notes: client.notes } : {}),
+      })
+    }
+
+    getDb().prepare("DELETE FROM clients WHERE id = ?").run(clientId)
+
+    return lead
   })
 }
 

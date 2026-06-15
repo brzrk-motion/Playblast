@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from "react"
-import { ExternalLink, FolderKanban, Link2, Pencil, Trash2 } from "lucide-react"
+import {
+  ExternalLink,
+  FolderKanban,
+  Link2,
+  Link2Off,
+  Pencil,
+  Trash2,
+  Undo2,
+} from "lucide-react"
 import { Link } from "react-router-dom"
-import { LinkProjectModal } from "@/components/client-management/link-project-modal"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,7 +26,7 @@ import {
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
-import { deleteClient, getClient } from "@/lib/api"
+import { deleteClient, getClient, updateProject } from "@/lib/api"
 import { formatDateAdded } from "@/lib/dates"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import type { Client, ClientWithProjects } from "@/types/client"
@@ -31,6 +38,9 @@ interface ClientDetailSheetProps {
   onOpenChange: (open: boolean) => void
   onClientDeleted?: () => void
   onEdit?: (client: Client) => void
+  onRevert?: (client: Client) => void
+  onLinkProject?: (clientId: string) => void
+  onProjectsChanged?: () => void
 }
 
 function DetailRow({
@@ -69,26 +79,53 @@ function formatWebsiteHref(website: string): string {
   return /^https?:\/\//i.test(website) ? website : `https://${website}`
 }
 
-function LinkedProjectCard({ project }: { project: Project }) {
+function LinkedProjectCard({
+  project,
+  onUnlink,
+  unlinking,
+}: {
+  project: Project
+  onUnlink: (project: Project) => void
+  unlinking: boolean
+}) {
   return (
-    <Link
-      to={`/projects/${encodeURIComponent(project.id)}`}
-      className="block rounded-xl focus-ring"
-    >
-      <Card className="interactive-card h-full border-muted">
-        <CardHeader className="gap-2 pb-2">
-          <div className="flex items-start justify-between gap-2">
-            <CardTitle className="text-base leading-snug">{project.name}</CardTitle>
+    <Card className="h-full border-muted">
+      <CardHeader className="gap-2 pb-2">
+        <div className="flex items-start justify-between gap-2">
+          <Link
+            to={`/projects/${encodeURIComponent(project.id)}`}
+            className="rounded-sm focus-ring"
+          >
+            <CardTitle className="text-base leading-snug hover:underline">
+              {project.name}
+            </CardTitle>
+          </Link>
+          <div className="flex shrink-0 items-center gap-1">
             <ProjectStatusBadge status={project.status} />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Unlink ${project.name}`}
+              title="Unlink project"
+              disabled={unlinking}
+              onClick={() => onUnlink(project)}
+            >
+              {unlinking ? (
+                <Spinner className="size-4" />
+              ) : (
+                <Link2Off className="size-4" />
+              )}
+            </Button>
           </div>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          <p>
-            {formatProjectDate(project.startDate)} – {formatProjectDate(project.endDate)}
-          </p>
-        </CardContent>
-      </Card>
-    </Link>
+        </div>
+      </CardHeader>
+      <CardContent className="text-sm text-muted-foreground">
+        <p>
+          {formatProjectDate(project.startDate)} – {formatProjectDate(project.endDate)}
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -98,12 +135,18 @@ export function ClientDetailSheet({
   onOpenChange,
   onClientDeleted,
   onEdit,
+  onRevert,
+  onLinkProject,
+  onProjectsChanged,
 }: ClientDetailSheetProps) {
   const [client, setClient] = useState<ClientWithProjects | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const [linkModalOpen, setLinkModalOpen] = useState(false)
+  const [unlinkingProjectId, setUnlinkingProjectId] = useState<string | null>(
+    null,
+  )
+  const [unlinkingAll, setUnlinkingAll] = useState(false)
 
   const hasActiveProjects = useMemo(
     () => client?.projects.some((project) => project.status !== "archived") ?? false,
@@ -217,6 +260,64 @@ export function ClientDetailSheet({
     }
   }
 
+  async function handleUnlink(project: Project) {
+    if (!client) {
+      return
+    }
+
+    if (
+      !window.confirm(
+        `Unlink "${project.name}" from ${client.name}? The project itself will not be deleted.`,
+      )
+    ) {
+      return
+    }
+
+    setUnlinkingProjectId(project.id)
+
+    try {
+      await updateProject(project.id, { clientId: null })
+      showSuccessToast(`Unlinked ${project.name}`)
+      await refreshClient()
+      onProjectsChanged?.()
+    } catch (err) {
+      showErrorToast(humanizeApiError(err, "Failed to unlink project"))
+    } finally {
+      setUnlinkingProjectId(null)
+    }
+  }
+
+  async function handleUnlinkAll() {
+    if (!client || client.projects.length === 0) {
+      return
+    }
+
+    if (
+      !window.confirm(
+        `Unlink all ${client.projects.length} projects from ${client.name}? The projects themselves will not be deleted.`,
+      )
+    ) {
+      return
+    }
+
+    setUnlinkingAll(true)
+
+    try {
+      await Promise.all(
+        client.projects.map((project) =>
+          updateProject(project.id, { clientId: null }),
+        ),
+      )
+      showSuccessToast("Unlinked all projects")
+      await refreshClient()
+      onProjectsChanged?.()
+    } catch (err) {
+      showErrorToast(humanizeApiError(err, "Failed to unlink projects"))
+    } finally {
+      setUnlinkingAll(false)
+    }
+  }
+
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
@@ -257,6 +358,21 @@ export function ClientDetailSheet({
                   >
                     <Pencil className="size-4" />
                     Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={hasActiveProjects}
+                    title={
+                      hasActiveProjects
+                        ? "Cannot convert to a lead while linked to active projects"
+                        : undefined
+                    }
+                    onClick={() => onRevert?.(client)}
+                  >
+                    <Undo2 className="size-4" />
+                    Convert to Lead
                   </Button>
                   <Button
                     type="button"
@@ -341,15 +457,34 @@ export function ClientDetailSheet({
               <section className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-sm font-medium">Linked Projects</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setLinkModalOpen(true)}
-                  >
-                    <Link2 className="size-4" />
-                    Link a Project
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {client.projects.length > 0 ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        disabled={unlinkingAll}
+                        onClick={() => void handleUnlinkAll()}
+                      >
+                        {unlinkingAll ? (
+                          <Spinner className="size-4" />
+                        ) : (
+                          <Link2Off className="size-4" />
+                        )}
+                        Unlink All
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => client && onLinkProject?.(client.id)}
+                    >
+                      <Link2 className="size-4" />
+                      Link a Project
+                    </Button>
+                  </div>
                 </div>
 
                 {client.projects.length === 0 ? (
@@ -362,7 +497,12 @@ export function ClientDetailSheet({
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-2">
                     {client.projects.map((project) => (
-                      <LinkedProjectCard key={project.id} project={project} />
+                      <LinkedProjectCard
+                        key={project.id}
+                        project={project}
+                        onUnlink={(target) => void handleUnlink(target)}
+                        unlinking={unlinkingProjectId === project.id}
+                      />
                     ))}
                   </div>
                 )}
@@ -371,15 +511,6 @@ export function ClientDetailSheet({
           </div>
         ) : null}
       </SheetContent>
-
-      {client ? (
-        <LinkProjectModal
-          open={linkModalOpen}
-          onOpenChange={setLinkModalOpen}
-          clientId={client.id}
-          onLinked={() => void refreshClient()}
-        />
-      ) : null}
     </Sheet>
   )
 }

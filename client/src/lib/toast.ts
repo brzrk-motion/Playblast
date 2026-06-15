@@ -11,7 +11,7 @@ export function showSuccessToast(message: string) {
 }
 
 export function showErrorToast(message: string) {
-  toast.error(message, { duration: Infinity })
+  toast.error(message, { duration: DEFAULT_DURATION_MS })
 }
 
 export function showLoadingToast(message: string) {
