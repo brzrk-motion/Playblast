@@ -25,16 +25,37 @@ import type { ProjectServiceWithDetails } from "@/types/project-service"
 interface ProjectServicesSectionProps {
   projectId: string
   currency?: string
+  projectServices?: ProjectServiceWithDetails[]
+  onProjectServicesChange?: (services: ProjectServiceWithDetails[]) => void
+  servicesLoading?: boolean
 }
 
 export function ProjectServicesSection({
   projectId,
   currency = "USD",
+  projectServices: controlledProjectServices,
+  onProjectServicesChange,
+  servicesLoading: controlledLoading,
 }: ProjectServicesSectionProps) {
-  const [projectServices, setProjectServices] = useState<ProjectServiceWithDetails[]>(
-    [],
-  )
-  const [loading, setLoading] = useState(true)
+  const [internalProjectServices, setInternalProjectServices] = useState<
+    ProjectServiceWithDetails[]
+  >([])
+  const [internalLoading, setInternalLoading] = useState(true)
+  const isControlled = controlledProjectServices !== undefined
+  const projectServices = isControlled
+    ? controlledProjectServices
+    : internalProjectServices
+  const loading = isControlled ? (controlledLoading ?? false) : internalLoading
+
+  function updateProjectServices(
+    updater: (current: ProjectServiceWithDetails[]) => ProjectServiceWithDetails[],
+  ) {
+    if (isControlled) {
+      onProjectServicesChange?.(updater(projectServices))
+      return
+    }
+    setInternalProjectServices(updater)
+  }
   const [error, setError] = useState<string | null>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [removingServiceId, setRemovingServiceId] = useState<string | null>(null)
@@ -43,25 +64,35 @@ export function ProjectServicesSection({
   const loadProjectServices = useCallback(async () => {
     try {
       const data = await listProjectServices(projectId)
-      setProjectServices(data)
+      if (isControlled) {
+        onProjectServicesChange?.(data)
+      } else {
+        setInternalProjectServices(data)
+      }
       setError(null)
     } catch (err) {
       const message = humanizeApiError(err, "Failed to load project services")
       setError(message)
       showErrorToast(message)
     } finally {
-      setLoading(false)
+      if (!isControlled) {
+        setInternalLoading(false)
+      }
     }
-  }, [projectId])
+  }, [isControlled, onProjectServicesChange, projectId])
 
   useEffect(() => {
+    if (isControlled) {
+      return
+    }
+
     let cancelled = false
 
     async function fetchServices() {
       try {
         const data = await listProjectServices(projectId)
         if (!cancelled) {
-          setProjectServices(data)
+          setInternalProjectServices(data)
           setError(null)
         }
       } catch (err) {
@@ -72,7 +103,7 @@ export function ProjectServicesSection({
         }
       } finally {
         if (!cancelled) {
-          setLoading(false)
+          setInternalLoading(false)
         }
       }
     }
@@ -82,7 +113,7 @@ export function ProjectServicesSection({
     return () => {
       cancelled = true
     }
-  }, [projectId])
+  }, [isControlled, projectId])
 
   const attachedServiceIds = useMemo(
     () => new Set(projectServices.map((item) => item.serviceId)),
@@ -90,7 +121,7 @@ export function ProjectServicesSection({
   )
 
   function handleServiceAdded(added: ProjectServiceWithDetails) {
-    setProjectServices((current) => {
+    updateProjectServices((current) => {
       if (current.some((item) => item.serviceId === added.serviceId)) {
         return current
       }
@@ -107,7 +138,7 @@ export function ProjectServicesSection({
       const updated = await updateProjectService(projectId, serviceId, {
         overrideHours,
       })
-      setProjectServices((current) =>
+      updateProjectServices((current) =>
         current.map((item) => (item.serviceId === serviceId ? updated : item)),
       )
       if (overrideHours === null) {
@@ -125,7 +156,7 @@ export function ProjectServicesSection({
     setRemovingServiceId(serviceId)
     try {
       await removeProjectService(projectId, serviceId)
-      setProjectServices((current) =>
+      updateProjectServices((current) =>
         current.filter((item) => item.serviceId !== serviceId),
       )
       showSuccessToast("Service removed from project")
@@ -168,7 +199,9 @@ export function ProjectServicesSection({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setLoading(true)
+                  if (!isControlled) {
+                    setInternalLoading(true)
+                  }
                   void loadProjectServices()
                 }}
               >
