@@ -1,5 +1,5 @@
 import fs from "node:fs"
-import { Router, type Request } from "express"
+import { Router, type Request, type Response } from "express"
 import { getVideoPath } from "../config/paths.js"
 import { getParam } from "../utils/params.js"
 import { getVideoContentType } from "../utils/mime.js"
@@ -12,6 +12,42 @@ interface VideoParams {
 }
 
 const videoRouter = Router({ mergeParams: true })
+
+/**
+ * Pipe a file read stream to the response with full lifecycle handling.
+ *
+ * Without this, a client disconnecting mid-playback (seek, pause, tab close)
+ * destroys `res` and the read stream emits an unhandled 'error' event, which
+ * crashes the Node process. We tear down the stream on client close and
+ * swallow the resulting stream errors instead.
+ */
+function pipeVideo(
+  res: Response,
+  videoPath: string,
+  options?: { start: number; end: number },
+): void {
+  const stream = options
+    ? fs.createReadStream(videoPath, options)
+    : fs.createReadStream(videoPath)
+
+  const cleanup = () => stream.destroy()
+  res.on("close", cleanup)
+
+  stream.on("error", (err: NodeJS.ErrnoException) => {
+    res.off("close", cleanup)
+    if (res.headersSent) {
+      res.destroy()
+      return
+    }
+    if (err.code === "ENOENT") {
+      res.status(404).json({ error: "Video not found" })
+      return
+    }
+    res.status(500).json({ error: "Failed to read video" })
+  })
+
+  stream.pipe(res)
+}
 
 videoRouter.get("/", (req: Request<VideoParams>, res) => {
   const projectId = getParam(req.params.projectId)
@@ -75,7 +111,7 @@ videoRouter.get("/", (req: Request<VideoParams>, res) => {
       "Content-Type": contentType,
     })
 
-    fs.createReadStream(videoPath, { start, end }).pipe(res)
+    pipeVideo(res, videoPath, { start, end })
     return
   }
 
@@ -86,7 +122,7 @@ videoRouter.get("/", (req: Request<VideoParams>, res) => {
     "Accept-Ranges": "bytes",
   })
 
-  fs.createReadStream(videoPath).pipe(res)
+  pipeVideo(res, videoPath)
 })
 
 export default videoRouter

@@ -93,6 +93,27 @@ describe("client management schema", () => {
     db.close()
   })
 
+  it("auto-migrates a legacy database through the startup path (initDatabase)", () => {
+    const dbPath = createLegacyDatabase()
+
+    assert.doesNotThrow(() => {
+      initDatabase(dbPath)
+    })
+
+    const db = new Database(dbPath)
+    assert.ok(__testOnly_tableHasColumn(db, "projects", "clientId"))
+
+    const clientIndex = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_projects_clientId'",
+      )
+      .get() as { name: string } | undefined
+    assert.ok(clientIndex, "expected idx_projects_clientId to be created")
+
+    db.close()
+    closeDatabase()
+  })
+
   it("enforces contact_log.leadId foreign key", () => {
     const dbPath = path.join(tempDir, `fk-${randomSuffix()}.db`)
     initDatabase(dbPath)

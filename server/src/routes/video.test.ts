@@ -115,6 +115,25 @@ describe("GET /video/:projectId/:deliverableId/:version/:filename", () => {
 
     assert.equal(response.status, 400)
   })
+
+  it("does not crash the process when the client aborts mid-stream", async () => {
+    const url = `${baseUrl}/video/${projectId}/${deliverableId}/${version}/${filename}`
+
+    // Abort each request almost immediately so the response stream is
+    // destroyed while the file read stream is still piping.
+    for (let i = 0; i < 25; i += 1) {
+      const controller = new AbortController()
+      const request = fetch(url, { signal: controller.signal }).catch(() => {
+        // Aborted fetches reject; that is expected and intentional here.
+      })
+      controller.abort()
+      await request
+    }
+
+    // If unhandled stream errors had crashed the server, this would fail.
+    const healthy = await fetch(`${baseUrl}/health`)
+    assert.equal(healthy.status, 200)
+  })
 })
 
 describe("GET /video large file", () => {

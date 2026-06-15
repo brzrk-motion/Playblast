@@ -100,7 +100,9 @@ CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
 CREATE INDEX IF NOT EXISTS idx_contact_log_leadId ON contact_log(leadId);
 CREATE INDEX IF NOT EXISTS idx_clients_convertedFromLeadId ON clients(convertedFromLeadId);
-CREATE INDEX IF NOT EXISTS idx_projects_clientId ON projects(clientId);
+-- idx_projects_clientId is created by the migration runner (see migrations/001 and db.ts):
+-- projects.clientId is added by migration on legacy databases, so the index cannot live
+-- here without crashing schema load on databases that predate client management.
 CREATE INDEX IF NOT EXISTS idx_deliverables_projectId ON deliverables(projectId);
 CREATE INDEX IF NOT EXISTS idx_milestones_projectId ON milestones(projectId);
 CREATE INDEX IF NOT EXISTS idx_versions_deliverableId ON versions(deliverableId);

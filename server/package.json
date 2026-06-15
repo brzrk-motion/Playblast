@@ -7,6 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc && cp src/storage/schema.sql dist/storage/schema.sql && cp -r src/storage/migrations dist/storage/migrations",
     "start": "node dist/index.js",
+    "migrate": "tsx src/scripts/migrate.ts",
+    "migrate:prod": "node dist/scripts/migrate.js",
     "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {

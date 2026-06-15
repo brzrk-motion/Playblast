@@ -1,6 +1,6 @@
 import fs from "node:fs"
 import cors from "cors"
-import express from "express"
+import express, { type NextFunction, type Request, type Response } from "express"
 import path from "node:path"
 import { CLIENT_DIST } from "./config/paths.js"
 import { validateVideoParams } from "./middleware/validateParams.js"
@@ -35,6 +35,17 @@ export function createApp() {
       })
     })
   }
+
+  // Catch-all error handler so a thrown route error returns a controlled 500
+  // instead of bubbling up and potentially crashing the process.
+  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    console.error("Unhandled request error:", err)
+    if (res.headersSent) {
+      res.destroy()
+      return
+    }
+    res.status(500).json({ error: "Internal server error" })
+  })
 
   return app
 }

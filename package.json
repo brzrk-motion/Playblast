@@ -11,7 +11,8 @@
     "build": "npm run build -w client && npm run build -w server",
     "lint": "npm run lint -w client",
     "test": "npm run test -w server && npm run test -w client",
-    "build:deploy": "bash scripts/build-deploy.sh"
+    "build:deploy": "bash scripts/build-deploy.sh",
+    "migrate": "npm run migrate -w server"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
