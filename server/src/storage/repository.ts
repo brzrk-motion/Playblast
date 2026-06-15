@@ -29,6 +29,8 @@ import type {
   ProjectDetail,
   ProjectStatus,
   ProjectSummary,
+  ProjectService,
+  ProjectServiceWithDetails,
   Service,
   UpdateClientInput,
   UpdateCommentInput,
@@ -1625,18 +1627,159 @@ export function getServiceProjectUsage(
   }
 }
 
+interface ProjectServiceRow {
+  id: string
+  projectId: string
+  serviceId: string
+  quantity: number
+  createdAt: string
+}
+
+function rowToProjectService(row: ProjectServiceRow): ProjectService {
+  return {
+    id: row.id,
+    projectId: row.projectId,
+    serviceId: row.serviceId,
+    quantity: row.quantity,
+    createdAt: row.createdAt,
+  }
+}
+
+export function listProjectServices(
+  projectId: string,
+): ProjectServiceWithDetails[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT
+        ps.id,
+        ps.projectId,
+        ps.serviceId,
+        ps.quantity,
+        ps.createdAt,
+        s.id AS service_id,
+        s.name,
+        s.hourEstimate,
+        s.hourlyRate,
+        s.type,
+        s.createdAt AS service_createdAt,
+        s.updatedAt AS service_updatedAt
+       FROM project_services ps
+       INNER JOIN services s ON s.id = ps.serviceId
+       WHERE ps.projectId = ?
+       ORDER BY ps.createdAt ASC`,
+    )
+    .all(projectId) as Array<
+    ProjectServiceRow & {
+      service_id: string
+      name: string
+      hourEstimate: number
+      hourlyRate: number
+      type: string
+      service_createdAt: string
+      service_updatedAt: string
+    }
+  >
+
+  return rows.map((row) => ({
+    ...rowToProjectService(row),
+    service: rowToService({
+      id: row.service_id,
+      name: row.name,
+      hourEstimate: row.hourEstimate,
+      hourlyRate: row.hourlyRate,
+      type: row.type,
+      createdAt: row.service_createdAt,
+      updatedAt: row.service_updatedAt,
+    }),
+  }))
+}
+
+export type AddProjectServiceResult =
+  | ProjectServiceWithDetails
+  | "project_not_found"
+  | "service_not_found"
+  | "already_linked"
+
+export function addProjectService(
+  projectId: string,
+  serviceId: string,
+  quantity = 1,
+): AddProjectServiceResult {
+  return withTransaction(() => {
+    if (!getProject(projectId)) {
+      return "project_not_found"
+    }
+
+    const service = getService(serviceId)
+    if (!service) {
+      return "service_not_found"
+    }
+
+    const existing = getDb()
+      .prepare(
+        "SELECT id FROM project_services WHERE projectId = ? AND serviceId = ?",
+      )
+      .get(projectId, serviceId) as { id: string } | undefined
+
+    if (existing) {
+      return "already_linked"
+    }
+
+    const now = new Date().toISOString()
+    const projectService: ProjectService = {
+      id: randomUUID(),
+      projectId,
+      serviceId,
+      quantity,
+      createdAt: now,
+    }
+
+    getDb()
+      .prepare(
+        `INSERT INTO project_services (
+          id, projectId, serviceId, quantity, createdAt
+        ) VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run(
+        projectService.id,
+        projectService.projectId,
+        projectService.serviceId,
+        projectService.quantity,
+        projectService.createdAt,
+      )
+
+    return {
+      ...projectService,
+      service,
+    }
+  })
+}
+
+export function removeProjectService(
+  projectId: string,
+  serviceId: string,
+): "removed" | "not_found" {
+  return withTransaction(() => {
+    const result = getDb()
+      .prepare(
+        "DELETE FROM project_services WHERE projectId = ? AND serviceId = ?",
+      )
+      .run(projectId, serviceId)
+
+    return result.changes > 0 ? "removed" : "not_found"
+  })
+}
+
 /** @internal Associates a catalog service with a project (for quoting/budget). */
 export function linkServiceToProject(
   projectId: string,
   serviceId: string,
 ): void {
-  withTransaction(() => {
-    const now = new Date().toISOString()
-    getDb()
-      .prepare(
-        `INSERT INTO project_services (projectId, serviceId, createdAt)
-         VALUES (?, ?, ?)`,
-      )
-      .run(projectId, serviceId, now)
-  })
+  const result = addProjectService(projectId, serviceId)
+  if (result === "project_not_found" || result === "service_not_found") {
+    throw new Error(`Cannot link service ${serviceId} to project ${projectId}`)
+  }
+  if (result === "already_linked") {
+    return
+  }
 }

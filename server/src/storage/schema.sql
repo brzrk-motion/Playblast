@@ -121,10 +121,13 @@ CREATE TABLE IF NOT EXISTS services (
 CREATE INDEX IF NOT EXISTS idx_services_type ON services(type);
 
 CREATE TABLE IF NOT EXISTS project_services (
+  id TEXT PRIMARY KEY,
   projectId TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   serviceId TEXT NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+  quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 1),
   createdAt TEXT NOT NULL,
-  PRIMARY KEY (projectId, serviceId)
+  UNIQUE (projectId, serviceId)
 );
 
 CREATE INDEX IF NOT EXISTS idx_project_services_serviceId ON project_services(serviceId);
+CREATE INDEX IF NOT EXISTS idx_project_services_projectId ON project_services(projectId);

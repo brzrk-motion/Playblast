@@ -1,0 +1,3 @@
+-- Migration 004: project_services row identity and quantity
+-- Legacy databases with composite PK (projectId, serviceId) are rebuilt in db.ts
+-- when the id column is missing. Fresh installs receive the final DDL from schema.sql.

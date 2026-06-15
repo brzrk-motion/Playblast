@@ -43,10 +43,13 @@ import {
   listDeliverableSummaries,
   listLeads,
   listMilestones,
+  listProjectServices,
   listProjectSummaries,
   listProjects,
   listServices,
+  addProjectService,
   linkServiceToProject,
+  removeProjectService,
   listVersions,
   updateClient,
   updateComment,
@@ -667,5 +670,34 @@ describe("SQLite data store", () => {
       ["Alpha Campaign", "Beta Launch"],
     )
     assert.equal(getServiceProjectUsage("missing-service"), undefined)
+  })
+
+  it("manages project service links with quantity", () => {
+    const service = createService({
+      name: "Explainer Video",
+      hourEstimate: 20,
+      hourlyRate: 180,
+      type: "animated",
+    })
+    const project = createProject({ name: "Explainer Campaign" })
+
+    const attached = addProjectService(project.id, service.id, 3)
+    assert.notEqual(attached, "already_linked")
+    if (typeof attached === "string") {
+      throw new Error(`Unexpected result: ${attached}`)
+    }
+    assert.equal(attached.quantity, 3)
+    assert.equal(attached.service.name, "Explainer Video")
+
+    assert.equal(addProjectService(project.id, service.id), "already_linked")
+
+    const listed = listProjectServices(project.id)
+    assert.equal(listed.length, 1)
+    assert.equal(listed[0]?.quantity, 3)
+
+    assert.equal(removeProjectService(project.id, service.id), "removed")
+    assert.equal(removeProjectService(project.id, service.id), "not_found")
+    assert.equal(getService(service.id)?.name, "Explainer Video")
+    assert.equal(listProjectServices(project.id).length, 0)
   })
 })

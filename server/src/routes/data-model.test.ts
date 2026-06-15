@@ -1017,4 +1017,91 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     )
     assert.equal(missingUsageResponse.status, 404)
   })
+
+  it("lists, attaches, and removes project services via API routes", async () => {
+    const projectResponse = await createProject("svc-proj-api", "Service Project")
+    assert.equal(projectResponse.status, 201)
+
+    const serviceResponse = await fetch(`${baseUrl}/api/services`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Logo Design",
+        hourEstimate: 8,
+        hourlyRate: 150,
+        type: "static",
+      }),
+    })
+    assert.equal(serviceResponse.status, 201)
+    const service = (await serviceResponse.json()) as { id: string; name: string }
+
+    const emptyListResponse = await fetch(
+      `${baseUrl}/api/projects/svc-proj-api/services`,
+    )
+    assert.equal(emptyListResponse.status, 200)
+    assert.deepEqual(await emptyListResponse.json(), [])
+
+    const attachResponse = await fetch(
+      `${baseUrl}/api/projects/svc-proj-api/services`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serviceId: service.id, quantity: 2 }),
+      },
+    )
+    assert.equal(attachResponse.status, 201)
+    const attached = (await attachResponse.json()) as {
+      id: string
+      projectId: string
+      serviceId: string
+      quantity: number
+      service: { name: string }
+    }
+    assert.equal(attached.projectId, "svc-proj-api")
+    assert.equal(attached.serviceId, service.id)
+    assert.equal(attached.quantity, 2)
+    assert.equal(attached.service.name, "Logo Design")
+
+    const duplicateResponse = await fetch(
+      `${baseUrl}/api/projects/svc-proj-api/services`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serviceId: service.id }),
+      },
+    )
+    assert.equal(duplicateResponse.status, 409)
+
+    const listResponse = await fetch(
+      `${baseUrl}/api/projects/svc-proj-api/services`,
+    )
+    assert.equal(listResponse.status, 200)
+    const listed = (await listResponse.json()) as Array<{ serviceId: string }>
+    assert.equal(listed.length, 1)
+    assert.equal(listed[0]?.serviceId, service.id)
+
+    const deleteResponse = await fetch(
+      `${baseUrl}/api/projects/svc-proj-api/services/${service.id}`,
+      { method: "DELETE" },
+    )
+    assert.equal(deleteResponse.status, 204)
+
+    const serviceStillExistsResponse = await fetch(`${baseUrl}/api/services`)
+    assert.equal(serviceStillExistsResponse.status, 200)
+    const services = (await serviceStillExistsResponse.json()) as Array<{
+      id: string
+    }>
+    assert.ok(services.some((entry) => entry.id === service.id))
+
+    const missingDeleteResponse = await fetch(
+      `${baseUrl}/api/projects/svc-proj-api/services/${service.id}`,
+      { method: "DELETE" },
+    )
+    assert.equal(missingDeleteResponse.status, 404)
+
+    const missingProjectResponse = await fetch(
+      `${baseUrl}/api/projects/missing-project/services`,
+    )
+    assert.equal(missingProjectResponse.status, 404)
+  })
 })

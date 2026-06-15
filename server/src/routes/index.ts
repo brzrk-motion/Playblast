@@ -8,6 +8,7 @@ import clientsRouter from "./clients.js"
 import deliverablesRouter, { deliverableByIdRouter } from "./deliverables.js"
 import leadsRouter from "./leads.js"
 import milestonesRouter, { milestoneByIdRouter } from "./milestones.js"
+import projectServicesRouter from "./project-services.js"
 import projectsRouter from "./projects.js"
 import servicesRouter from "./services.js"
 import uploadRouter from "./upload.js"
@@ -25,6 +26,7 @@ apiRouter.use(
   deliverablesRouter,
 )
 apiRouter.use("/projects/:projectId/milestones", milestonesRouter)
+apiRouter.use("/projects/:projectId/services", projectServicesRouter)
 apiRouter.use("/deliverables", deliverableByIdRouter)
 apiRouter.use("/milestones", milestoneByIdRouter)
 apiRouter.use("/versions", versionsRouter)
