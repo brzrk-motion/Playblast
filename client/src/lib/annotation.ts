@@ -1,4 +1,5 @@
 import type { AnnotationShape, FrameAnnotation } from "@/types/annotation"
+import { randomUUID } from "@/lib/uuid"
 
 /** Seconds within which an annotation is shown at the current playhead */
 export const ANNOTATION_TIMESTAMP_THRESHOLD = 0.5
@@ -12,7 +13,7 @@ export function isNearTimestamp(
 }
 
 export function createShapeId(): string {
-  return `shape-${crypto.randomUUID()}`
+  return `shape-${randomUUID()}`
 }
 
 export function pointsToSvgPath(points: number[]): string {

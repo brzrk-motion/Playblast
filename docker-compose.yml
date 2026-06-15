@@ -1,5 +1,6 @@
 services:
   playblast:
+    image: playblast:latest
     build: .
     init: true
     ports:

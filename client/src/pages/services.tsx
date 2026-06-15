@@ -53,6 +53,7 @@ import {
   type SortDirection,
 } from "@/lib/services"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { randomUUID } from "@/lib/uuid"
 import { cn } from "@/lib/utils"
 import type { Service } from "@/types/service"
 
@@ -246,7 +247,7 @@ export function ServicesPage() {
     setFormError(null)
 
     const payload = serviceFormToPayload(values)
-    const optimisticId = `optimistic-${crypto.randomUUID()}`
+    const optimisticId = `optimistic-${randomUUID()}`
     const optimisticService: Service = {
       id: optimisticId,
       ...payload,
