@@ -3,6 +3,7 @@ import {
   createService,
   deleteService,
   getService,
+  getServiceProjectUsage,
   listServices,
   updateService,
 } from "../storage/index.js"
@@ -97,6 +98,18 @@ servicesRouter.post("/", (req, res) => {
   })
 
   res.status(201).json(service)
+})
+
+servicesRouter.get("/:id/usage", (req, res) => {
+  const serviceId = getServiceIdParam(req)
+  const usage = getServiceProjectUsage(serviceId)
+
+  if (!usage) {
+    res.status(404).json({ error: "Service not found." })
+    return
+  }
+
+  res.json(usage)
 })
 
 servicesRouter.put("/:id", (req, res) => {

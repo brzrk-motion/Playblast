@@ -17,27 +17,31 @@ import {
   type ServiceFormFieldErrors,
   type ServiceFormValues,
 } from "@/lib/service-form"
+import type { Service } from "@/types/service"
 
-interface AddServiceModalProps {
+interface ServiceFormModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  service?: Service | null
   submitting?: boolean
   error?: string | null
   onSubmit: (values: ServiceFormValues) => void | Promise<void>
 }
 
-export function AddServiceModal({
+export function ServiceFormModal({
   open,
   onOpenChange,
+  service = null,
   submitting = false,
   error,
   onSubmit,
-}: AddServiceModalProps) {
+}: ServiceFormModalProps) {
+  const isEdit = service !== null
   const { values, update, syncOpenState, handleOpenChange, reset } =
-    useServiceForm()
+    useServiceForm(service)
   const [fieldErrors, setFieldErrors] = useState<ServiceFormFieldErrors>({})
 
-  syncOpenState(open)
+  syncOpenState(open, service)
 
   function clearFieldError(key: keyof ServiceFormValues) {
     setFieldErrors((current) => {
@@ -63,8 +67,10 @@ export function AddServiceModal({
 
     try {
       await onSubmit(values)
-      reset()
-      setFieldErrors({})
+      if (!isEdit) {
+        reset()
+        setFieldErrors({})
+      }
     } catch {
       // API errors are surfaced via the error prop.
     }
@@ -78,9 +84,11 @@ export function AddServiceModal({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <form onSubmit={(event) => void handleSubmit(event)}>
           <DialogHeader>
-            <DialogTitle>Add Service</DialogTitle>
+            <DialogTitle>{isEdit ? "Edit Service" : "Add Service"}</DialogTitle>
             <DialogDescription>
-              Add a catalog offering with estimated hours and hourly rate.
+              {isEdit
+                ? "Update this catalog offering."
+                : "Add a catalog offering with estimated hours and hourly rate."}
             </DialogDescription>
           </DialogHeader>
 
@@ -106,8 +114,10 @@ export function AddServiceModal({
               {submitting ? (
                 <>
                   <Spinner className="size-4" />
-                  Adding…
+                  {isEdit ? "Saving…" : "Adding…"}
                 </>
+              ) : isEdit ? (
+                "Save Changes"
               ) : (
                 "Add Service"
               )}

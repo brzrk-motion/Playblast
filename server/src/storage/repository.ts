@@ -1596,3 +1596,47 @@ export function deleteService(id: string): "deleted" | "not_found" {
     return result.changes > 0 ? "deleted" : "not_found"
   })
 }
+
+export interface ServiceProjectUsage {
+  projectCount: number
+  projects: Array<{ id: string; name: string }>
+}
+
+export function getServiceProjectUsage(
+  serviceId: string,
+): ServiceProjectUsage | undefined {
+  if (!getService(serviceId)) {
+    return undefined
+  }
+
+  const projects = getDb()
+    .prepare(
+      `SELECT p.id, p.name
+       FROM project_services ps
+       JOIN projects p ON p.id = ps.projectId
+       WHERE ps.serviceId = ?
+       ORDER BY p.name ASC`,
+    )
+    .all(serviceId) as Array<{ id: string; name: string }>
+
+  return {
+    projectCount: projects.length,
+    projects,
+  }
+}
+
+/** @internal Associates a catalog service with a project (for quoting/budget). */
+export function linkServiceToProject(
+  projectId: string,
+  serviceId: string,
+): void {
+  withTransaction(() => {
+    const now = new Date().toISOString()
+    getDb()
+      .prepare(
+        `INSERT INTO project_services (projectId, serviceId, createdAt)
+         VALUES (?, ?, ?)`,
+      )
+      .run(projectId, serviceId, now)
+  })
+}

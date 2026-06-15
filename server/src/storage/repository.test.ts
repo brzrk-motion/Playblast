@@ -34,6 +34,7 @@ import {
   getMilestone,
   getProject,
   getService,
+  getServiceProjectUsage,
   getVersionByLabel,
   listClients,
   listComments,
@@ -45,6 +46,7 @@ import {
   listProjectSummaries,
   listProjects,
   listServices,
+  linkServiceToProject,
   listVersions,
   updateClient,
   updateComment,
@@ -643,5 +645,27 @@ describe("SQLite data store", () => {
     assert.equal(getService(staticService.id), undefined)
     assert.equal(deleteService(staticService.id), "not_found")
     assert.equal(listServices().length, 1)
+  })
+
+  it("reports linked projects for service usage", () => {
+    const service = createService({
+      name: "Brand Film",
+      hourEstimate: 40,
+      hourlyRate: 200,
+      type: "animated",
+    })
+    const alpha = createProject({ name: "Alpha Campaign" })
+    const beta = createProject({ name: "Beta Launch" })
+
+    linkServiceToProject(alpha.id, service.id)
+    linkServiceToProject(beta.id, service.id)
+
+    const usage = getServiceProjectUsage(service.id)
+    assert.equal(usage?.projectCount, 2)
+    assert.deepEqual(
+      usage?.projects.map((project) => project.name),
+      ["Alpha Campaign", "Beta Launch"],
+    )
+    assert.equal(getServiceProjectUsage("missing-service"), undefined)
   })
 })

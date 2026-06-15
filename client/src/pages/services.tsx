@@ -7,8 +7,8 @@ import {
   MoreHorizontal,
   Plus,
 } from "lucide-react"
-import { AddServiceModal } from "@/components/services/add-service-modal"
-import { EditServiceModal } from "@/components/services/edit-service-modal"
+import { DeleteServiceDialog } from "@/components/services/delete-service-dialog"
+import { ServiceFormModal } from "@/components/services/service-form-modal"
 import { ServiceTypeBadge } from "@/components/services/service-type-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -37,6 +37,7 @@ import {
 import {
   createService,
   deleteService,
+  getServiceProjectUsage,
   listServices,
   updateService,
 } from "@/lib/api"
@@ -103,10 +104,15 @@ export function ServicesPage() {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [addModalOpen, setAddModalOpen] = useState(false)
-  const [editModalOpen, setEditModalOpen] = useState(false)
-  const [selectedService, setSelectedService] = useState<Service | null>(null)
+  const [formModalOpen, setFormModalOpen] = useState(false)
+  const [editingService, setEditingService] = useState<Service | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null)
+  const [deleteUsageLoading, setDeleteUsageLoading] = useState(false)
+  const [deleteUsageError, setDeleteUsageError] = useState<string | null>(null)
+  const [linkedProjectNames, setLinkedProjectNames] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [sortField, setSortField] = useState<ServiceSortField>("name")
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
@@ -175,14 +181,67 @@ export function ServicesPage() {
   }
 
   function openCreateModal() {
+    setEditingService(null)
     setFormError(null)
-    setAddModalOpen(true)
+    setFormModalOpen(true)
   }
 
   function openEditModal(service: Service) {
-    setSelectedService(service)
+    setEditingService(service)
     setFormError(null)
-    setEditModalOpen(true)
+    setFormModalOpen(true)
+  }
+
+  function handleFormModalOpenChange(open: boolean) {
+    setFormModalOpen(open)
+    if (!open) {
+      setEditingService(null)
+      setFormError(null)
+    }
+  }
+
+  function resetDeleteDialogState() {
+    setServiceToDelete(null)
+    setDeleteUsageLoading(false)
+    setDeleteUsageError(null)
+    setLinkedProjectNames([])
+  }
+
+  function openDeleteDialog(service: Service) {
+    setServiceToDelete(service)
+    setDeleteDialogOpen(true)
+    setDeleteUsageLoading(true)
+    setDeleteUsageError(null)
+    setLinkedProjectNames([])
+
+    void getServiceProjectUsage(service.id)
+      .then((usage) => {
+        setLinkedProjectNames(usage.projects.map((project) => project.name))
+      })
+      .catch((err) => {
+        setDeleteUsageError(
+          humanizeApiError(err, "Failed to check linked projects"),
+        )
+      })
+      .finally(() => {
+        setDeleteUsageLoading(false)
+      })
+  }
+
+  function handleDeleteDialogOpenChange(open: boolean) {
+    setDeleteDialogOpen(open)
+    if (!open) {
+      resetDeleteDialogState()
+    }
+  }
+
+  async function handleFormSubmit(values: ServiceFormValues) {
+    if (editingService) {
+      await handleEdit(values)
+      return
+    }
+
+    await handleCreate(values)
   }
 
   async function handleCreate(values: ServiceFormValues) {
@@ -222,7 +281,7 @@ export function ServicesPage() {
   }
 
   async function handleEdit(values: ServiceFormValues) {
-    if (!selectedService) {
+    if (!editingService) {
       return
     }
 
@@ -231,12 +290,11 @@ export function ServicesPage() {
 
     try {
       const updated = await updateService(
-        selectedService.id,
+        editingService.id,
         serviceFormToPayload(values),
       )
       showSuccessToast("Service updated")
-      setEditModalOpen(false)
-      setSelectedService(null)
+      handleFormModalOpenChange(false)
       setServices((current) =>
         current.map((service) =>
           service.id === updated.id ? updated : service,
@@ -246,26 +304,30 @@ export function ServicesPage() {
       const message = humanizeApiError(err, "Failed to save service")
       setFormError(message)
       showErrorToast(message)
+      throw err
     } finally {
       setSubmitting(false)
     }
   }
 
-  async function handleDelete(service: Service) {
-    if (
-      !window.confirm(
-        `Delete service "${service.name}"? This cannot be undone.`,
-      )
-    ) {
+  async function handleConfirmDelete() {
+    if (!serviceToDelete) {
       return
     }
 
+    setDeleting(true)
+
     try {
-      await deleteService(service.id)
+      await deleteService(serviceToDelete.id)
+      setServices((current) =>
+        current.filter((service) => service.id !== serviceToDelete.id),
+      )
       showSuccessToast("Service deleted")
-      await fetchServices()
+      handleDeleteDialogOpenChange(false)
     } catch (err) {
       showErrorToast(humanizeApiError(err, "Failed to delete service"))
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -376,7 +438,7 @@ export function ServicesPage() {
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             variant="destructive"
-                            onClick={() => void handleDelete(service)}
+                            onClick={() => openDeleteDialog(service)}
                           >
                             Delete
                           </DropdownMenuItem>
@@ -391,21 +453,24 @@ export function ServicesPage() {
         </CardContent>
       </Card>
 
-      <AddServiceModal
-        open={addModalOpen}
-        onOpenChange={setAddModalOpen}
+      <ServiceFormModal
+        open={formModalOpen}
+        onOpenChange={handleFormModalOpenChange}
+        service={editingService}
         submitting={submitting}
         error={formError}
-        onSubmit={(values) => void handleCreate(values)}
+        onSubmit={(values) => handleFormSubmit(values)}
       />
 
-      <EditServiceModal
-        open={editModalOpen}
-        onOpenChange={setEditModalOpen}
-        service={selectedService}
-        submitting={submitting}
-        error={formError}
-        onSubmit={(values) => void handleEdit(values)}
+      <DeleteServiceDialog
+        service={serviceToDelete}
+        open={deleteDialogOpen}
+        onOpenChange={handleDeleteDialogOpenChange}
+        linkedProjectNames={linkedProjectNames}
+        loadingUsage={deleteUsageLoading}
+        usageError={deleteUsageError}
+        deleting={deleting}
+        onConfirm={() => void handleConfirmDelete()}
       />
     </div>
   )
