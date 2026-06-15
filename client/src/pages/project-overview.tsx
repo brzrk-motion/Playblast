@@ -27,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DeliverableStatusBadge } from "@/components/project/deliverable-status-badge"
-import { ProjectClientBadge } from "@/components/project/project-client-badge"
+import { ProjectClientInfoBlock } from "@/components/project/project-client-info-block"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
 import { ClientDetailSheet } from "@/components/client-management/client-detail-sheet"
 import {
@@ -388,12 +388,6 @@ export function ProjectOverviewPage() {
               <h2 className="type-page-title">{project.name}</h2>
               <ProjectStatusBadge status={project.status} />
             </div>
-            {project.client ? (
-              <ProjectClientBadge
-                client={project.client}
-                onClick={setViewClientId}
-              />
-            ) : null}
             {project.description ? (
               <p className="max-w-2xl text-sm text-muted-foreground">
                 {project.description}
@@ -405,6 +399,12 @@ export function ProjectOverviewPage() {
             Edit project
           </Button>
         </div>
+        <ProjectClientInfoBlock
+          projectId={project.id}
+          client={project.client}
+          onViewClient={setViewClientId}
+          onProjectUpdated={setProject}
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
