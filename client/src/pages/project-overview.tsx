@@ -34,6 +34,7 @@ import {
   type DeliverableFormValues,
 } from "@/components/project/deliverable-dialog"
 import { ProjectFormSheet } from "@/components/project/project-form-sheet"
+import { ProjectServicesSection } from "@/components/project/project-services-section"
 import {
   projectFormToPayload,
   type ProjectFormValues,
@@ -523,6 +524,8 @@ export function ProjectOverviewPage() {
           </form>
         </CardContent>
       </Card>
+
+      <ProjectServicesSection projectId={project.id} />
 
       <Card>
         <CardHeader>

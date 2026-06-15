@@ -14,6 +14,25 @@ export const SERVICE_TYPE_STYLES: Record<ServiceType, string> = {
   animated: "border-primary/30 bg-primary/10 text-primary",
 }
 
+export function filterServices(services: Service[], query: string): Service[] {
+  const normalized = query.trim().toLowerCase()
+  if (!normalized) {
+    return services
+  }
+
+  return services.filter((service) => {
+    const typeLabel = SERVICE_TYPE_LABELS[service.type].toLowerCase()
+    return (
+      service.name.toLowerCase().includes(normalized) ||
+      typeLabel.includes(normalized)
+    )
+  })
+}
+
+export function formatHourEstimate(hours: number): string {
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1)
+}
+
 export function sortServices(
   services: Service[],
   field: ServiceSortField,
