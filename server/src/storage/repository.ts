@@ -1700,6 +1700,7 @@ interface ProjectServiceRow {
   projectId: string
   serviceId: string
   quantity: number
+  overrideHours: number | null
   createdAt: string
 }
 
@@ -1709,6 +1710,7 @@ function rowToProjectService(row: ProjectServiceRow): ProjectService {
     projectId: row.projectId,
     serviceId: row.serviceId,
     quantity: row.quantity,
+    overrideHours: row.overrideHours ?? null,
     createdAt: row.createdAt,
   }
 }
@@ -1723,6 +1725,7 @@ export function listProjectServices(
         ps.projectId,
         ps.serviceId,
         ps.quantity,
+        ps.overrideHours,
         ps.createdAt,
         s.id AS service_id,
         s.name,
@@ -1799,20 +1802,22 @@ export function addProjectService(
       projectId,
       serviceId,
       quantity,
+      overrideHours: null,
       createdAt: now,
     }
 
     getDb()
       .prepare(
         `INSERT INTO project_services (
-          id, projectId, serviceId, quantity, createdAt
-        ) VALUES (?, ?, ?, ?, ?)`,
+          id, projectId, serviceId, quantity, overrideHours, createdAt
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
       )
       .run(
         projectService.id,
         projectService.projectId,
         projectService.serviceId,
         projectService.quantity,
+        projectService.overrideHours,
         projectService.createdAt,
       )
 
@@ -1835,6 +1840,44 @@ export function removeProjectService(
       .run(projectId, serviceId)
 
     return result.changes > 0 ? "removed" : "not_found"
+  })
+}
+
+export type UpdateProjectServiceResult =
+  | ProjectServiceWithDetails
+  | "not_found"
+
+export function updateProjectService(
+  projectId: string,
+  serviceId: string,
+  input: { overrideHours: number | null },
+): UpdateProjectServiceResult {
+  return withTransaction(() => {
+    const existing = getDb()
+      .prepare(
+        "SELECT id FROM project_services WHERE projectId = ? AND serviceId = ?",
+      )
+      .get(projectId, serviceId) as { id: string } | undefined
+
+    if (!existing) {
+      return "not_found"
+    }
+
+    getDb()
+      .prepare(
+        "UPDATE project_services SET overrideHours = ? WHERE projectId = ? AND serviceId = ?",
+      )
+      .run(input.overrideHours, projectId, serviceId)
+
+    const updated = listProjectServices(projectId).find(
+      (item) => item.serviceId === serviceId,
+    )
+
+    if (!updated) {
+      return "not_found"
+    }
+
+    return updated
   })
 }
 

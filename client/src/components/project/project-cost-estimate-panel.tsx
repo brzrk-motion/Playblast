@@ -1,5 +1,6 @@
 import { Calculator } from "lucide-react"
 import { ServiceTypeBadge } from "@/components/services/service-type-badge"
+import { Badge } from "@/components/ui/badge"
 import {
   Table,
   TableBody,
@@ -10,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { formatEstimateCurrency } from "@/lib/budget"
-import { calculateProjectCostEstimate } from "@/lib/service-estimate"
+import { calculateProjectCostEstimate, isProjectServiceHoursOverridden } from "@/lib/service-estimate"
 import { formatHourEstimate, SERVICE_TYPE_LABELS } from "@/lib/services"
 import type { ProjectServiceWithDetails } from "@/types/project-service"
 
@@ -70,7 +71,21 @@ export function ProjectCostEstimatePanel({
                     <ServiceTypeBadge type={item.service.type} />
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatHourEstimate(hours)}
+                    <span
+                      className={
+                        isProjectServiceHoursOverridden(item) ? "italic" : undefined
+                      }
+                    >
+                      {formatHourEstimate(hours)}
+                    </span>
+                    {isProjectServiceHoursOverridden(item) ? (
+                      <Badge
+                        variant="secondary"
+                        className="ml-2 h-5 px-1.5 text-[10px] uppercase"
+                      >
+                        Custom
+                      </Badge>
+                    ) : null}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatEstimateCurrency(item.service.hourlyRate, currency)}/hr

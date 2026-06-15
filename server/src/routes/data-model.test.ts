@@ -1199,6 +1199,55 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(listed.length, 1)
     assert.equal(listed[0]?.serviceId, service.id)
 
+    const patchResponse = await fetch(
+      `${baseUrl}/api/projects/svc-proj-api/services/${service.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ overrideHours: 10 }),
+      },
+    )
+    assert.equal(patchResponse.status, 200)
+    const patched = (await patchResponse.json()) as {
+      overrideHours: number | null
+      service: { hourEstimate: number }
+    }
+    assert.equal(patched.overrideHours, 10)
+    assert.equal(patched.service.hourEstimate, 8)
+
+    const catalogResponse = await fetch(`${baseUrl}/api/services`)
+    assert.equal(catalogResponse.status, 200)
+    const catalog = (await catalogResponse.json()) as Array<{
+      id: string
+      hourEstimate: number
+    }>
+    assert.equal(
+      catalog.find((entry) => entry.id === service.id)?.hourEstimate,
+      8,
+    )
+
+    const resetResponse = await fetch(
+      `${baseUrl}/api/projects/svc-proj-api/services/${service.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ overrideHours: null }),
+      },
+    )
+    assert.equal(resetResponse.status, 200)
+    const reset = (await resetResponse.json()) as { overrideHours: number | null }
+    assert.equal(reset.overrideHours, null)
+
+    const invalidPatchResponse = await fetch(
+      `${baseUrl}/api/projects/svc-proj-api/services/${service.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ overrideHours: -1 }),
+      },
+    )
+    assert.equal(invalidPatchResponse.status, 400)
+
     const deleteResponse = await fetch(
       `${baseUrl}/api/projects/svc-proj-api/services/${service.id}`,
       { method: "DELETE" },

@@ -4,10 +4,49 @@ import {
   getProject,
   listProjectServices,
   removeProjectService,
+  updateProjectService,
 } from "../storage/index.js"
 import { getParam, getProjectIdParam } from "../utils/params.js"
 
 const projectServicesRouter = Router({ mergeParams: true })
+
+function parsePositiveNumber(
+  value: unknown,
+  fieldName: string,
+): { value: number } | { error: string } {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return { error: `${fieldName} must be greater than 0.` }
+  }
+
+  return { value }
+}
+
+function hasAtMostOneDecimalPlace(value: number): boolean {
+  return Math.round(value * 10) / 10 === value
+}
+
+function parseOverrideHours(
+  value: unknown,
+): { value: number | null } | { error: string } {
+  if (value === null) {
+    return { value: null }
+  }
+
+  if (value === undefined) {
+    return { error: "overrideHours is required." }
+  }
+
+  const parsed = parsePositiveNumber(value, "overrideHours")
+  if ("error" in parsed) {
+    return parsed
+  }
+
+  if (!hasAtMostOneDecimalPlace(parsed.value)) {
+    return { error: "overrideHours allows at most one decimal place." }
+  }
+
+  return { value: parsed.value }
+}
 
 projectServicesRouter.get("/", (req, res) => {
   const projectId = getProjectIdParam(req)
@@ -66,6 +105,33 @@ projectServicesRouter.post("/", (req, res) => {
   }
 
   res.status(201).json(result)
+})
+
+projectServicesRouter.patch("/:serviceId", (req, res) => {
+  const projectId = getProjectIdParam(req)
+  const serviceId = getParam(req.params.serviceId)
+
+  if (!getProject(projectId)) {
+    res.status(404).json({ error: "Project not found." })
+    return
+  }
+
+  const overrideHoursResult = parseOverrideHours(req.body?.overrideHours)
+  if ("error" in overrideHoursResult) {
+    res.status(400).json({ error: overrideHoursResult.error })
+    return
+  }
+
+  const result = updateProjectService(projectId, serviceId, {
+    overrideHours: overrideHoursResult.value,
+  })
+
+  if (result === "not_found") {
+    res.status(404).json({ error: "Service is not attached to this project." })
+    return
+  }
+
+  res.json(result)
 })
 
 projectServicesRouter.delete("/:serviceId", (req, res) => {
