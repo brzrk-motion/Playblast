@@ -15,6 +15,7 @@ import type {
   CreateLeadInput,
   CreateMilestoneInput,
   CreateProjectInput,
+  CreateServiceInput,
   CreateVersionInput,
   Deliverable,
   DeliverableStatus,
@@ -28,12 +29,14 @@ import type {
   ProjectDetail,
   ProjectStatus,
   ProjectSummary,
+  Service,
   UpdateClientInput,
   UpdateCommentInput,
   UpdateDeliverableInput,
   UpdateLeadInput,
   UpdateMilestoneInput,
   UpdateProjectInput,
+  UpdateServiceInput,
   Version,
   VersionStatus,
 } from "../types/index.js"
@@ -130,6 +133,16 @@ interface ClientRow {
   website: string | null
   notes: string | null
   convertedFromLeadId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface ServiceRow {
+  id: string
+  name: string
+  hourEstimate: number
+  hourlyRate: number
+  type: string
   createdAt: string
   updatedAt: string
 }
@@ -1475,5 +1488,111 @@ export function convertLeadToClient(
       .run("converted", now, leadId)
 
     return client
+  })
+}
+
+function rowToService(row: ServiceRow): Service {
+  return {
+    id: row.id,
+    name: row.name,
+    hourEstimate: row.hourEstimate,
+    hourlyRate: row.hourlyRate,
+    type: row.type as Service["type"],
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+}
+
+export function listServices(): Service[] {
+  const rows = getDb()
+    .prepare(
+      "SELECT * FROM services ORDER BY updatedAt DESC, createdAt DESC",
+    )
+    .all() as ServiceRow[]
+
+  return rows.map(rowToService)
+}
+
+export function getService(id: string): Service | undefined {
+  const row = getDb()
+    .prepare("SELECT * FROM services WHERE id = ?")
+    .get(id) as ServiceRow | undefined
+
+  return row ? rowToService(row) : undefined
+}
+
+export function createService(input: CreateServiceInput): Service {
+  return withTransaction(() => {
+    const now = new Date().toISOString()
+    const service: Service = {
+      id: randomUUID(),
+      name: input.name,
+      hourEstimate: input.hourEstimate,
+      hourlyRate: input.hourlyRate,
+      type: input.type,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    getDb()
+      .prepare(
+        `INSERT INTO services (
+          id, name, hourEstimate, hourlyRate, type, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        service.id,
+        service.name,
+        service.hourEstimate,
+        service.hourlyRate,
+        service.type,
+        service.createdAt,
+        service.updatedAt,
+      )
+
+    return service
+  })
+}
+
+export function updateService(
+  id: string,
+  input: UpdateServiceInput,
+): Service | undefined {
+  return withTransaction(() => {
+    const service = getService(id)
+
+    if (!service) {
+      return undefined
+    }
+
+    service.name = input.name
+    service.hourEstimate = input.hourEstimate
+    service.hourlyRate = input.hourlyRate
+    service.type = input.type
+    service.updatedAt = new Date().toISOString()
+
+    getDb()
+      .prepare(
+        `UPDATE services
+         SET name = ?, hourEstimate = ?, hourlyRate = ?, type = ?, updatedAt = ?
+         WHERE id = ?`,
+      )
+      .run(
+        service.name,
+        service.hourEstimate,
+        service.hourlyRate,
+        service.type,
+        service.updatedAt,
+        id,
+      )
+
+    return service
+  })
+}
+
+export function deleteService(id: string): "deleted" | "not_found" {
+  return withTransaction(() => {
+    const result = getDb().prepare("DELETE FROM services WHERE id = ?").run(id)
+    return result.changes > 0 ? "deleted" : "not_found"
   })
 }

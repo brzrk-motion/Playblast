@@ -13,6 +13,7 @@ import {
   createLead,
   createMilestone,
   createProject,
+  createService,
   createVersion,
   deleteClient,
   deleteComment,
@@ -21,6 +22,7 @@ import {
   deleteLead,
   deleteMilestone,
   deleteProject,
+  deleteService,
   ensureProject,
   getClient,
   getClientWithProjects,
@@ -31,6 +33,7 @@ import {
   getLeadWithContactLog,
   getMilestone,
   getProject,
+  getService,
   getVersionByLabel,
   listClients,
   listComments,
@@ -41,6 +44,7 @@ import {
   listMilestones,
   listProjectSummaries,
   listProjects,
+  listServices,
   listVersions,
   updateClient,
   updateComment,
@@ -48,6 +52,7 @@ import {
   updateLead,
   updateMilestone,
   updateProject,
+  updateService,
   updateVersionLabel,
   updateVersionStatus,
 } from "./repository.js"
@@ -605,5 +610,38 @@ describe("SQLite data store", () => {
     })
     assert.equal(patched?.notes, "Converted account.")
     assert.equal(patched?.phone, undefined)
+  })
+
+  it("creates, updates, lists, and hard-deletes services", () => {
+    const staticService = createService({
+      name: "Logo Design",
+      hourEstimate: 4,
+      hourlyRate: 150,
+      type: "static",
+    })
+
+    createService({
+      name: "Motion Intro",
+      hourEstimate: 12,
+      hourlyRate: 175,
+      type: "animated",
+    })
+
+    assert.equal(listServices().length, 2)
+    assert.equal(getService(staticService.id)?.type, "static")
+
+    const updated = updateService(staticService.id, {
+      name: "Brand Logo Package",
+      hourEstimate: 6,
+      hourlyRate: 160,
+      type: "static",
+    })
+    assert.equal(updated?.name, "Brand Logo Package")
+    assert.equal(updated?.hourEstimate, 6)
+
+    assert.equal(deleteService(staticService.id), "deleted")
+    assert.equal(getService(staticService.id), undefined)
+    assert.equal(deleteService(staticService.id), "not_found")
+    assert.equal(listServices().length, 1)
   })
 })
