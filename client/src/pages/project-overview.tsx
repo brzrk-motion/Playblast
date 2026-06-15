@@ -34,6 +34,7 @@ import {
   DeliverableDialog,
   type DeliverableFormValues,
 } from "@/components/project/deliverable-dialog"
+import { ProjectBudgetEstimatePanel } from "@/components/project/project-budget-estimate-panel"
 import { ProjectFormSheet } from "@/components/project/project-form-sheet"
 import { ProjectServicesSection } from "@/components/project/project-services-section"
 import {
@@ -47,6 +48,7 @@ import {
   deleteMilestone,
   listDeliverables,
   listMilestones,
+  listProjectServices,
   getProject,
   updateDeliverable,
   updateMilestone,
@@ -65,6 +67,7 @@ import { useProjectPageHeader } from "@/hooks/use-project-page-header"
 import type { DeliverableSummary } from "@/types/deliverable"
 import type { Milestone } from "@/types/milestone"
 import type { ProjectDetail } from "@/types/project"
+import type { ProjectServiceWithDetails } from "@/types/project-service"
 
 const TAB_PARAM = "tab"
 type ProjectOverviewTab = "milestones" | "deliverables" | "services"
@@ -90,6 +93,10 @@ export function ProjectOverviewPage() {
   const [project, setProject] = useState<ProjectDetail | null>(null)
   const [deliverables, setDeliverables] = useState<DeliverableSummary[]>([])
   const [milestones, setMilestones] = useState<Milestone[]>([])
+  const [projectServices, setProjectServices] = useState<ProjectServiceWithDetails[]>(
+    [],
+  )
+  const [servicesLoading, setServicesLoading] = useState(true)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -124,14 +131,17 @@ export function ProjectOverviewPage() {
     if (!projectId) return
 
     try {
-      const [projectData, deliverableData, milestoneData] = await Promise.all([
-        getProject(projectId),
-        listDeliverables(projectId),
-        listMilestones(projectId),
-      ])
+      const [projectData, deliverableData, milestoneData, servicesData] =
+        await Promise.all([
+          getProject(projectId),
+          listDeliverables(projectId),
+          listMilestones(projectId),
+          listProjectServices(projectId),
+        ])
       setProject(projectData)
       setDeliverables(deliverableData)
       setMilestones(milestoneData)
+      setProjectServices(servicesData)
       setError(null)
     } catch (err) {
       const message = humanizeApiError(err, "Failed to load project")
@@ -140,6 +150,7 @@ export function ProjectOverviewPage() {
       setProject(null)
     } finally {
       setLoading(false)
+      setServicesLoading(false)
     }
   }, [projectId])
 
@@ -150,15 +161,18 @@ export function ProjectOverviewPage() {
 
     async function fetchData() {
       try {
-        const [projectData, deliverableData, milestoneData] = await Promise.all([
-          getProject(projectId),
-          listDeliverables(projectId),
-          listMilestones(projectId),
-        ])
+        const [projectData, deliverableData, milestoneData, servicesData] =
+          await Promise.all([
+            getProject(projectId),
+            listDeliverables(projectId),
+            listMilestones(projectId),
+            listProjectServices(projectId),
+          ])
         if (!cancelled) {
           setProject(projectData)
           setDeliverables(deliverableData)
           setMilestones(milestoneData)
+          setProjectServices(servicesData)
           setError(null)
         }
       } catch (err) {
@@ -171,6 +185,7 @@ export function ProjectOverviewPage() {
       } finally {
         if (!cancelled) {
           setLoading(false)
+          setServicesLoading(false)
         }
       }
     }
@@ -459,6 +474,12 @@ export function ProjectOverviewPage() {
         </Card>
       </div>
 
+      <ProjectBudgetEstimatePanel
+        projectServices={projectServices}
+        budget={project.budget}
+        loading={servicesLoading}
+      />
+
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="milestones">Milestones</TabsTrigger>
@@ -688,6 +709,9 @@ export function ProjectOverviewPage() {
           <ProjectServicesSection
             projectId={project.id}
             currency={project.budget?.currency}
+            projectServices={projectServices}
+            onProjectServicesChange={setProjectServices}
+            servicesLoading={servicesLoading}
           />
         </TabsContent>
       </Tabs>
