@@ -321,6 +321,45 @@ describe("SQLite data store", () => {
     assert.equal(openComment.resolved, false)
   })
 
+  it("includes linked client name and services estimate in project summaries", () => {
+    const client = createClient({
+      name: "Jane Doe",
+      email: "jane@example.com",
+      company: "Acme Co",
+    })
+    const project = createProject({
+      id: "summary-client-estimate",
+      name: "Summary Client Estimate",
+      clientId: client.id,
+      budget: { total: 10_000, currency: "USD" },
+    })
+    const service = createService({
+      name: "Brand Film",
+      hourEstimate: 10,
+      hourlyRate: 420,
+      type: "animated",
+    })
+
+    addProjectService(project.id, service.id)
+
+    const summary = listProjectSummaries().find((item) => item.id === project.id)
+    assert.ok(summary)
+    assert.equal(summary.clientName, "Acme Co")
+    assert.equal(summary.servicesEstimate, 4200)
+
+    const bare = createProject({ id: "summary-bare", name: "Bare Project" })
+    const bareSummary = listProjectSummaries().find((item) => item.id === bare.id)
+    assert.ok(bareSummary)
+    assert.equal(bareSummary.clientName, undefined)
+    assert.equal(bareSummary.servicesEstimate, undefined)
+
+    removeProjectService(project.id, service.id)
+    deleteProject(project.id)
+    deleteProject(bare.id)
+    deleteService(service.id)
+    deleteClient(client.id)
+  })
+
   it("summarizes deliverables with version and comment rollups", () => {
     const project = createProject({ id: "deliv-summary", name: "Deliverable Summary" })
     const deliverable = createDeliverable({

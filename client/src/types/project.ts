@@ -51,4 +51,8 @@ export interface ProjectSummary extends Project {
   updatedAt: string
   deliverableStatusCounts: Record<DeliverableStatus, number>
   nextMilestone: { id: string; name: string; dueDate?: string } | null
+  /** Linked client display name (company preferred), when clientId is set. */
+  clientName?: string
+  /** Total services estimate when at least one service is attached. */
+  servicesEstimate?: number
 }

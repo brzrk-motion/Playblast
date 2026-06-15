@@ -18,7 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ProjectStatusBadge } from "@/components/project/project-status-badge"
+import { DashboardProjectCard } from "@/components/dashboard/project-card"
 import { listProjects } from "@/lib/api"
 import {
   budgetHealth,
@@ -334,28 +334,17 @@ export function DashboardPage() {
           {recentProjects.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {recentProjects.map((project) => (
-                <Link
+                <DashboardProjectCard
                   key={project.id}
-                  to={`/projects/${encodeURIComponent(project.id)}`}
-                  className="block rounded-xl focus-ring"
-                >
-                  <Card className="interactive-card h-full border-muted">
-                    <CardHeader className="gap-2 pb-2">
-                      <CardTitle className="text-sm leading-snug">
-                        {project.name}
-                      </CardTitle>
-                      <ProjectStatusBadge status={project.status} />
-                    </CardHeader>
-                    <CardContent className="text-sm text-muted-foreground">
-                      <p>
-                        {project.deliverableCount}{" "}
-                        {project.deliverableCount === 1
-                          ? "deliverable"
-                          : "deliverables"}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </Link>
+                  projectId={project.id}
+                  name={project.name}
+                  status={project.status}
+                  clientName={project.clientName}
+                  budget={project.budget}
+                  servicesEstimate={project.servicesEstimate}
+                  deliverableCount={project.deliverableCount}
+                  compact
+                />
               ))}
             </div>
           ) : (
