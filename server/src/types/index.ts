@@ -53,6 +53,11 @@ export type {
 } from "./project.js"
 export { isProjectStatus, PROJECT_STATUSES } from "./project.js"
 export type {
+  AddProjectServiceInput,
+  ProjectService,
+  ProjectServiceWithDetails,
+} from "./project-service.js"
+export type {
   CreateServiceInput,
   Service,
   ServiceType,

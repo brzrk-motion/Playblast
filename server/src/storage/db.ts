@@ -1,5 +1,6 @@
 import fs from "node:fs"
 import path from "node:path"
+import { randomUUID } from "node:crypto"
 import { fileURLToPath } from "node:url"
 import type Database from "better-sqlite3"
 import DatabaseConstructor from "better-sqlite3"
@@ -47,6 +48,65 @@ function recordMigration(db: Database.Database, id: string): void {
   ).run(id, new Date().toISOString())
 }
 
+function tableExists(db: Database.Database, table: string): boolean {
+  const row = db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+    )
+    .get(table) as { name: string } | undefined
+  return row !== undefined
+}
+
+function upgradeProjectServicesTable(db: Database.Database): void {
+  if (!tableExists(db, "project_services")) {
+    return
+  }
+
+  if (tableHasColumn(db, "project_services", "id")) {
+    return
+  }
+
+  const legacyRows = db
+    .prepare(
+      "SELECT projectId, serviceId, createdAt FROM project_services ORDER BY createdAt ASC",
+    )
+    .all() as Array<{
+    projectId: string
+    serviceId: string
+    createdAt: string
+  }>
+
+  db.exec(`
+    CREATE TABLE project_services_new (
+      id TEXT PRIMARY KEY,
+      projectId TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      serviceId TEXT NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+      quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 1),
+      createdAt TEXT NOT NULL,
+      UNIQUE (projectId, serviceId)
+    )
+  `)
+
+  const insert = db.prepare(
+    `INSERT INTO project_services_new (
+      id, projectId, serviceId, quantity, createdAt
+    ) VALUES (?, ?, ?, ?, ?)`,
+  )
+
+  for (const row of legacyRows) {
+    insert.run(randomUUID(), row.projectId, row.serviceId, 1, row.createdAt)
+  }
+
+  db.exec("DROP TABLE project_services")
+  db.exec("ALTER TABLE project_services_new RENAME TO project_services")
+  db.exec(
+    "CREATE INDEX IF NOT EXISTS idx_project_services_serviceId ON project_services(serviceId)",
+  )
+  db.exec(
+    "CREATE INDEX IF NOT EXISTS idx_project_services_projectId ON project_services(projectId)",
+  )
+}
+
 function runMigrations(db: Database.Database): void {
   if (!fs.existsSync(MIGRATIONS_DIR)) {
     return
@@ -78,6 +138,10 @@ function runMigrations(db: Database.Database): void {
       db.exec(
         "CREATE INDEX IF NOT EXISTS idx_projects_clientId ON projects(clientId)",
       )
+    }
+
+    if (id === "004_project_service_details") {
+      upgradeProjectServicesTable(db)
     }
 
     recordMigration(db, id)
