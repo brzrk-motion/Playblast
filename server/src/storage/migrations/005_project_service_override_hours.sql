@@ -1,0 +1,2 @@
+-- Migration 005: optional hour override per project-service link
+-- Column is added in db.ts when missing on existing databases.

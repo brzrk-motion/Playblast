@@ -21,6 +21,7 @@ import type {
 import type {
   AddProjectServiceInput,
   ProjectServiceWithDetails,
+  UpdateProjectServiceInput,
 } from "@/types/project-service"
 import type {
   CreateServiceInput,
@@ -692,4 +693,20 @@ export async function removeProjectService(
     { method: "DELETE" },
   )
   await expectOk(response)
+}
+
+export async function updateProjectService(
+  projectId: string,
+  serviceId: string,
+  input: UpdateProjectServiceInput,
+): Promise<ProjectServiceWithDetails> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/services/${encodeURIComponent(serviceId)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  )
+  return parseJsonResponse<ProjectServiceWithDetails>(response)
 }

@@ -144,6 +144,13 @@ function runMigrations(db: Database.Database): void {
       upgradeProjectServicesTable(db)
     }
 
+    if (
+      id === "005_project_service_override_hours" &&
+      !tableHasColumn(db, "project_services", "overrideHours")
+    ) {
+      db.exec("ALTER TABLE project_services ADD COLUMN overrideHours REAL")
+    }
+
     recordMigration(db, id)
   }
 }
