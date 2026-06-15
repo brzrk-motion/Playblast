@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Briefcase, Plus, X } from "lucide-react"
 import { AddProjectServicesModal } from "@/components/project/add-project-services-modal"
+import { ProjectCostEstimatePanel } from "@/components/project/project-cost-estimate-panel"
 import { ServiceTypeBadge } from "@/components/services/service-type-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -22,9 +23,13 @@ import type { ProjectServiceWithDetails } from "@/types/project-service"
 
 interface ProjectServicesSectionProps {
   projectId: string
+  currency?: string
 }
 
-export function ProjectServicesSection({ projectId }: ProjectServicesSectionProps) {
+export function ProjectServicesSection({
+  projectId,
+  currency = "USD",
+}: ProjectServicesSectionProps) {
   const [projectServices, setProjectServices] = useState<ProjectServiceWithDetails[]>(
     [],
   )
@@ -124,7 +129,7 @@ export function ProjectServicesSection({ projectId }: ProjectServicesSectionProp
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           {loading ? (
             <div className="space-y-2">
               {Array.from({ length: 3 }).map((_, index) => (
@@ -192,6 +197,13 @@ export function ProjectServicesSection({ projectId }: ProjectServicesSectionProp
                 )
               })}
             </ul>
+          )}
+
+          {!loading && !error && (
+            <ProjectCostEstimatePanel
+              projectServices={projectServices}
+              currency={currency}
+            />
           )}
         </CardContent>
       </Card>

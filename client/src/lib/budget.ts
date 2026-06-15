@@ -14,6 +14,19 @@ export function formatCurrency(amount: number, currency = "USD"): string {
   }
 }
 
+export function formatEstimateCurrency(amount: number, currency = "USD"): string {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount)
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`
+  }
+}
+
 export function budgetSpentRatio(budget: ProjectBudget): number {
   if (!budget.total || budget.total <= 0) {
     return 0

@@ -525,7 +525,10 @@ export function ProjectOverviewPage() {
         </CardContent>
       </Card>
 
-      <ProjectServicesSection projectId={project.id} />
+      <ProjectServicesSection
+        projectId={project.id}
+        currency={project.budget?.currency}
+      />
 
       <Card>
         <CardHeader>
