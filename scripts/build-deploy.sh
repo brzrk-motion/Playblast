@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-IMAGE_NAME="${IMAGE_NAME:-playblast:latest}"
+IMAGE_NAME="${IMAGE_NAME:-brzrk/playblast:latest}"
 PLATFORM="${PLATFORM:-linux/amd64}"
 DEPLOY_DIR="$ROOT_DIR/deploy"
 OUTPUT_FILE="$DEPLOY_DIR/playblast.tar.gz"

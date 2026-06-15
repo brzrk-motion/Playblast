@@ -7,7 +7,7 @@ const TAB_PARAM = "tab"
 type ClientsPageTab = "leads" | "clients"
 
 function parseTab(value: string | null): ClientsPageTab {
-  return value === "clients" ? "clients" : "leads"
+  return value === "leads" ? "leads" : "clients"
 }
 
 export function ClientsPage() {
@@ -19,7 +19,7 @@ export function ClientsPage() {
 
   function handleTabChange(value: string) {
     const next = new URLSearchParams(searchParams)
-    if (value === "leads") {
+    if (value === "clients") {
       next.delete(TAB_PARAM)
     } else {
       next.set(TAB_PARAM, value)
@@ -38,8 +38,8 @@ export function ClientsPage() {
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
-          <TabsTrigger value="leads">Leads</TabsTrigger>
           <TabsTrigger value="clients">Clients</TabsTrigger>
+          <TabsTrigger value="leads">Leads</TabsTrigger>
         </TabsList>
 
         <TabsContent value="leads" className="mt-4">
