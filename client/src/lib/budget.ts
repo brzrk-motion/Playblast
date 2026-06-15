@@ -102,3 +102,9 @@ export const ESTIMATE_BUDGET_STATUS_LABELS: Record<EstimateBudgetStatus, string>
 
 export const ESTIMATE_BUDGET_STATUS_STYLES: Record<EstimateBudgetStatus, string> =
   BUDGET_HEALTH_STYLES
+
+export const ESTIMATE_BUDGET_STATUS_DOT_STYLES: Record<EstimateBudgetStatus, string> = {
+  healthy: "bg-status-success",
+  warning: "bg-status-warning",
+  over: "bg-destructive",
+}

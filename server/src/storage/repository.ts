@@ -3,6 +3,7 @@ import path from "node:path"
 import { randomUUID } from "node:crypto"
 import type { Database } from "better-sqlite3"
 import { getUploadDir } from "../config/paths.js"
+import { calculateProjectServicesEstimate } from "../lib/service-estimate.js"
 import type {
   Comment,
   ContactLog,
@@ -323,6 +324,16 @@ export function listProjectSummaries(clientId?: string): ProjectSummary[] {
       (milestone) => !milestone.done,
     )
 
+    const linkedClient = project.clientId ? getClient(project.clientId) : undefined
+    const clientName = linkedClient
+      ? linkedClient.company?.trim() || linkedClient.name
+      : undefined
+
+    const projectServices = listProjectServices(project.id)
+    const servicesTotal = calculateProjectServicesEstimate(projectServices)
+    const servicesEstimate =
+      projectServices.length > 0 ? servicesTotal : undefined
+
     return {
       ...project,
       deliverableCount: deliverables.length,
@@ -337,6 +348,8 @@ export function listProjectSummaries(clientId?: string): ProjectSummary[] {
             dueDate: nextMilestone.dueDate,
           }
         : null,
+      ...(clientName ? { clientName } : {}),
+      ...(servicesEstimate !== undefined ? { servicesEstimate } : {}),
     }
   })
 }

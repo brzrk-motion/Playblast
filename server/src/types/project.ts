@@ -67,6 +67,10 @@ export interface ProjectSummary extends Project {
   deliverableStatusCounts: Record<DeliverableStatus, number>
   /** Soonest upcoming (incomplete) milestone, when present. */
   nextMilestone: { id: string; name: string; dueDate?: string } | null
+  /** Linked client display name (company preferred), when clientId is set. */
+  clientName?: string
+  /** Total services estimate when at least one service is attached. */
+  servicesEstimate?: number
 }
 
 export interface CreateProjectInput {
