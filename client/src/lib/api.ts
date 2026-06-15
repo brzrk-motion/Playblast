@@ -19,6 +19,10 @@ import type {
   ProjectSummary,
 } from "@/types/project"
 import type {
+  AddProjectServiceInput,
+  ProjectServiceWithDetails,
+} from "@/types/project-service"
+import type {
   CreateServiceInput,
   Service,
   ServiceProjectUsage,
@@ -643,4 +647,41 @@ export async function getServiceProjectUsage(
     `/api/services/${encodeURIComponent(id)}/usage`,
   )
   return parseJsonResponse<ServiceProjectUsage>(response)
+}
+
+// --- Project services -------------------------------------------------------
+
+export async function listProjectServices(
+  projectId: string,
+): Promise<ProjectServiceWithDetails[]> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/services`,
+  )
+  return parseJsonResponse<ProjectServiceWithDetails[]>(response)
+}
+
+export async function addProjectService(
+  projectId: string,
+  input: AddProjectServiceInput,
+): Promise<ProjectServiceWithDetails> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/services`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  )
+  return parseJsonResponse<ProjectServiceWithDetails>(response)
+}
+
+export async function removeProjectService(
+  projectId: string,
+  serviceId: string,
+): Promise<void> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/services/${encodeURIComponent(serviceId)}`,
+    { method: "DELETE" },
+  )
+  await expectOk(response)
 }

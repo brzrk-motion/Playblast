@@ -48,16 +48,13 @@ import {
 } from "@/lib/service-form"
 import {
   sortServices,
+  formatHourEstimate,
   type ServiceSortField,
   type SortDirection,
 } from "@/lib/services"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import type { Service } from "@/types/service"
-
-function formatHourEstimate(hours: number): string {
-  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1)
-}
 
 interface SortableTableHeadProps {
   label: string
