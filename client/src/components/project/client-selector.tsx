@@ -24,6 +24,8 @@ interface ClientSelectorProps {
   onChange: (clientId: string | null) => void
   disabled?: boolean
   id?: string
+  /** Load the client list on mount (e.g. when embedded in a dialog). */
+  loadOnMount?: boolean
 }
 
 export function ClientSelector({
@@ -31,6 +33,7 @@ export function ClientSelector({
   onChange,
   disabled = false,
   id = "project-client",
+  loadOnMount = false,
 }: ClientSelectorProps) {
   const [open, setOpen] = useState(false)
   const [clients, setClients] = useState<Client[]>([])
@@ -38,7 +41,7 @@ export function ClientSelector({
   const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
-    if (!open) {
+    if (!open && !loadOnMount) {
       return
     }
 
@@ -67,7 +70,7 @@ export function ClientSelector({
     return () => {
       cancelled = true
     }
-  }, [open])
+  }, [open, loadOnMount])
 
   const selectedClient = useMemo(
     () => clients.find((client) => client.id === value) ?? null,
