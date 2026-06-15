@@ -127,6 +127,7 @@ CREATE TABLE IF NOT EXISTS project_services (
   projectId TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   serviceId TEXT NOT NULL REFERENCES services(id) ON DELETE CASCADE,
   quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 1),
+  overrideHours REAL,
   createdAt TEXT NOT NULL,
   UNIQUE (projectId, serviceId)
 );

@@ -56,6 +56,7 @@ export type {
   AddProjectServiceInput,
   ProjectService,
   ProjectServiceWithDetails,
+  UpdateProjectServiceInput,
 } from "./project-service.js"
 export type {
   CreateServiceInput,

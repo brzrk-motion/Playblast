@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Briefcase, Plus, X } from "lucide-react"
 import { AddProjectServicesModal } from "@/components/project/add-project-services-modal"
+import { ProjectServiceHoursControl } from "@/components/project/project-service-hours-control"
 import { ProjectCostEstimatePanel } from "@/components/project/project-cost-estimate-panel"
 import { ServiceTypeBadge } from "@/components/services/service-type-badge"
 import { Button } from "@/components/ui/button"
@@ -15,51 +16,83 @@ import { Skeleton } from "@/components/ui/skeleton"
 import {
   listProjectServices,
   removeProjectService,
+  updateProjectService,
 } from "@/lib/api"
 import { formatCurrency } from "@/lib/budget"
-import { formatHourEstimate } from "@/lib/services"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import type { ProjectServiceWithDetails } from "@/types/project-service"
 
 interface ProjectServicesSectionProps {
   projectId: string
   currency?: string
+  projectServices?: ProjectServiceWithDetails[]
+  onProjectServicesChange?: (services: ProjectServiceWithDetails[]) => void
+  servicesLoading?: boolean
 }
 
 export function ProjectServicesSection({
   projectId,
   currency = "USD",
+  projectServices: controlledProjectServices,
+  onProjectServicesChange,
+  servicesLoading: controlledLoading,
 }: ProjectServicesSectionProps) {
-  const [projectServices, setProjectServices] = useState<ProjectServiceWithDetails[]>(
-    [],
-  )
-  const [loading, setLoading] = useState(true)
+  const [internalProjectServices, setInternalProjectServices] = useState<
+    ProjectServiceWithDetails[]
+  >([])
+  const [internalLoading, setInternalLoading] = useState(true)
+  const isControlled = controlledProjectServices !== undefined
+  const projectServices = isControlled
+    ? controlledProjectServices
+    : internalProjectServices
+  const loading = isControlled ? (controlledLoading ?? false) : internalLoading
+
+  function updateProjectServices(
+    updater: (current: ProjectServiceWithDetails[]) => ProjectServiceWithDetails[],
+  ) {
+    if (isControlled) {
+      onProjectServicesChange?.(updater(projectServices))
+      return
+    }
+    setInternalProjectServices(updater)
+  }
   const [error, setError] = useState<string | null>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [removingServiceId, setRemovingServiceId] = useState<string | null>(null)
+  const [updatingServiceId, setUpdatingServiceId] = useState<string | null>(null)
 
   const loadProjectServices = useCallback(async () => {
     try {
       const data = await listProjectServices(projectId)
-      setProjectServices(data)
+      if (isControlled) {
+        onProjectServicesChange?.(data)
+      } else {
+        setInternalProjectServices(data)
+      }
       setError(null)
     } catch (err) {
       const message = humanizeApiError(err, "Failed to load project services")
       setError(message)
       showErrorToast(message)
     } finally {
-      setLoading(false)
+      if (!isControlled) {
+        setInternalLoading(false)
+      }
     }
-  }, [projectId])
+  }, [isControlled, onProjectServicesChange, projectId])
 
   useEffect(() => {
+    if (isControlled) {
+      return
+    }
+
     let cancelled = false
 
     async function fetchServices() {
       try {
         const data = await listProjectServices(projectId)
         if (!cancelled) {
-          setProjectServices(data)
+          setInternalProjectServices(data)
           setError(null)
         }
       } catch (err) {
@@ -70,7 +103,7 @@ export function ProjectServicesSection({
         }
       } finally {
         if (!cancelled) {
-          setLoading(false)
+          setInternalLoading(false)
         }
       }
     }
@@ -80,7 +113,7 @@ export function ProjectServicesSection({
     return () => {
       cancelled = true
     }
-  }, [projectId])
+  }, [isControlled, projectId])
 
   const attachedServiceIds = useMemo(
     () => new Set(projectServices.map((item) => item.serviceId)),
@@ -88,7 +121,7 @@ export function ProjectServicesSection({
   )
 
   function handleServiceAdded(added: ProjectServiceWithDetails) {
-    setProjectServices((current) => {
+    updateProjectServices((current) => {
       if (current.some((item) => item.serviceId === added.serviceId)) {
         return current
       }
@@ -96,11 +129,34 @@ export function ProjectServicesSection({
     })
   }
 
+  async function handleOverrideHoursChange(
+    serviceId: string,
+    overrideHours: number | null,
+  ) {
+    setUpdatingServiceId(serviceId)
+    try {
+      const updated = await updateProjectService(projectId, serviceId, {
+        overrideHours,
+      })
+      updateProjectServices((current) =>
+        current.map((item) => (item.serviceId === serviceId ? updated : item)),
+      )
+      if (overrideHours === null) {
+        showSuccessToast("Hours reset to catalog default")
+      }
+    } catch (err) {
+      showErrorToast(humanizeApiError(err, "Failed to update service hours"))
+      throw err
+    } finally {
+      setUpdatingServiceId(null)
+    }
+  }
+
   async function handleRemove(serviceId: string) {
     setRemovingServiceId(serviceId)
     try {
       await removeProjectService(projectId, serviceId)
-      setProjectServices((current) =>
+      updateProjectServices((current) =>
         current.filter((item) => item.serviceId !== serviceId),
       )
       showSuccessToast("Service removed from project")
@@ -143,7 +199,9 @@ export function ProjectServicesSection({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setLoading(true)
+                  if (!isControlled) {
+                    setInternalLoading(true)
+                  }
                   void loadProjectServices()
                 }}
               >
@@ -178,7 +236,15 @@ export function ProjectServicesSection({
                       <p className="truncate font-medium">{service.name}</p>
                       <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                         <ServiceTypeBadge type={service.type} />
-                        <span>{formatHourEstimate(service.hourEstimate)} hrs</span>
+                        <ProjectServiceHoursControl
+                          item={item}
+                          disabled={
+                            removingServiceId !== null || updatingServiceId !== null
+                          }
+                          onSave={(overrideHours) =>
+                            handleOverrideHoursChange(item.serviceId, overrideHours)
+                          }
+                        />
                         <span className="tabular-nums">
                           {formatCurrency(service.hourlyRate)}/hr
                         </span>

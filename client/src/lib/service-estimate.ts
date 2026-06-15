@@ -21,8 +21,20 @@ export interface ProjectCostEstimate {
   totalEstimate: number
 }
 
+export function effectiveProjectServiceHours(
+  item: ProjectServiceWithDetails,
+): number {
+  return item.overrideHours ?? item.service.hourEstimate
+}
+
+export function isProjectServiceHoursOverridden(
+  item: ProjectServiceWithDetails,
+): boolean {
+  return item.overrideHours !== null
+}
+
 export function projectServiceLineTotal(item: ProjectServiceWithDetails): number {
-  return item.service.hourEstimate * item.service.hourlyRate
+  return effectiveProjectServiceHours(item) * item.service.hourlyRate
 }
 
 export function calculateProjectCostEstimate(
@@ -30,7 +42,7 @@ export function calculateProjectCostEstimate(
 ): ProjectCostEstimate {
   const lines = items.map((item) => ({
     item,
-    hours: item.service.hourEstimate,
+    hours: effectiveProjectServiceHours(item),
     lineTotal: projectServiceLineTotal(item),
   }))
 

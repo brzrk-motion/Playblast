@@ -165,4 +165,14 @@ describe("services schema", () => {
 
     db.close()
   })
+
+  it("adds overrideHours via migration 005", () => {
+    const dbPath = path.join(tempDir, `legacy-override-${randomSuffix()}.db`)
+    initDatabase(dbPath)
+
+    const db = new Database(dbPath)
+    assert.ok(__testOnly_tableHasColumn(db, "project_services", "overrideHours"))
+    db.close()
+    closeDatabase()
+  })
 })

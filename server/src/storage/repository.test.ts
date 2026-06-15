@@ -50,6 +50,7 @@ import {
   addProjectService,
   linkServiceToProject,
   removeProjectService,
+  updateProjectService,
   listVersions,
   updateClient,
   updateComment,
@@ -699,5 +700,40 @@ describe("SQLite data store", () => {
     assert.equal(removeProjectService(project.id, service.id), "not_found")
     assert.equal(getService(service.id)?.name, "Explainer Video")
     assert.equal(listProjectServices(project.id).length, 0)
+  })
+
+  it("stores and clears project-level hour overrides", () => {
+    const service = createService({
+      name: "Brand Guide",
+      hourEstimate: 5,
+      hourlyRate: 120,
+      type: "static",
+    })
+    const project = createProject({ name: "Brand Refresh" })
+
+    addProjectService(project.id, service.id)
+
+    const listed = listProjectServices(project.id)
+    assert.equal(listed[0]?.overrideHours, null)
+    assert.equal(listed[0]?.service.hourEstimate, 5)
+
+    const updated = updateProjectService(project.id, service.id, {
+      overrideHours: 7.5,
+    })
+    if (typeof updated === "string") {
+      throw new Error(`Unexpected result: ${updated}`)
+    }
+    assert.equal(updated.overrideHours, 7.5)
+    assert.equal(updated.service.hourEstimate, 5)
+    assert.equal(getService(service.id)?.hourEstimate, 5)
+
+    const reset = updateProjectService(project.id, service.id, {
+      overrideHours: null,
+    })
+    if (typeof reset === "string") {
+      throw new Error(`Unexpected result: ${reset}`)
+    }
+    assert.equal(reset.overrideHours, null)
+    assert.equal(updateProjectService(project.id, "missing", { overrideHours: 4 }), "not_found")
   })
 })

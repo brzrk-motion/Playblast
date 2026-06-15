@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import {
   calculateProjectCostEstimate,
+  effectiveProjectServiceHours,
   projectServiceLineTotal,
 } from "./service-estimate.js"
 import type { ProjectServiceWithDetails } from "@/types/project-service"
@@ -16,6 +17,7 @@ function makeProjectService(
     projectId: "project-1",
     serviceId: overrides.service.id,
     quantity: 1,
+    overrideHours: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
   }
@@ -36,6 +38,24 @@ describe("projectServiceLineTotal", () => {
     })
 
     assert.equal(projectServiceLineTotal(item), 1250)
+  })
+
+  it("uses override hours when set on the project service", () => {
+    const item = makeProjectService({
+      overrideHours: 12,
+      service: {
+        id: "svc-1",
+        name: "Layout",
+        hourEstimate: 10,
+        hourlyRate: 125,
+        type: "static",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    })
+
+    assert.equal(effectiveProjectServiceHours(item), 12)
+    assert.equal(projectServiceLineTotal(item), 1500)
   })
 })
 
@@ -108,5 +128,29 @@ describe("calculateProjectCostEstimate", () => {
         { type: "animated", hours: 8, lineTotal: 1600 },
       ],
     )
+  })
+
+  it("uses project-level hour overrides in totals", () => {
+    const items = [
+      makeProjectService({
+        id: "ps-1",
+        serviceId: "svc-1",
+        overrideHours: 6,
+        service: {
+          id: "svc-1",
+          name: "Static A",
+          hourEstimate: 4,
+          hourlyRate: 100,
+          type: "static",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      }),
+    ]
+
+    const estimate = calculateProjectCostEstimate(items)
+
+    assert.equal(estimate.totalHours, 6)
+    assert.equal(estimate.totalEstimate, 600)
   })
 })
