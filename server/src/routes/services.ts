@@ -9,19 +9,44 @@ import {
 import { isServiceType } from "../types/index.js"
 import { getParam } from "../utils/params.js"
 
+const MAX_NAME_LENGTH = 100
+
 function getServiceIdParam(req: { params: { id?: string | string[] } }): string {
   return getParam(req.params.id ?? "")
 }
 
-function parseRequiredNumber(
+function parsePositiveNumber(
   value: unknown,
   fieldName: string,
 ): { value: number } | { error: string } {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-    return { error: `${fieldName} must be a non-negative number.` }
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return { error: `${fieldName} must be greater than 0.` }
   }
 
   return { value }
+}
+
+function hasAtMostOneDecimalPlace(value: number): boolean {
+  return Math.round(value * 10) / 10 === value
+}
+
+function validateServiceName(name: unknown): { value: string } | { error: string } {
+  if (typeof name !== "string") {
+    return { error: "Service name is required." }
+  }
+
+  const trimmed = name.trim()
+  if (!trimmed) {
+    return { error: "Service name is required." }
+  }
+
+  if (trimmed.length > MAX_NAME_LENGTH) {
+    return {
+      error: `Service name must be ${MAX_NAME_LENGTH} characters or fewer.`,
+    }
+  }
+
+  return { value: trimmed }
 }
 
 const servicesRouter = Router()
@@ -31,13 +56,13 @@ servicesRouter.get("/", (_req, res) => {
 })
 
 servicesRouter.post("/", (req, res) => {
-  const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""
-  if (!name) {
-    res.status(400).json({ error: "Service name is required." })
+  const nameResult = validateServiceName(req.body?.name)
+  if ("error" in nameResult) {
+    res.status(400).json({ error: nameResult.error })
     return
   }
 
-  const hourEstimateResult = parseRequiredNumber(
+  const hourEstimateResult = parsePositiveNumber(
     req.body?.hourEstimate,
     "hourEstimate",
   )
@@ -46,7 +71,14 @@ servicesRouter.post("/", (req, res) => {
     return
   }
 
-  const hourlyRateResult = parseRequiredNumber(req.body?.hourlyRate, "hourlyRate")
+  if (!hasAtMostOneDecimalPlace(hourEstimateResult.value)) {
+    res.status(400).json({
+      error: "hourEstimate allows at most one decimal place.",
+    })
+    return
+  }
+
+  const hourlyRateResult = parsePositiveNumber(req.body?.hourlyRate, "hourlyRate")
   if ("error" in hourlyRateResult) {
     res.status(400).json({ error: hourlyRateResult.error })
     return
@@ -58,7 +90,7 @@ servicesRouter.post("/", (req, res) => {
   }
 
   const service = createService({
-    name,
+    name: nameResult.value,
     hourEstimate: hourEstimateResult.value,
     hourlyRate: hourlyRateResult.value,
     type: req.body.type,
@@ -76,13 +108,13 @@ servicesRouter.put("/:id", (req, res) => {
     return
   }
 
-  const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""
-  if (!name) {
-    res.status(400).json({ error: "Service name is required." })
+  const nameResult = validateServiceName(req.body?.name)
+  if ("error" in nameResult) {
+    res.status(400).json({ error: nameResult.error })
     return
   }
 
-  const hourEstimateResult = parseRequiredNumber(
+  const hourEstimateResult = parsePositiveNumber(
     req.body?.hourEstimate,
     "hourEstimate",
   )
@@ -91,7 +123,14 @@ servicesRouter.put("/:id", (req, res) => {
     return
   }
 
-  const hourlyRateResult = parseRequiredNumber(req.body?.hourlyRate, "hourlyRate")
+  if (!hasAtMostOneDecimalPlace(hourEstimateResult.value)) {
+    res.status(400).json({
+      error: "hourEstimate allows at most one decimal place.",
+    })
+    return
+  }
+
+  const hourlyRateResult = parsePositiveNumber(req.body?.hourlyRate, "hourlyRate")
   if ("error" in hourlyRateResult) {
     res.status(400).json({ error: hourlyRateResult.error })
     return
@@ -103,7 +142,7 @@ servicesRouter.put("/:id", (req, res) => {
   }
 
   const updated = updateService(serviceId, {
-    name,
+    name: nameResult.value,
     hourEstimate: hourEstimateResult.value,
     hourlyRate: hourlyRateResult.value,
     type: req.body.type,

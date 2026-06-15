@@ -12,7 +12,9 @@ import { Spinner } from "@/components/ui/spinner"
 import { ServiceFormFields } from "@/components/services/service-form-fields"
 import { useServiceForm } from "@/components/services/use-service-form"
 import {
+  hasServiceFormErrors,
   validateServiceForm,
+  type ServiceFormFieldErrors,
   type ServiceFormValues,
 } from "@/lib/service-form"
 import type { Service } from "@/types/service"
@@ -36,18 +38,31 @@ export function EditServiceModal({
 }: EditServiceModalProps) {
   const { values, update, syncOpenState, handleOpenChange } =
     useServiceForm(service)
-  const [validationError, setValidationError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<ServiceFormFieldErrors>({})
 
   syncOpenState(open, service)
 
+  function clearFieldError(key: keyof ServiceFormValues) {
+    setFieldErrors((current) => {
+      if (!current[key]) {
+        return current
+      }
+
+      const next = { ...current }
+      delete next[key]
+      return next
+    })
+  }
+
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    const message = validateServiceForm(values)
-    if (message) {
-      setValidationError(message)
+    const errors = validateServiceForm(values)
+    if (hasServiceFormErrors(errors)) {
+      setFieldErrors(errors)
       return
     }
-    setValidationError(null)
+
+    setFieldErrors({})
     onSubmit(values)
   }
 
@@ -69,10 +84,20 @@ export function EditServiceModal({
             values={values}
             onChange={update}
             submitting={submitting}
-            validationError={validationError ?? error}
+            fieldErrors={fieldErrors}
+            formError={error}
+            onClearFieldError={clearFieldError}
           />
 
           <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={submitting}
+              onClick={() => handleOpenChange(false, onOpenChange)}
+            >
+              Cancel
+            </Button>
             <Button type="submit" disabled={submitting}>
               {submitting ? (
                 <>
