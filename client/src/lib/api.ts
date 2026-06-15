@@ -21,6 +21,7 @@ import type {
 import type {
   CreateServiceInput,
   Service,
+  ServiceProjectUsage,
   UpdateServiceInput,
 } from "@/types/service"
 import type { UploadProgress, UploadResponse } from "@/types/upload"
@@ -633,4 +634,13 @@ export async function deleteService(id: string): Promise<void> {
     method: "DELETE",
   })
   await expectOk(response)
+}
+
+export async function getServiceProjectUsage(
+  id: string,
+): Promise<ServiceProjectUsage> {
+  const response = await fetch(
+    `/api/services/${encodeURIComponent(id)}/usage`,
+  )
+  return parseJsonResponse<ServiceProjectUsage>(response)
 }

@@ -30,6 +30,7 @@ export {
   getProject,
   getProjectWithClient,
   getService,
+  getServiceProjectUsage,
   getVersion,
   getVersionByLabel,
   listClients,

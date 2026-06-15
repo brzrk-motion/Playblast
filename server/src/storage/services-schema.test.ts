@@ -62,6 +62,7 @@ describe("services schema", () => {
       .map((row) => row.name)
 
     assert.ok(tables.includes("services"))
+    assert.ok(tables.includes("project_services"))
     db.close()
     closeDatabase()
   })

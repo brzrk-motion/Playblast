@@ -25,3 +25,8 @@ export interface UpdateServiceInput {
   hourlyRate: number
   type: ServiceType
 }
+
+export interface ServiceProjectUsage {
+  projectCount: number
+  projects: Array<{ id: string; name: string }>
+}

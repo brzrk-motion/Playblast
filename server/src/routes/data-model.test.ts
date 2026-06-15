@@ -971,4 +971,50 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     )
     assert.equal(missingDeleteResponse.status, 404)
   })
+
+  it("returns linked project usage for a service", async () => {
+    const createResponse = await fetch(`${baseUrl}/api/services`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Social Cutdown",
+        hourEstimate: 6,
+        hourlyRate: 175,
+        type: "animated",
+      }),
+    })
+    assert.equal(createResponse.status, 201)
+    const service = (await createResponse.json()) as { id: string }
+
+    const usageBeforeLinkResponse = await fetch(
+      `${baseUrl}/api/services/${service.id}/usage`,
+    )
+    assert.equal(usageBeforeLinkResponse.status, 200)
+    const usageBeforeLink = (await usageBeforeLinkResponse.json()) as {
+      projectCount: number
+    }
+    assert.equal(usageBeforeLink.projectCount, 0)
+
+    const projectResponse = await createProject("svc-project", "Launch Film")
+    assert.equal(projectResponse.status, 201)
+
+    const { linkServiceToProject } = await import("../storage/repository.js")
+    linkServiceToProject("svc-project", service.id)
+
+    const usageResponse = await fetch(
+      `${baseUrl}/api/services/${service.id}/usage`,
+    )
+    assert.equal(usageResponse.status, 200)
+    const usage = (await usageResponse.json()) as {
+      projectCount: number
+      projects: Array<{ name: string }>
+    }
+    assert.equal(usage.projectCount, 1)
+    assert.equal(usage.projects[0]?.name, "Launch Film")
+
+    const missingUsageResponse = await fetch(
+      `${baseUrl}/api/services/missing-service/usage`,
+    )
+    assert.equal(missingUsageResponse.status, 404)
+  })
 })
