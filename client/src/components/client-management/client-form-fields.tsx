@@ -96,6 +96,78 @@ export function ClientFormFields({
         />
       </div>
 
+      <div className="space-y-4 rounded-lg border p-4">
+        <div className="flex items-center gap-2">
+          <input
+            id="client-is-retainer"
+            type="checkbox"
+            className="size-4 rounded border-input"
+            checked={values.isRetainer}
+            onChange={(event) => onChange("isRetainer", event.target.checked)}
+            disabled={submitting}
+          />
+          <Label htmlFor="client-is-retainer" className="font-medium">
+            Retainer client
+          </Label>
+        </div>
+
+        {values.isRetainer ? (
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="client-retainer-hours">Monthly hours</Label>
+              <Input
+                id="client-retainer-hours"
+                type="number"
+                min="0.1"
+                step="0.5"
+                value={values.retainerHours}
+                onChange={(event) =>
+                  onChange("retainerHours", event.target.value)
+                }
+                placeholder="40"
+                disabled={submitting}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="client-retainer-rate">Hourly rate</Label>
+              <Input
+                id="client-retainer-rate"
+                type="number"
+                min="0"
+                step="1"
+                value={values.retainerRate}
+                onChange={(event) =>
+                  onChange("retainerRate", event.target.value)
+                }
+                placeholder="150"
+                disabled={submitting}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="client-retainer-cycle-day">Cycle start day</Label>
+              <Input
+                id="client-retainer-cycle-day"
+                type="number"
+                min="1"
+                max="28"
+                step="1"
+                value={values.retainerCycleDay}
+                onChange={(event) =>
+                  onChange("retainerCycleDay", event.target.value)
+                }
+                placeholder="1"
+                disabled={submitting}
+                required
+              />
+            </div>
+          </div>
+        ) : null}
+      </div>
+
       {validationError ? (
         <p className="text-sm text-destructive">{validationError}</p>
       ) : null}

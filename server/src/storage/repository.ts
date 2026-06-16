@@ -9,6 +9,7 @@ import {
   effectiveProjectServiceHours,
   projectServiceLineTotal,
 } from "../lib/service-estimate.js"
+import { computeRetainerSummary, getCurrentCycleStart } from "../lib/retainer-cycle.js"
 import type {
   Comment,
   ContactLog,
@@ -143,6 +144,19 @@ interface ClientRow {
   website: string | null
   notes: string | null
   convertedFromLeadId: string | null
+  isRetainer: number
+  retainerHours: number | null
+  retainerRate: number | null
+  retainerCycleDay: number | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface RetainerCycleHoursRow {
+  id: string
+  clientId: string
+  cycleStart: string
+  hoursLogged: number
   createdAt: string
   updatedAt: string
 }
@@ -1389,8 +1403,87 @@ function rowToClient(row: ClientRow): Client {
   if (row.convertedFromLeadId) {
     client.convertedFromLeadId = row.convertedFromLeadId
   }
+  if (row.isRetainer) {
+    client.isRetainer = true
+    if (row.retainerHours != null) client.retainerHours = row.retainerHours
+    if (row.retainerRate != null) client.retainerRate = row.retainerRate
+    if (row.retainerCycleDay != null) {
+      client.retainerCycleDay = row.retainerCycleDay
+    }
+  }
 
   return client
+}
+
+function getRetainerCycleHours(
+  clientId: string,
+  cycleStart: string,
+): number {
+  const row = getDb()
+    .prepare(
+      `SELECT hoursLogged FROM retainer_cycle_hours
+       WHERE clientId = ? AND cycleStart = ?`,
+    )
+    .get(clientId, cycleStart) as { hoursLogged: number } | undefined
+
+  return row?.hoursLogged ?? 0
+}
+
+export function upsertRetainerCycleHours(
+  clientId: string,
+  cycleStart: string,
+  hoursLogged: number,
+): number {
+  return withTransaction(() => {
+    const now = new Date().toISOString()
+    const existing = getDb()
+      .prepare(
+        `SELECT id FROM retainer_cycle_hours
+         WHERE clientId = ? AND cycleStart = ?`,
+      )
+      .get(clientId, cycleStart) as { id: string } | undefined
+
+    if (existing) {
+      getDb()
+        .prepare(
+          `UPDATE retainer_cycle_hours
+           SET hoursLogged = ?, updatedAt = ?
+           WHERE id = ?`,
+        )
+        .run(hoursLogged, now, existing.id)
+    } else {
+      getDb()
+        .prepare(
+          `INSERT INTO retainer_cycle_hours (
+            id, clientId, cycleStart, hoursLogged, createdAt, updatedAt
+          ) VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+        .run(randomUUID(), clientId, cycleStart, hoursLogged, now, now)
+    }
+
+    return hoursLogged
+  })
+}
+
+function buildRetainerSummary(client: Client) {
+  if (
+    !client.isRetainer ||
+    client.retainerHours == null ||
+    client.retainerRate == null ||
+    client.retainerCycleDay == null
+  ) {
+    return undefined
+  }
+
+  const cycleStart = getCurrentCycleStart(client.retainerCycleDay)
+  const hoursLogged = getRetainerCycleHours(client.id, cycleStart)
+
+  return computeRetainerSummary({
+    retainerHours: client.retainerHours,
+    retainerRate: client.retainerRate,
+    retainerCycleDay: client.retainerCycleDay,
+    hoursLogged,
+  })
 }
 
 export function listClients(): Client[] {
@@ -1431,9 +1524,12 @@ export function getClientWithProjects(
     return undefined
   }
 
+  const retainerSummary = buildRetainerSummary(client)
+
   return {
     ...client,
     projects: listProjectsByClientId(id),
+    ...(retainerSummary ? { retainerSummary } : {}),
   }
 }
 
@@ -1453,14 +1549,29 @@ export function createClient(input: CreateClientInput): Client {
       ...(input.convertedFromLeadId
         ? { convertedFromLeadId: input.convertedFromLeadId }
         : {}),
+      ...(input.isRetainer
+        ? {
+            isRetainer: true,
+            ...(input.retainerHours != null
+              ? { retainerHours: input.retainerHours }
+              : {}),
+            ...(input.retainerRate != null
+              ? { retainerRate: input.retainerRate }
+              : {}),
+            ...(input.retainerCycleDay != null
+              ? { retainerCycleDay: input.retainerCycleDay }
+              : {}),
+          }
+        : {}),
     }
 
     getDb()
       .prepare(
         `INSERT INTO clients (
           id, name, company, email, phone, website, notes,
-          convertedFromLeadId, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          convertedFromLeadId, isRetainer, retainerHours, retainerRate,
+          retainerCycleDay, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         client.id,
@@ -1471,6 +1582,10 @@ export function createClient(input: CreateClientInput): Client {
         client.website ?? null,
         client.notes ?? null,
         client.convertedFromLeadId ?? null,
+        client.isRetainer ? 1 : 0,
+        client.retainerHours ?? null,
+        client.retainerRate ?? null,
+        client.retainerCycleDay ?? null,
         client.createdAt,
         client.updatedAt,
       )
@@ -1498,13 +1613,48 @@ export function updateClient(
     applyNullableString(client, "notes", input.notes)
     applyNullableString(client, "convertedFromLeadId", input.convertedFromLeadId)
 
+    if (input.isRetainer !== undefined) {
+      client.isRetainer = input.isRetainer
+      if (!input.isRetainer) {
+        delete client.retainerHours
+        delete client.retainerRate
+        delete client.retainerCycleDay
+      }
+    }
+
+    if (input.retainerHours !== undefined) {
+      if (input.retainerHours === null) {
+        delete client.retainerHours
+      } else {
+        client.retainerHours = input.retainerHours
+      }
+    }
+
+    if (input.retainerRate !== undefined) {
+      if (input.retainerRate === null) {
+        delete client.retainerRate
+      } else {
+        client.retainerRate = input.retainerRate
+      }
+    }
+
+    if (input.retainerCycleDay !== undefined) {
+      if (input.retainerCycleDay === null) {
+        delete client.retainerCycleDay
+      } else {
+        client.retainerCycleDay = input.retainerCycleDay
+      }
+    }
+
     client.updatedAt = new Date().toISOString()
 
     getDb()
       .prepare(
         `UPDATE clients
          SET name = ?, company = ?, email = ?, phone = ?, website = ?,
-             notes = ?, convertedFromLeadId = ?, updatedAt = ?
+             notes = ?, convertedFromLeadId = ?, isRetainer = ?,
+             retainerHours = ?, retainerRate = ?, retainerCycleDay = ?,
+             updatedAt = ?
          WHERE id = ?`,
       )
       .run(
@@ -1515,6 +1665,10 @@ export function updateClient(
         client.website ?? null,
         client.notes ?? null,
         client.convertedFromLeadId ?? null,
+        client.isRetainer ? 1 : 0,
+        client.retainerHours ?? null,
+        client.retainerRate ?? null,
+        client.retainerCycleDay ?? null,
         client.updatedAt,
         id,
       )
@@ -1592,8 +1746,9 @@ export function convertLeadToClient(
       .prepare(
         `INSERT INTO clients (
           id, name, company, email, phone, website, notes,
-          convertedFromLeadId, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          convertedFromLeadId, isRetainer, retainerHours, retainerRate,
+          retainerCycleDay, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         client.id,
@@ -1604,6 +1759,10 @@ export function convertLeadToClient(
         null,
         client.notes ?? null,
         client.convertedFromLeadId ?? null,
+        0,
+        null,
+        null,
+        null,
         client.createdAt,
         client.updatedAt,
       )
