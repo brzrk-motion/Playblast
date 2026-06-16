@@ -36,6 +36,7 @@ import {
 } from "@/components/project/deliverable-dialog"
 import { ProjectBudgetEstimatePanel } from "@/components/project/project-budget-estimate-panel"
 import { ProjectFormSheet } from "@/components/project/project-form-sheet"
+import { ProjectNotesField } from "@/components/project/project-notes-field"
 import { ProjectServicesSection } from "@/components/project/project-services-section"
 import {
   projectFormToPayload,
@@ -473,6 +474,16 @@ export function ProjectOverviewPage() {
           </CardContent>
         </Card>
       </div>
+
+      <ProjectNotesField
+        notes={project.notes}
+        onSave={async (notes) => {
+          const updated = await updateProject(project.id, { notes })
+          setProject((current) =>
+            current ? { ...current, notes: updated.notes } : current,
+          )
+        }}
+      />
 
       <ProjectBudgetEstimatePanel
         projectServices={projectServices}

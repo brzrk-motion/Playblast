@@ -151,6 +151,13 @@ function runMigrations(db: Database.Database): void {
       db.exec("ALTER TABLE project_services ADD COLUMN overrideHours REAL")
     }
 
+    if (
+      id === "006_project_notes" &&
+      !tableHasColumn(db, "projects", "notes")
+    ) {
+      db.exec("ALTER TABLE projects ADD COLUMN notes TEXT")
+    }
+
     recordMigration(db, id)
   }
 }

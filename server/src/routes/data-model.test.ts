@@ -143,6 +143,17 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(updated.budget.currency, "USD")
     assert.equal(updated.budget.spent, 5000)
 
+    const notesResponse = await fetch(`${baseUrl}/api/projects/spot-patch`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        notes: "Internal creative direction.",
+      }),
+    })
+    assert.equal(notesResponse.status, 200)
+    const withNotes = (await notesResponse.json()) as { notes: string }
+    assert.equal(withNotes.notes, "Internal creative direction.")
+
     const invalid = await fetch(`${baseUrl}/api/projects/spot-patch`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

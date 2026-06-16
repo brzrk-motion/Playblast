@@ -59,6 +59,7 @@ interface ProjectRow {
   startDate: string | null
   endDate: string | null
   budget: string | null
+  notes: string | null
 }
 
 interface DeliverableRow {
@@ -174,6 +175,7 @@ function rowToProject(row: ProjectRow): Project {
   if (row.startDate) project.startDate = row.startDate
   if (row.endDate) project.endDate = row.endDate
   if (row.budget) project.budget = JSON.parse(row.budget) as ProjectBudget
+  if (row.notes) project.notes = row.notes
 
   return project
 }
@@ -387,13 +389,14 @@ export function createProject(input: CreateProjectInput): Project {
       ...(input.startDate ? { startDate: input.startDate } : {}),
       ...(input.endDate ? { endDate: input.endDate } : {}),
       ...(input.budget ? { budget: input.budget } : {}),
+      ...(input.notes ? { notes: input.notes } : {}),
     }
 
     getDb()
       .prepare(
         `INSERT INTO projects (
-          id, name, createdAt, status, client, clientId, description, startDate, endDate, budget
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, name, createdAt, status, client, clientId, description, startDate, endDate, budget, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         project.id,
@@ -406,6 +409,7 @@ export function createProject(input: CreateProjectInput): Project {
         project.startDate ?? null,
         project.endDate ?? null,
         project.budget ? JSON.stringify(project.budget) : null,
+        project.notes ?? null,
       )
 
     return project
@@ -430,6 +434,7 @@ export function updateProject(
     applyNullableString(project, "description", input.description)
     applyNullableString(project, "startDate", input.startDate)
     applyNullableString(project, "endDate", input.endDate)
+    applyNullableString(project, "notes", input.notes)
 
     if (input.budget === null) {
       delete project.budget
@@ -441,7 +446,7 @@ export function updateProject(
       .prepare(
         `UPDATE projects
          SET name = ?, status = ?, client = ?, clientId = ?, description = ?,
-             startDate = ?, endDate = ?, budget = ?
+             startDate = ?, endDate = ?, budget = ?, notes = ?
          WHERE id = ?`,
       )
       .run(
@@ -453,6 +458,7 @@ export function updateProject(
         project.startDate ?? null,
         project.endDate ?? null,
         project.budget ? JSON.stringify(project.budget) : null,
+        project.notes ?? null,
         id,
       )
 
