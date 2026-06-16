@@ -3,6 +3,7 @@ import path from "node:path"
 import { randomUUID } from "node:crypto"
 import type { Database } from "better-sqlite3"
 import { getUploadDir } from "../config/paths.js"
+import { buildProjectHoursSummary } from "../lib/hours-summary.js"
 import {
   calculateProjectServicesEstimate,
   calculateProjectServicesEstimatedHours,
@@ -67,6 +68,7 @@ import type {
   Version,
   VersionStatus,
 } from "../types/index.js"
+import type { ProjectHoursSummary } from "../types/hours-summary.js"
 import { contactLogTypeIndicatesResponse } from "../types/index.js"
 import { DELIVERABLE_STATUSES } from "../types/index.js"
 import type { FrameAnnotation } from "../types/annotation.js"
@@ -1174,6 +1176,26 @@ export function getTotalLoggedHours(taskId: string): number {
     .get(taskId) as { total: number }
 
   return row.total
+}
+
+export function getProjectLoggedHours(projectId: string): number {
+  const row = getDb()
+    .prepare(
+      `SELECT COALESCE(SUM(time_logs.durationHours), 0) AS total
+       FROM time_logs
+       INNER JOIN tasks ON tasks.id = time_logs.taskId
+       INNER JOIN milestones ON milestones.id = tasks.milestoneId
+       WHERE milestones.projectId = ?`,
+    )
+    .get(projectId) as { total: number }
+
+  return row.total
+}
+
+export function getProjectHoursSummary(projectId: string): ProjectHoursSummary {
+  const projectServices = listProjectServices(projectId)
+  const totalLoggedHours = getProjectLoggedHours(projectId)
+  return buildProjectHoursSummary(projectServices, totalLoggedHours)
 }
 
 export function createTimeLog(input: CreateTimeLogInput): TimeLog {

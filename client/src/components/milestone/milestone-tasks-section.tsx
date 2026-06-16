@@ -13,12 +13,14 @@ interface MilestoneTasksSectionProps {
   milestoneId: string
   tasks: Task[]
   onTasksChange: (milestoneId: string, tasks: Task[]) => void
+  onTaskHoursChange?: () => void
 }
 
 export function MilestoneTasksSection({
   milestoneId,
   tasks,
   onTasksChange,
+  onTaskHoursChange,
 }: MilestoneTasksSectionProps) {
   const [newTaskName, setNewTaskName] = useState("")
   const [adding, setAdding] = useState(false)
@@ -104,9 +106,10 @@ export function MilestoneTasksSection({
           <TaskTimeLogControl
             taskId={task.id}
             totalHours={taskHours[task.id]}
-            onTotalHoursChange={(hours) =>
+            onTotalHoursChange={(hours) => {
               setTaskHours((current) => ({ ...current, [task.id]: hours }))
-            }
+              onTaskHoursChange?.()
+            }}
           />
           <Button
             type="button"

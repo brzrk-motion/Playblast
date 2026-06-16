@@ -19,6 +19,7 @@ import type { CreateLeadInput, Lead, LeadWithContactLog, UpdateLeadInput } from 
 import type { Milestone } from "@/types/milestone"
 import type { Task } from "@/types/task"
 import type { TimeLog } from "@/types/time-log"
+import type { ProjectHoursSummary } from "@/types/hours-summary"
 import type {
   Project,
   ProjectBudget,
@@ -415,6 +416,15 @@ export async function deleteTimeLog(timeLogId: string): Promise<void> {
     { method: "DELETE" },
   )
   await expectOk(response)
+}
+
+export async function getProjectHoursSummary(
+  projectId: string,
+): Promise<ProjectHoursSummary> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/hours-summary`,
+  )
+  return parseJsonResponse<ProjectHoursSummary>(response)
 }
 
 // --- Versions ---------------------------------------------------------------

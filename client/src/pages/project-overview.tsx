@@ -136,6 +136,7 @@ export function ProjectOverviewPage() {
   const [outstandingBalance, setOutstandingBalance] = useState(0)
   const [clientLinkOpen, setClientLinkOpen] = useState(false)
   const [invoiceRefreshKey, setInvoiceRefreshKey] = useState(0)
+  const [hoursSummaryRefreshKey, setHoursSummaryRefreshKey] = useState(0)
 
   useProjectPageHeader(projectId, project)
 
@@ -695,6 +696,9 @@ export function ProjectOverviewPage() {
                         milestoneId={milestone.id}
                         tasks={tasksByMilestone.get(milestone.id) ?? []}
                         onTasksChange={handleTasksChange}
+                        onTaskHoursChange={() =>
+                          setHoursSummaryRefreshKey((key) => key + 1)
+                        }
                       />
                     </li>
                   ))}
@@ -866,6 +870,7 @@ export function ProjectOverviewPage() {
             projectServices={projectServices}
             onProjectServicesChange={setProjectServices}
             servicesLoading={servicesLoading}
+            hoursSummaryRefreshKey={hoursSummaryRefreshKey}
           />
         </TabsContent>
       </Tabs>

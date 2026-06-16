@@ -437,6 +437,116 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(deleteTaskResponse.status, 204)
   })
 
+  it("returns project hours summary with estimates and logged time", async () => {
+    await createProject("hours-summary", "Hours Summary Project")
+
+    const serviceAResponse = await fetch(`${baseUrl}/api/services`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Animation",
+        hourEstimate: 40,
+        hourlyRate: 120,
+        type: "animated",
+      }),
+    })
+    assert.equal(serviceAResponse.status, 201)
+    const serviceA = (await serviceAResponse.json()) as { id: string }
+
+    const serviceBResponse = await fetch(`${baseUrl}/api/services`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Layout",
+        hourEstimate: 20,
+        hourlyRate: 90,
+        type: "static",
+      }),
+    })
+    assert.equal(serviceBResponse.status, 201)
+    const serviceB = (await serviceBResponse.json()) as { id: string }
+
+    for (const serviceId of [serviceA.id, serviceB.id]) {
+      const attachResponse = await fetch(
+        `${baseUrl}/api/projects/hours-summary/services`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ serviceId }),
+        },
+      )
+      assert.equal(attachResponse.status, 201)
+    }
+
+    const emptySummaryResponse = await fetch(
+      `${baseUrl}/api/projects/hours-summary/hours-summary`,
+    )
+    assert.equal(emptySummaryResponse.status, 200)
+    const emptySummary = (await emptySummaryResponse.json()) as {
+      totalEstimatedHours: number
+      totalLoggedHours: number
+      deltaHours: number
+      lines: Array<{ serviceName: string; estimatedHours: number }>
+    }
+    assert.equal(emptySummary.totalEstimatedHours, 60)
+    assert.equal(emptySummary.totalLoggedHours, 0)
+    assert.equal(emptySummary.deltaHours, -60)
+    assert.equal(emptySummary.lines.length, 2)
+
+    const milestoneResponse = await fetch(
+      `${baseUrl}/api/projects/hours-summary/milestones`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Production" }),
+      },
+    )
+    assert.equal(milestoneResponse.status, 201)
+    const milestone = (await milestoneResponse.json()) as { id: string }
+
+    const taskResponse = await fetch(
+      `${baseUrl}/api/milestones/${milestone.id}/tasks`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Blocking" }),
+      },
+    )
+    assert.equal(taskResponse.status, 201)
+    const task = (await taskResponse.json()) as { id: string }
+
+    const logResponse = await fetch(
+      `${baseUrl}/api/tasks/${task.id}/time-logs`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ durationHours: 12.5 }),
+      },
+    )
+    assert.equal(logResponse.status, 201)
+
+    const summaryResponse = await fetch(
+      `${baseUrl}/api/projects/hours-summary/hours-summary`,
+    )
+    assert.equal(summaryResponse.status, 200)
+    const summary = (await summaryResponse.json()) as {
+      totalEstimatedHours: number
+      totalLoggedHours: number
+      deltaHours: number
+      lines: Array<{ serviceName: string; estimatedHours: number }>
+    }
+    assert.equal(summary.totalEstimatedHours, 60)
+    assert.equal(summary.totalLoggedHours, 12.5)
+    assert.equal(summary.deltaHours, -47.5)
+    assert.equal(summary.lines[0]?.serviceName, "Animation")
+    assert.equal(summary.lines[0]?.estimatedHours, 40)
+
+    const missingResponse = await fetch(
+      `${baseUrl}/api/projects/missing-project/hours-summary`,
+    )
+    assert.equal(missingResponse.status, 404)
+  })
+
   it("rejects invalid time log duration", async () => {
     await createProject("spot-time-invalid", "Spot Time Invalid")
 
