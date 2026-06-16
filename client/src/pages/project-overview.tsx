@@ -621,6 +621,7 @@ export function ProjectOverviewPage() {
         hasClient={project.client !== null}
         onRequestClientLink={() => setClientLinkOpen(true)}
         onInvoiceCreated={() => setInvoiceRefreshKey((key) => key + 1)}
+        hoursRefreshKey={hoursSummaryRefreshKey}
       />
 
       <ProjectInvoicesSection
