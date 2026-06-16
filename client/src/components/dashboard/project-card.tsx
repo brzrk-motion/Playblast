@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { ProjectActionsMenu } from "@/components/project/project-actions-menu"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
 import {
   ESTIMATE_BUDGET_STATUS_DOT_STYLES,
@@ -166,12 +167,19 @@ export function DashboardProjectCard({
   )
 
   return (
-    <Link
-      to={`/projects/${encodeURIComponent(projectId)}`}
-      className="block rounded-xl focus-ring"
-    >
-      <Card className="interactive-card h-full border-muted">
-        <CardHeader className={compact ? "gap-2 pb-2" : "pb-3"}>
+    <Card className="interactive-card relative h-full border-muted">
+      <div className="absolute top-2 right-2 z-10">
+        <ProjectActionsMenu
+          projectId={projectId}
+          projectName={name}
+          className="size-7"
+        />
+      </div>
+      <Link
+        to={`/projects/${encodeURIComponent(projectId)}`}
+        className="block rounded-xl focus-ring"
+      >
+        <CardHeader className={compact ? "gap-2 pb-2 pr-10" : "pb-3 pr-10"}>
           <CardTitle
             className={cn(
               "leading-snug",
@@ -197,7 +205,7 @@ export function DashboardProjectCard({
             {deliverableCount === 1 ? "deliverable" : "deliverables"}
           </p>
         </CardContent>
-      </Card>
-    </Link>
+      </Link>
+    </Card>
   )
 }

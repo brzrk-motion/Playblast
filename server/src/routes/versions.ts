@@ -1,12 +1,18 @@
+import fs from "node:fs"
 import { Router } from "express"
+import { getVideoPath } from "../config/paths.js"
 import {
+  getProject,
   getVersion,
   updateVersionLabel,
   updateVersionStatus,
 } from "../storage/index.js"
 import { isVersionStatus } from "../types/version.js"
+import { buildVersionDownloadFilename } from "../utils/download-filename.js"
+import { getVideoContentType } from "../utils/mime.js"
 import { getParam } from "../utils/params.js"
 import { SAFE_SEGMENT } from "../middleware/validateParams.js"
+import { pipeVideo } from "./video.js"
 
 const versionsRouter = Router()
 
@@ -70,6 +76,61 @@ versionsRouter.patch("/:versionId/label", (req, res) => {
   }
 
   res.json(result)
+})
+
+versionsRouter.get("/:versionId/download", (req, res) => {
+  const versionId = getParam(req.params.versionId)
+  const version = getVersion(versionId)
+
+  if (!version) {
+    res.status(404).json({ error: "Version not found." })
+    return
+  }
+
+  const project = getProject(version.projectId)
+  if (!project) {
+    res.status(404).json({ error: "Project not found." })
+    return
+  }
+
+  const videoPath = getVideoPath(
+    version.projectId,
+    version.deliverableId,
+    version.label,
+    version.filename,
+  )
+  if (!videoPath) {
+    res.status(400).json({ error: "Invalid filename" })
+    return
+  }
+
+  let stat: fs.Stats
+  try {
+    stat = fs.statSync(videoPath)
+  } catch {
+    res.status(404).json({ error: "Video not found" })
+    return
+  }
+
+  if (!stat.isFile()) {
+    res.status(404).json({ error: "Video not found" })
+    return
+  }
+
+  const downloadFilename = buildVersionDownloadFilename(
+    project.name,
+    version.label,
+    version.filename,
+  )
+
+  res.status(200)
+  res.set({
+    "Content-Length": String(stat.size),
+    "Content-Type": getVideoContentType(version.filename),
+    "Content-Disposition": `attachment; filename="${downloadFilename}"`,
+  })
+
+  pipeVideo(res, videoPath)
 })
 
 export default versionsRouter

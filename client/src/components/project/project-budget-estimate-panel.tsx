@@ -1,6 +1,8 @@
+import { useState } from "react"
 import { Link } from "react-router-dom"
-import { Scale, TrendingUp } from "lucide-react"
+import { FileOutput, Scale, TrendingUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -31,6 +33,9 @@ import {
   calculateProjectCostEstimate,
   isProjectServiceHoursOverridden,
 } from "@/lib/service-estimate"
+import { InvoiceClientRequiredDialog } from "@/components/project/invoice-client-required-dialog"
+import { Spinner } from "@/components/ui/spinner"
+import { createInvoice, downloadInvoicePdf } from "@/lib/api"
 import { useInternalHourlyCostRate } from "@/lib/internal-hourly-cost-rate"
 import {
   calculateProjectProfitability,
@@ -38,15 +43,20 @@ import {
   MARGIN_STATUS_STYLES,
   marginStatus,
 } from "@/lib/profitability"
+import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import { formatHourEstimate } from "@/lib/services"
 import { cn } from "@/lib/utils"
 import type { ProjectBudget } from "@/types/project"
 import type { ProjectServiceWithDetails } from "@/types/project-service"
 
 interface ProjectBudgetEstimatePanelProps {
+  projectId: string
   projectServices: ProjectServiceWithDetails[]
   budget?: ProjectBudget
   loading?: boolean
+  hasClient: boolean
+  onRequestClientLink: () => void
+  onInvoiceCreated?: () => void
 }
 
 function formatSignedVariance(amount: number, currency: string): string {
@@ -64,10 +74,16 @@ function formatSignedVariancePercent(percent: number): string {
 }
 
 export function ProjectBudgetEstimatePanel({
+  projectId,
   projectServices,
   budget,
   loading = false,
+  hasClient,
+  onRequestClientLink,
+  onInvoiceCreated,
 }: ProjectBudgetEstimatePanelProps) {
+  const [generating, setGenerating] = useState(false)
+  const [clientRequiredOpen, setClientRequiredOpen] = useState(false)
   const currency = budget?.currency ?? "USD"
   const estimate = calculateProjectCostEstimate(projectServices)
   const internalHourlyCostRate = useInternalHourlyCostRate()
@@ -86,6 +102,30 @@ export function ProjectBudgetEstimatePanel({
   const variancePercent = hasBudget
     ? estimateBudgetVariancePercent(budgetTotal, estimate.totalEstimate)
     : null
+
+  async function handleGenerateInvoice() {
+    if (!hasClient) {
+      setClientRequiredOpen(true)
+      return
+    }
+
+    if (estimate.lines.length === 0) {
+      showErrorToast("Add at least one service before generating an invoice.")
+      return
+    }
+
+    setGenerating(true)
+    try {
+      const invoice = await createInvoice(projectId)
+      await downloadInvoicePdf(invoice.id)
+      showSuccessToast(`Invoice #${invoice.invoiceNumber} generated`)
+      onInvoiceCreated?.()
+    } catch (err) {
+      showErrorToast(humanizeApiError(err, "Failed to generate invoice"))
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   return (
     <Card
@@ -112,6 +152,16 @@ export function ProjectBudgetEstimatePanel({
               {ESTIMATE_BUDGET_STATUS_LABELS[status]}
             </Badge>
           ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={loading || generating}
+            onClick={() => void handleGenerateInvoice()}
+          >
+            {generating ? <Spinner className="size-4" /> : <FileOutput />}
+            Generate Invoice
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -337,6 +387,12 @@ export function ProjectBudgetEstimatePanel({
           )}
         </section>
       </CardContent>
+
+      <InvoiceClientRequiredDialog
+        open={clientRequiredOpen}
+        onOpenChange={setClientRequiredOpen}
+        onAddClient={onRequestClientLink}
+      />
     </Card>
   )
 }

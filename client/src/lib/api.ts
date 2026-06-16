@@ -18,6 +18,7 @@ import type {
   ProjectStatus,
   ProjectSummary,
 } from "@/types/project"
+import type { Invoice } from "@/types/invoice"
 import type {
   AddProjectServiceInput,
   ProjectServiceWithDetails,
@@ -44,6 +45,19 @@ export function getVideoUrl(
     .join("/")
 
   return `/video/${encodeURIComponent(projectId)}/${encodeURIComponent(deliverableId)}/${encodeURIComponent(version)}/${encodedFilename}`
+}
+
+export function getVersionDownloadUrl(versionId: string): string {
+  return `/api/versions/${encodeURIComponent(versionId)}/download`
+}
+
+export function downloadVersion(versionId: string): void {
+  const link = document.createElement("a")
+  link.href = getVersionDownloadUrl(versionId)
+  link.style.display = "none"
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 }
 
 function humanizeHttpError(status: number, serverMessage?: string): string {
@@ -161,6 +175,14 @@ export async function deleteProject(id: string): Promise<void> {
     method: "DELETE",
   })
   await expectOk(response)
+}
+
+export async function duplicateProject(id: string): Promise<Project> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(id)}/duplicate`,
+    { method: "POST" },
+  )
+  return parseJsonResponse<Project>(response)
 }
 
 // --- Deliverables -----------------------------------------------------------
@@ -709,4 +731,47 @@ export async function updateProjectService(
     },
   )
   return parseJsonResponse<ProjectServiceWithDetails>(response)
+}
+
+// --- Invoices ---------------------------------------------------------------
+
+export async function listInvoices(projectId: string): Promise<Invoice[]> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/invoices`,
+  )
+  return parseJsonResponse<Invoice[]>(response)
+}
+
+export async function createInvoice(projectId: string): Promise<Invoice> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/invoices`,
+    { method: "POST" },
+  )
+  return parseJsonResponse<Invoice>(response)
+}
+
+export function getInvoicePdfUrl(invoiceId: string): string {
+  return `/api/invoices/${encodeURIComponent(invoiceId)}/pdf`
+}
+
+export async function downloadInvoicePdf(invoiceId: string): Promise<void> {
+  const response = await fetch(getInvoicePdfUrl(invoiceId))
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: string
+    } | null
+    throw new Error(humanizeHttpError(response.status, body?.error))
+  }
+
+  const blob = await response.blob()
+  const disposition = response.headers.get("content-disposition") ?? ""
+  const filenameMatch = disposition.match(/filename="([^"]+)"/)
+  const filename = filenameMatch?.[1] ?? `invoice-${invoiceId}.pdf`
+
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
 }

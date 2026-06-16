@@ -6,6 +6,8 @@ import { getUploadDir } from "../config/paths.js"
 import {
   calculateProjectServicesEstimate,
   calculateProjectServicesEstimatedHours,
+  effectiveProjectServiceHours,
+  projectServiceLineTotal,
 } from "../lib/service-estimate.js"
 import type {
   Comment,
@@ -27,6 +29,8 @@ import type {
   Lead,
   LeadStatus,
   LeadWithContactLog,
+  Invoice,
+  InvoiceLineItem,
   Milestone,
   Project,
   ProjectBudget,
@@ -419,6 +423,101 @@ export function createProject(input: CreateProjectInput): Project {
       )
 
     return project
+  })
+}
+
+export function duplicateProject(sourceProjectId: string): Project | undefined {
+  return withTransaction(() => {
+    const source = getProject(sourceProjectId)
+    if (!source) {
+      return undefined
+    }
+
+    const now = new Date().toISOString()
+    const newProject: Project = {
+      id: randomUUID(),
+      name: `${source.name} (Copy)`,
+      createdAt: now,
+      status: "active",
+      ...(source.description ? { description: source.description } : {}),
+    }
+
+    getDb()
+      .prepare(
+        `INSERT INTO projects (
+          id, name, createdAt, status, client, clientId, description, startDate, endDate, budget
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        newProject.id,
+        newProject.name,
+        newProject.createdAt,
+        newProject.status,
+        null,
+        null,
+        newProject.description ?? null,
+        null,
+        null,
+        null,
+      )
+
+    const sourceServices = getDb()
+      .prepare(
+        `SELECT serviceId, quantity, overrideHours
+         FROM project_services
+         WHERE projectId = ?`,
+      )
+      .all(sourceProjectId) as Array<{
+      serviceId: string
+      quantity: number
+      overrideHours: number | null
+    }>
+
+    const insertService = getDb().prepare(
+      `INSERT INTO project_services (
+        id, projectId, serviceId, quantity, overrideHours, createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+
+    for (const service of sourceServices) {
+      insertService.run(
+        randomUUID(),
+        newProject.id,
+        service.serviceId,
+        service.quantity,
+        service.overrideHours,
+        now,
+      )
+    }
+
+    const sourceMilestones = getDb()
+      .prepare(
+        `SELECT name, "order"
+         FROM milestones
+         WHERE projectId = ?
+         ORDER BY "order" ASC`,
+      )
+      .all(sourceProjectId) as Array<{ name: string; order: number }>
+
+    const insertMilestone = getDb().prepare(
+      `INSERT INTO milestones (
+        id, projectId, name, dueDate, done, "order", createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+
+    for (const milestone of sourceMilestones) {
+      insertMilestone.run(
+        randomUUID(),
+        newProject.id,
+        milestone.name,
+        null,
+        0,
+        milestone.order,
+        now,
+      )
+    }
+
+    return newProject
   })
 }
 
@@ -1727,6 +1826,22 @@ interface ProjectServiceRow {
   createdAt: string
 }
 
+interface InvoiceRow {
+  id: string
+  invoiceNumber: number
+  projectId: string
+  clientId: string
+  projectName: string
+  clientName: string
+  clientCompany: string | null
+  clientEmail: string
+  currency: string
+  grandTotal: number
+  lineItems: string
+  invoiceDate: string
+  createdAt: string
+}
+
 function rowToProjectService(row: ProjectServiceRow): ProjectService {
   return {
     id: row.id,
@@ -1916,4 +2031,121 @@ export function linkServiceToProject(
   if (result === "already_linked") {
     return
   }
+}
+
+function rowToInvoice(row: InvoiceRow): Invoice {
+  const lineItems = JSON.parse(row.lineItems) as InvoiceLineItem[]
+
+  return {
+    id: row.id,
+    invoiceNumber: row.invoiceNumber,
+    projectId: row.projectId,
+    clientId: row.clientId,
+    projectName: row.projectName,
+    clientName: row.clientName,
+    ...(row.clientCompany ? { clientCompany: row.clientCompany } : {}),
+    clientEmail: row.clientEmail,
+    currency: row.currency,
+    grandTotal: row.grandTotal,
+    lineItems,
+    invoiceDate: row.invoiceDate,
+    createdAt: row.createdAt,
+  }
+}
+
+function nextInvoiceNumber(db: Database): number {
+  const row = db
+    .prepare("SELECT COALESCE(MAX(invoiceNumber), 0) AS maxNum FROM invoices")
+    .get() as { maxNum: number }
+  return row.maxNum + 1
+}
+
+export function listInvoicesByProject(projectId: string): Invoice[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM invoices
+       WHERE projectId = ?
+       ORDER BY invoiceNumber DESC`,
+    )
+    .all(projectId) as InvoiceRow[]
+
+  return rows.map(rowToInvoice)
+}
+
+export function getInvoice(id: string): Invoice | undefined {
+  const row = getDb()
+    .prepare("SELECT * FROM invoices WHERE id = ?")
+    .get(id) as InvoiceRow | undefined
+
+  return row ? rowToInvoice(row) : undefined
+}
+
+export type CreateInvoiceResult =
+  | Invoice
+  | "project_not_found"
+  | "no_client"
+  | "no_services"
+
+export function createInvoice(projectId: string): CreateInvoiceResult {
+  const project = getProjectWithClient(projectId)
+  if (!project) {
+    return "project_not_found"
+  }
+
+  if (!project.clientId || !project.client) {
+    return "no_client"
+  }
+
+  const services = listProjectServices(projectId)
+  if (services.length === 0) {
+    return "no_services"
+  }
+
+  const lineItems: InvoiceLineItem[] = services.map((item) => ({
+    serviceName: item.service.name,
+    hours: effectiveProjectServiceHours(item),
+    hourlyRate: item.service.hourlyRate,
+    lineTotal: projectServiceLineTotal(item),
+  }))
+
+  const grandTotal = calculateProjectServicesEstimate(services)
+  const currency = project.budget?.currency ?? "USD"
+  const now = new Date()
+  const invoiceDate = now.toISOString().slice(0, 10)
+  const createdAt = now.toISOString()
+  const client = project.client
+
+  return withTransaction(() => {
+    const db = getDb()
+    const id = randomUUID()
+    const invoiceNumber = nextInvoiceNumber(db)
+
+    db.prepare(
+      `INSERT INTO invoices (
+        id, invoiceNumber, projectId, clientId, projectName,
+        clientName, clientCompany, clientEmail, currency,
+        grandTotal, lineItems, invoiceDate, createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      id,
+      invoiceNumber,
+      projectId,
+      project.clientId,
+      project.name,
+      client.name,
+      client.company ?? null,
+      client.email,
+      currency,
+      grandTotal,
+      JSON.stringify(lineItems),
+      invoiceDate,
+      createdAt,
+    )
+
+    const row = db
+      .prepare("SELECT * FROM invoices WHERE id = ?")
+      .get(id) as InvoiceRow
+
+    return rowToInvoice(row)
+  })
 }

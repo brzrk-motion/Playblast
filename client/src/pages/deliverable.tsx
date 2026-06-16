@@ -10,6 +10,7 @@ import { VersionSelector } from "@/components/project/version-selector"
 import { VersionStatusBadge } from "@/components/project/version-status-badge"
 import { VersionUpload } from "@/components/project/version-upload"
 import { VideoApprovalActions } from "@/components/video/video-approval-actions"
+import { VersionDownloadButton } from "@/components/video/version-download-button"
 import { VideoReview } from "@/components/video/video-review"
 import {
   createComment,
@@ -422,6 +423,10 @@ export function DeliverablePage() {
           ) : null}
 
           <div className="flex items-center gap-1">
+            {selectedVersion ? (
+              <VersionDownloadButton versionId={selectedVersion.id} />
+            ) : null}
+
             <Button
               variant="ghost"
               size="sm"
