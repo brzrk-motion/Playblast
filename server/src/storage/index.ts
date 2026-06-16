@@ -44,6 +44,7 @@ export {
   listDeliverables,
   listDeliverableSummaries,
   listInvoicesByProject,
+  listInvoicePayments,
   listLeads,
   listMilestones,
   listProjectServices,

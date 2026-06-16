@@ -229,9 +229,30 @@ describe("invoice API", () => {
     )
     assert.equal(pdfResponse.status, 200)
     assert.equal(pdfResponse.headers.get("content-type"), "application/pdf")
+    assert.match(
+      pdfResponse.headers.get("content-disposition") ?? "",
+      /attachment/i,
+    )
     const pdfBuffer = Buffer.from(await pdfResponse.arrayBuffer())
     assert.ok(pdfBuffer.length > 100)
     assert.equal(pdfBuffer.subarray(0, 4).toString(), "%PDF")
+
+    const downloadResponse = await fetch(
+      `${baseUrl}/api/invoices/${created.id}/download`,
+    )
+    assert.equal(downloadResponse.status, 200)
+    assert.equal(downloadResponse.headers.get("content-type"), "application/pdf")
+    assert.match(
+      downloadResponse.headers.get("content-disposition") ?? "",
+      /attachment/i,
+    )
+
+    const paymentsListResponse = await fetch(
+      `${baseUrl}/api/invoices/${created.id}/payments`,
+    )
+    assert.equal(paymentsListResponse.status, 200)
+    const listedPayments = (await paymentsListResponse.json()) as unknown[]
+    assert.equal(listedPayments.length, 2)
   })
 
   it("auto-increments invoice numbers across projects", async () => {
@@ -295,8 +316,12 @@ describe("invoice API", () => {
     assert.equal(projectDetailResponse.status, 200)
     const projectDetail = (await projectDetailResponse.json()) as {
       outstandingBalance?: number
+      servicesEstimate?: number
+      servicesEstimatedHours?: number
     }
     assert.equal(projectDetail.outstandingBalance, 1000)
+    assert.equal(projectDetail.servicesEstimate, 1000)
+    assert.equal(projectDetail.servicesEstimatedHours, 5)
 
     const clientDetailResponse = await fetch(
       `${baseUrl}/api/clients/${client.id}`,

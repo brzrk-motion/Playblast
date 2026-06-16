@@ -65,6 +65,10 @@ export function isProjectArchived(project: Pick<Project, "archivedAt">): boolean
 /** Project detail with the linked client record populated (or null). */
 export interface ProjectDetail extends Omit<Project, "client"> {
   client: Client | null
+  /** Total services estimate when at least one service is attached. */
+  servicesEstimate?: number
+  /** Sum of effective estimated hours from attached services. */
+  servicesEstimatedHours?: number
 }
 
 export interface ProjectSummary extends Project {
