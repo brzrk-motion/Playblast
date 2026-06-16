@@ -199,15 +199,6 @@ interface ClientRow {
   updatedAt: string
 }
 
-interface RetainerCycleHoursRow {
-  id: string
-  clientId: string
-  cycleStart: string
-  hoursLogged: number
-  createdAt: string
-  updatedAt: string
-}
-
 interface ServiceRow {
   id: string
   name: string

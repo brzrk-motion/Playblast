@@ -176,7 +176,7 @@ describe("SQLite data store", () => {
 
   it("archives and unarchives projects while preserving related data", () => {
     const project = createProject({ id: "archive-me", name: "Archive Me" })
-    const deliverable = createDeliverable({
+    createDeliverable({
       projectId: project.id,
       name: "Hero Spot",
     })
