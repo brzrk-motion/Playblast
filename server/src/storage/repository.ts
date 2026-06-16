@@ -441,11 +441,23 @@ export function getProjectWithClient(id: string): ProjectDetail | undefined {
 
   const client = project.clientId ? (getClient(project.clientId) ?? null) : null
   const outstandingBalance = getProjectOutstandingBalance(id)
+  const projectServices = listProjectServices(id)
+  const servicesTotal = calculateProjectServicesEstimate(projectServices)
+  const servicesEstimate =
+    projectServices.length > 0 ? servicesTotal : undefined
+  const servicesEstimatedHours =
+    projectServices.length > 0
+      ? calculateProjectServicesEstimatedHours(projectServices)
+      : undefined
 
   return {
     ...project,
     client,
     ...(outstandingBalance > 0 ? { outstandingBalance } : {}),
+    ...(servicesEstimate !== undefined ? { servicesEstimate } : {}),
+    ...(servicesEstimatedHours !== undefined
+      ? { servicesEstimatedHours }
+      : {}),
   }
 }
 

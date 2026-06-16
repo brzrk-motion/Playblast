@@ -1,4 +1,4 @@
-import { Router } from "express"
+import { Router, type Response } from "express"
 import { generateInvoicePdf } from "../lib/invoice-pdf.js"
 import {
   createInvoice,
@@ -6,6 +6,7 @@ import {
   getInvoice,
   getInvoiceWithPayments,
   getProject,
+  listInvoicePayments,
   listInvoicesByProject,
   updateInvoice,
 } from "../storage/index.js"
@@ -115,6 +116,17 @@ invoiceByIdRouter.patch("/:invoiceId", (req, res) => {
   res.json(invoice)
 })
 
+invoiceByIdRouter.get("/:invoiceId/payments", (req, res) => {
+  const invoiceId = getParam(req.params.invoiceId)
+
+  if (!getInvoice(invoiceId)) {
+    res.status(404).json({ error: "Invoice not found." })
+    return
+  }
+
+  res.json(listInvoicePayments(invoiceId))
+})
+
 invoiceByIdRouter.post("/:invoiceId/payments", (req, res) => {
   const invoiceId = getParam(req.params.invoiceId)
 
@@ -149,8 +161,7 @@ invoiceByIdRouter.post("/:invoiceId/payments", (req, res) => {
   res.status(201).json({ payment: result, invoice })
 })
 
-invoiceByIdRouter.get("/:invoiceId/pdf", async (req, res) => {
-  const invoiceId = getParam(req.params.invoiceId)
+async function sendInvoicePdf(res: Response, invoiceId: string): Promise<void> {
   const invoice = getInvoice(invoiceId)
 
   if (!invoice) {
@@ -168,6 +179,14 @@ invoiceByIdRouter.get("/:invoiceId/pdf", async (req, res) => {
   } catch {
     res.status(500).json({ error: "Failed to generate invoice PDF." })
   }
+}
+
+invoiceByIdRouter.get("/:invoiceId/pdf", async (req, res) => {
+  await sendInvoicePdf(res, getParam(req.params.invoiceId))
+})
+
+invoiceByIdRouter.get("/:invoiceId/download", async (req, res) => {
+  await sendInvoicePdf(res, getParam(req.params.invoiceId))
 })
 
 export { invoiceByIdRouter }
