@@ -93,6 +93,24 @@ CREATE TABLE IF NOT EXISTS milestones (
   createdAt TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS tasks (
+  id TEXT PRIMARY KEY,
+  milestoneId TEXT NOT NULL REFERENCES milestones(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  done INTEGER NOT NULL DEFAULT 0,
+  "order" INTEGER NOT NULL,
+  createdAt TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS time_logs (
+  id TEXT PRIMARY KEY,
+  taskId TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  durationHours REAL NOT NULL CHECK (durationHours > 0),
+  loggedAt TEXT NOT NULL,
+  notes TEXT,
+  createdAt TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS versions (
   id TEXT PRIMARY KEY,
   projectId TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -124,6 +142,8 @@ CREATE INDEX IF NOT EXISTS idx_clients_convertedFromLeadId ON clients(convertedF
 -- here without crashing schema load on databases that predate client management.
 CREATE INDEX IF NOT EXISTS idx_deliverables_projectId ON deliverables(projectId);
 CREATE INDEX IF NOT EXISTS idx_milestones_projectId ON milestones(projectId);
+CREATE INDEX IF NOT EXISTS idx_tasks_milestoneId ON tasks(milestoneId);
+CREATE INDEX IF NOT EXISTS idx_time_logs_taskId ON time_logs(taskId);
 CREATE INDEX IF NOT EXISTS idx_versions_deliverableId ON versions(deliverableId);
 CREATE INDEX IF NOT EXISTS idx_versions_projectId ON versions(projectId);
 CREATE INDEX IF NOT EXISTS idx_comments_versionId ON comments(versionId);

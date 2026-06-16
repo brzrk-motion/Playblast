@@ -355,6 +355,122 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(deleteResponse.status, 204)
   })
 
+  it("creates tasks and logs time entries", async () => {
+    await createProject("spot-time", "Spot Time")
+
+    const milestoneResponse = await fetch(
+      `${baseUrl}/api/projects/spot-time/milestones`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Animation pass" }),
+      },
+    )
+    assert.equal(milestoneResponse.status, 201)
+    const milestone = (await milestoneResponse.json()) as { id: string }
+
+    const taskResponse = await fetch(
+      `${baseUrl}/api/milestones/${milestone.id}/tasks`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Rig polish" }),
+      },
+    )
+    assert.equal(taskResponse.status, 201)
+    const task = (await taskResponse.json()) as { id: string; name: string }
+    assert.equal(task.name, "Rig polish")
+
+    const manualLogResponse = await fetch(
+      `${baseUrl}/api/tasks/${task.id}/time-logs`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          durationHours: 1.5,
+          notes: "Blocked out motion",
+        }),
+      },
+    )
+    assert.equal(manualLogResponse.status, 201)
+    const manualLog = (await manualLogResponse.json()) as {
+      id: string
+      durationHours: number
+      notes?: string
+    }
+    assert.equal(manualLog.durationHours, 1.5)
+    assert.equal(manualLog.notes, "Blocked out motion")
+
+    const timerLogResponse = await fetch(
+      `${baseUrl}/api/tasks/${task.id}/time-logs`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ durationHours: 0.5 }),
+      },
+    )
+    assert.equal(timerLogResponse.status, 201)
+
+    const listResponse = await fetch(
+      `${baseUrl}/api/tasks/${task.id}/time-logs`,
+    )
+    assert.equal(listResponse.status, 200)
+    const entries = (await listResponse.json()) as Array<{ durationHours: number }>
+    assert.equal(entries.length, 2)
+
+    const projectTasksResponse = await fetch(
+      `${baseUrl}/api/projects/spot-time/tasks`,
+    )
+    assert.equal(projectTasksResponse.status, 200)
+    const projectTasks = (await projectTasksResponse.json()) as Array<{ id: string }>
+    assert.equal(projectTasks.length, 1)
+
+    const deleteLogResponse = await fetch(
+      `${baseUrl}/api/time-logs/${manualLog.id}`,
+      { method: "DELETE" },
+    )
+    assert.equal(deleteLogResponse.status, 204)
+
+    const deleteTaskResponse = await fetch(`${baseUrl}/api/tasks/${task.id}`, {
+      method: "DELETE",
+    })
+    assert.equal(deleteTaskResponse.status, 204)
+  })
+
+  it("rejects invalid time log duration", async () => {
+    await createProject("spot-time-invalid", "Spot Time Invalid")
+
+    const milestoneResponse = await fetch(
+      `${baseUrl}/api/projects/spot-time-invalid/milestones`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "QA" }),
+      },
+    )
+    const milestone = (await milestoneResponse.json()) as { id: string }
+
+    const taskResponse = await fetch(
+      `${baseUrl}/api/milestones/${milestone.id}/tasks`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Review renders" }),
+      },
+    )
+    const task = (await taskResponse.json()) as { id: string }
+
+    const invalidResponse = await fetch(
+      `${baseUrl}/api/tasks/${task.id}/time-logs`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ durationHours: 0 }),
+      },
+    )
+    assert.equal(invalidResponse.status, 400)
+  })
+
   it("lists project summaries with rollup fields", async () => {
     await createProject("spot-summary", "Spot Summary")
     const deliverable = await createDeliverable("spot-summary", "Cut")

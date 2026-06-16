@@ -17,6 +17,8 @@ import type {
 } from "@/types/invoice"
 import type { CreateLeadInput, Lead, LeadWithContactLog, UpdateLeadInput } from "@/types/lead"
 import type { Milestone } from "@/types/milestone"
+import type { Task } from "@/types/task"
+import type { TimeLog } from "@/types/time-log"
 import type {
   Project,
   ProjectBudget,
@@ -335,6 +337,81 @@ export async function updateMilestone(
 export async function deleteMilestone(milestoneId: string): Promise<void> {
   const response = await fetch(
     `/api/milestones/${encodeURIComponent(milestoneId)}`,
+    { method: "DELETE" },
+  )
+  await expectOk(response)
+}
+
+// --- Tasks ------------------------------------------------------------------
+
+export async function listProjectTasks(projectId: string): Promise<Task[]> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/tasks`,
+  )
+  return parseJsonResponse<Task[]>(response)
+}
+
+export async function createTask(
+  milestoneId: string,
+  input: { name: string; done?: boolean },
+): Promise<Task> {
+  const response = await fetch(
+    `/api/milestones/${encodeURIComponent(milestoneId)}/tasks`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  )
+  return parseJsonResponse<Task>(response)
+}
+
+export async function updateTask(
+  taskId: string,
+  input: { name?: string; done?: boolean },
+): Promise<Task> {
+  const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  })
+  return parseJsonResponse<Task>(response)
+}
+
+export async function deleteTask(taskId: string): Promise<void> {
+  const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+    method: "DELETE",
+  })
+  await expectOk(response)
+}
+
+// --- Time logs --------------------------------------------------------------
+
+export async function listTimeLogs(taskId: string): Promise<TimeLog[]> {
+  const response = await fetch(
+    `/api/tasks/${encodeURIComponent(taskId)}/time-logs`,
+  )
+  return parseJsonResponse<TimeLog[]>(response)
+}
+
+export async function createTimeLog(
+  taskId: string,
+  input: { durationHours: number; loggedAt?: string; notes?: string },
+): Promise<TimeLog> {
+  const response = await fetch(
+    `/api/tasks/${encodeURIComponent(taskId)}/time-logs`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  )
+  return parseJsonResponse<TimeLog>(response)
+}
+
+export async function deleteTimeLog(timeLogId: string): Promise<void> {
+  const response = await fetch(
+    `/api/time-logs/${encodeURIComponent(timeLogId)}`,
     { method: "DELETE" },
   )
   await expectOk(response)

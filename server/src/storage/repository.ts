@@ -30,6 +30,8 @@ import type {
   CreateMilestoneInput,
   CreateProjectInput,
   CreateServiceInput,
+  CreateTaskInput,
+  CreateTimeLogInput,
   CreateVersionInput,
   Deliverable,
   DeliverableStatus,
@@ -59,6 +61,9 @@ import type {
   UpdateMilestoneInput,
   UpdateProjectInput,
   UpdateServiceInput,
+  UpdateTaskInput,
+  Task,
+  TimeLog,
   Version,
   VersionStatus,
 } from "../types/index.js"
@@ -100,6 +105,24 @@ interface MilestoneRow {
   dueDate: string | null
   done: number
   order: number
+  createdAt: string
+}
+
+interface TaskRow {
+  id: string
+  milestoneId: string
+  name: string
+  done: number
+  order: number
+  createdAt: string
+}
+
+interface TimeLogRow {
+  id: string
+  taskId: string
+  durationHours: number
+  loggedAt: string
+  notes: string | null
   createdAt: string
 }
 
@@ -243,6 +266,31 @@ function rowToMilestone(row: MilestoneRow): Milestone {
   if (row.dueDate) milestone.dueDate = row.dueDate
 
   return milestone
+}
+
+function rowToTask(row: TaskRow): Task {
+  return {
+    id: row.id,
+    milestoneId: row.milestoneId,
+    name: row.name,
+    done: row.done === 1,
+    order: row.order,
+    createdAt: row.createdAt,
+  }
+}
+
+function rowToTimeLog(row: TimeLogRow): TimeLog {
+  const entry: TimeLog = {
+    id: row.id,
+    taskId: row.taskId,
+    durationHours: row.durationHours,
+    loggedAt: row.loggedAt,
+    createdAt: row.createdAt,
+  }
+
+  if (row.notes) entry.notes = row.notes
+
+  return entry
 }
 
 function rowToVersion(row: VersionRow): Version {
@@ -569,12 +617,12 @@ export function duplicateProject(sourceProjectId: string): Project | undefined {
 
     const sourceMilestones = getDb()
       .prepare(
-        `SELECT name, "order"
+        `SELECT id, name, "order"
          FROM milestones
          WHERE projectId = ?
          ORDER BY "order" ASC`,
       )
-      .all(sourceProjectId) as Array<{ name: string; order: number }>
+      .all(sourceProjectId) as Array<{ id: string; name: string; order: number }>
 
     const insertMilestone = getDb().prepare(
       `INSERT INTO milestones (
@@ -582,14 +630,54 @@ export function duplicateProject(sourceProjectId: string): Project | undefined {
       ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
 
+    const milestoneIdMap = new Map<string, string>()
+
     for (const milestone of sourceMilestones) {
+      const newMilestoneId = randomUUID()
+      milestoneIdMap.set(milestone.id, newMilestoneId)
       insertMilestone.run(
-        randomUUID(),
+        newMilestoneId,
         newProject.id,
         milestone.name,
         null,
         0,
         milestone.order,
+        now,
+      )
+    }
+
+    const sourceTasks = getDb()
+      .prepare(
+        `SELECT milestoneId, name, done, "order"
+         FROM tasks
+         WHERE milestoneId IN (
+           SELECT id FROM milestones WHERE projectId = ?
+         )
+         ORDER BY "order" ASC`,
+      )
+      .all(sourceProjectId) as Array<{
+      milestoneId: string
+      name: string
+      done: number
+      order: number
+    }>
+
+    const insertTask = getDb().prepare(
+      `INSERT INTO tasks (
+        id, milestoneId, name, done, "order", createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+
+    for (const task of sourceTasks) {
+      const newMilestoneId = milestoneIdMap.get(task.milestoneId)
+      if (!newMilestoneId) continue
+
+      insertTask.run(
+        randomUUID(),
+        newMilestoneId,
+        task.name,
+        0,
+        task.order,
         now,
       )
     }
@@ -945,6 +1033,185 @@ export function updateMilestone(
 export function deleteMilestone(id: string): boolean {
   return withTransaction(() => {
     const result = getDb().prepare("DELETE FROM milestones WHERE id = ?").run(id)
+    return result.changes > 0
+  })
+}
+
+// --- Tasks ------------------------------------------------------------------
+
+export function listTasks(milestoneId: string): Task[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM tasks
+       WHERE milestoneId = ?
+       ORDER BY "order" ASC`,
+    )
+    .all(milestoneId) as TaskRow[]
+
+  return rows.map(rowToTask)
+}
+
+export function listTasksByProject(projectId: string): Task[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT tasks.*
+       FROM tasks
+       INNER JOIN milestones ON milestones.id = tasks.milestoneId
+       WHERE milestones.projectId = ?
+       ORDER BY milestones."order" ASC, tasks."order" ASC`,
+    )
+    .all(projectId) as TaskRow[]
+
+  return rows.map(rowToTask)
+}
+
+export function getTask(id: string): Task | undefined {
+  const row = getDb()
+    .prepare("SELECT * FROM tasks WHERE id = ?")
+    .get(id) as TaskRow | undefined
+
+  return row ? rowToTask(row) : undefined
+}
+
+export function createTask(input: CreateTaskInput): Task {
+  return withTransaction(() => {
+    const row = getDb()
+      .prepare(
+        `SELECT COALESCE(MAX("order"), -1) AS maxOrder
+         FROM tasks WHERE milestoneId = ?`,
+      )
+      .get(input.milestoneId) as { maxOrder: number }
+
+    const task: Task = {
+      id: randomUUID(),
+      milestoneId: input.milestoneId,
+      name: input.name,
+      done: input.done ?? false,
+      order: row.maxOrder + 1,
+      createdAt: new Date().toISOString(),
+    }
+
+    getDb()
+      .prepare(
+        `INSERT INTO tasks (
+          id, milestoneId, name, done, "order", createdAt
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        task.id,
+        task.milestoneId,
+        task.name,
+        task.done ? 1 : 0,
+        task.order,
+        task.createdAt,
+      )
+
+    return task
+  })
+}
+
+export function updateTask(
+  id: string,
+  input: UpdateTaskInput,
+): Task | undefined {
+  return withTransaction(() => {
+    const task = getTask(id)
+    if (!task) {
+      return undefined
+    }
+
+    if (input.name !== undefined) task.name = input.name
+    if (input.done !== undefined) task.done = input.done
+
+    getDb()
+      .prepare(
+        `UPDATE tasks
+         SET name = ?, done = ?
+         WHERE id = ?`,
+      )
+      .run(task.name, task.done ? 1 : 0, id)
+
+    return task
+  })
+}
+
+export function deleteTask(id: string): boolean {
+  return withTransaction(() => {
+    const result = getDb().prepare("DELETE FROM tasks WHERE id = ?").run(id)
+    return result.changes > 0
+  })
+}
+
+// --- Time logs --------------------------------------------------------------
+
+export function listTimeLogs(taskId: string): TimeLog[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM time_logs
+       WHERE taskId = ?
+       ORDER BY loggedAt DESC, createdAt DESC`,
+    )
+    .all(taskId) as TimeLogRow[]
+
+  return rows.map(rowToTimeLog)
+}
+
+export function getTimeLog(id: string): TimeLog | undefined {
+  const row = getDb()
+    .prepare("SELECT * FROM time_logs WHERE id = ?")
+    .get(id) as TimeLogRow | undefined
+
+  return row ? rowToTimeLog(row) : undefined
+}
+
+export function getTotalLoggedHours(taskId: string): number {
+  const row = getDb()
+    .prepare(
+      `SELECT COALESCE(SUM(durationHours), 0) AS total
+       FROM time_logs
+       WHERE taskId = ?`,
+    )
+    .get(taskId) as { total: number }
+
+  return row.total
+}
+
+export function createTimeLog(input: CreateTimeLogInput): TimeLog {
+  return withTransaction(() => {
+    const now = new Date().toISOString()
+    const entry: TimeLog = {
+      id: randomUUID(),
+      taskId: input.taskId,
+      durationHours: input.durationHours,
+      loggedAt: input.loggedAt ?? now,
+      createdAt: now,
+      ...(input.notes ? { notes: input.notes } : {}),
+    }
+
+    getDb()
+      .prepare(
+        `INSERT INTO time_logs (
+          id, taskId, durationHours, loggedAt, notes, createdAt
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        entry.id,
+        entry.taskId,
+        entry.durationHours,
+        entry.loggedAt,
+        entry.notes ?? null,
+        entry.createdAt,
+      )
+
+    return entry
+  })
+}
+
+export function deleteTimeLog(id: string): boolean {
+  return withTransaction(() => {
+    const result = getDb()
+      .prepare("DELETE FROM time_logs WHERE id = ?")
+      .run(id)
     return result.changes > 0
   })
 }
