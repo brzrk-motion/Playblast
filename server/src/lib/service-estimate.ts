@@ -15,3 +15,9 @@ export function calculateProjectServicesEstimate(
 ): number {
   return items.reduce((sum, item) => sum + projectServiceLineTotal(item), 0)
 }
+
+export function calculateProjectServicesEstimatedHours(
+  items: ProjectServiceWithDetails[],
+): number {
+  return items.reduce((sum, item) => sum + effectiveProjectServiceHours(item), 0)
+}

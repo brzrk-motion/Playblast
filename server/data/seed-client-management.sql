@@ -78,7 +78,8 @@ INSERT INTO contact_log (
 
 INSERT INTO clients (
   id, name, company, email, phone, website, notes,
-  convertedFromLeadId, createdAt, updatedAt
+  convertedFromLeadId, isRetainer, retainerHours, retainerRate,
+  retainerCycleDay, createdAt, updatedAt
 ) VALUES
   (
     'client-seed-001',
@@ -89,6 +90,10 @@ INSERT INTO clients (
     'https://orbitlabs.io',
     'Active retainer client.',
     'lead-seed-003',
+    1,
+    40,
+    175,
+    1,
     '2026-05-21T09:15:00.000Z',
     '2026-05-21T09:15:00.000Z'
   );

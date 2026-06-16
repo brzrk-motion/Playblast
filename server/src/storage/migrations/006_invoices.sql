@@ -1,10 +1,17 @@
 CREATE TABLE IF NOT EXISTS invoices (
   id TEXT PRIMARY KEY,
+  invoiceNumber INTEGER NOT NULL UNIQUE,
   projectId TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  invoiceNumber TEXT NOT NULL,
-  issuedAt TEXT NOT NULL,
+  clientId TEXT NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
+  projectName TEXT NOT NULL,
+  clientName TEXT NOT NULL,
+  clientCompany TEXT,
+  clientEmail TEXT NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  grandTotal REAL NOT NULL CHECK (grandTotal > 0),
+  lineItems TEXT NOT NULL,
+  invoiceDate TEXT NOT NULL,
   dueDate TEXT NOT NULL,
-  total REAL NOT NULL CHECK (total > 0),
   status TEXT NOT NULL DEFAULT 'unpaid'
     CHECK (status IN ('unpaid', 'partially_paid', 'paid')),
   createdAt TEXT NOT NULL

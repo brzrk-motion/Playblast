@@ -13,13 +13,27 @@ export function isInvoiceStatus(value: unknown): value is InvoiceStatus {
   )
 }
 
+export interface InvoiceLineItem {
+  serviceName: string
+  hours: number
+  hourlyRate: number
+  lineTotal: number
+}
+
 export interface Invoice {
   id: string
+  invoiceNumber: number
   projectId: string
-  invoiceNumber: string
-  issuedAt: string
+  clientId: string
+  projectName: string
+  clientName: string
+  clientCompany?: string
+  clientEmail: string
+  currency: string
+  grandTotal: number
+  lineItems: InvoiceLineItem[]
+  invoiceDate: string
   dueDate: string
-  total: number
   status: InvoiceStatus
   createdAt: string
 }
@@ -43,19 +57,8 @@ export interface InvoiceWithPayments extends InvoiceSummary {
   payments: InvoicePayment[]
 }
 
-export interface CreateInvoiceInput {
-  projectId: string
-  invoiceNumber: string
-  issuedAt: string
-  dueDate: string
-  total: number
-}
-
 export interface UpdateInvoiceInput {
-  invoiceNumber?: string
-  issuedAt?: string
   dueDate?: string
-  total?: number
 }
 
 export interface CreateInvoicePaymentInput {

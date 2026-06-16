@@ -1,0 +1,2 @@
+-- Migration 006: retainer client fields and manual cycle hour tracking
+-- Column additions and retainer_cycle_hours creation are handled in db.ts.

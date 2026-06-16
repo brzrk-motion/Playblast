@@ -6,6 +6,12 @@ import assert from "node:assert/strict"
 import type { Server } from "node:http"
 import { createApp } from "../app.js"
 import { closeDatabase, initDatabase } from "../storage/db.js"
+import {
+  createClient,
+  createProject,
+  createService,
+  linkServiceToProject,
+} from "../storage/repository.js"
 
 let tempDir = ""
 let dbPath = ""
@@ -41,66 +47,131 @@ after(async () => {
   fs.rmSync(tempDir, { recursive: true, force: true })
 })
 
-async function createProject(id: string, name: string) {
-  const response = await fetch(`${baseUrl}/api/projects`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, name }),
-  })
-  assert.equal(response.status, 201)
-  return response.json() as Promise<{ id: string }>
-}
+describe("invoice API", () => {
+  it("rejects invoice generation when no client is linked", async () => {
+    const project = createProject({ name: "No Client Project" })
+    const service = createService({
+      name: "Animation",
+      hourEstimate: 10,
+      hourlyRate: 150,
+      type: "animated",
+    })
+    linkServiceToProject(project.id, service.id)
 
-describe("invoices API", () => {
-  it("creates, lists, and retrieves invoices with payment tracking", async () => {
-    await createProject("invoice-project", "Invoice Project")
+    const response = await fetch(
+      `${baseUrl}/api/projects/${project.id}/invoices`,
+      { method: "POST" },
+    )
+
+    assert.equal(response.status, 400)
+    const body = (await response.json()) as { error: string }
+    assert.match(body.error, /client/i)
+  })
+
+  it("rejects invoice generation when no services are attached", async () => {
+    const client = createClient({
+      name: "Acme Contact",
+      email: "billing@acme.test",
+      company: "Acme Corp",
+    })
+    const project = createProject({
+      name: "Empty Services Project",
+      clientId: client.id,
+    })
+
+    const response = await fetch(
+      `${baseUrl}/api/projects/${project.id}/invoices`,
+      { method: "POST" },
+    )
+
+    assert.equal(response.status, 400)
+    const body = (await response.json()) as { error: string }
+    assert.match(body.error, /service/i)
+  })
+
+  it("creates an invoice, lists it, downloads a PDF, and tracks payments", async () => {
+    const client = createClient({
+      name: "Jane Client",
+      email: "jane@example.test",
+      company: "Example Inc",
+    })
+    const project = createProject({
+      name: "Brand Spot",
+      clientId: client.id,
+      budget: { total: 5000, currency: "USD" },
+    })
+    const service = createService({
+      name: "Motion Design",
+      hourEstimate: 8,
+      hourlyRate: 200,
+      type: "animated",
+    })
+    linkServiceToProject(project.id, service.id)
 
     const createResponse = await fetch(
-      `${baseUrl}/api/projects/invoice-project/invoices`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          invoiceNumber: "INV-001",
-          issuedAt: "2026-05-01",
-          dueDate: "2026-06-01",
-          total: 5000,
-        }),
-      },
+      `${baseUrl}/api/projects/${project.id}/invoices`,
+      { method: "POST" },
     )
 
     assert.equal(createResponse.status, 201)
     const created = (await createResponse.json()) as {
       id: string
+      invoiceNumber: number
+      projectName: string
+      clientName: string
+      clientCompany: string
+      clientEmail: string
+      grandTotal: number
       status: string
       outstandingBalance: number
       amountPaid: number
+      lineItems: Array<{
+        serviceName: string
+        hours: number
+        hourlyRate: number
+        lineTotal: number
+      }>
+      invoiceDate: string
+      dueDate: string
     }
+
+    assert.equal(created.invoiceNumber, 1)
+    assert.equal(created.projectName, "Brand Spot")
+    assert.equal(created.clientName, "Jane Client")
+    assert.equal(created.clientCompany, "Example Inc")
+    assert.equal(created.clientEmail, "jane@example.test")
+    assert.equal(created.grandTotal, 1600)
     assert.equal(created.status, "unpaid")
-    assert.equal(created.outstandingBalance, 5000)
+    assert.equal(created.outstandingBalance, 1600)
     assert.equal(created.amountPaid, 0)
+    assert.equal(created.lineItems.length, 1)
+    assert.equal(created.lineItems[0]?.serviceName, "Motion Design")
+    assert.equal(created.lineItems[0]?.lineTotal, 1600)
+    assert.ok(created.invoiceDate)
+    assert.ok(created.dueDate)
 
     const listResponse = await fetch(
-      `${baseUrl}/api/projects/invoice-project/invoices`,
+      `${baseUrl}/api/projects/${project.id}/invoices`,
     )
     assert.equal(listResponse.status, 200)
     const invoices = (await listResponse.json()) as Array<{ id: string }>
     assert.equal(invoices.length, 1)
+    assert.equal(invoices[0]?.id, created.id)
 
     const detailResponse = await fetch(`${baseUrl}/api/invoices/${created.id}`)
     assert.equal(detailResponse.status, 200)
     const detail = (await detailResponse.json()) as {
-      total: number
+      grandTotal: number
       amountPaid: number
       outstandingBalance: number
       payments: unknown[]
       isOverdue: boolean
     }
-    assert.equal(detail.total, 5000)
+    assert.equal(detail.grandTotal, 1600)
     assert.equal(detail.amountPaid, 0)
-    assert.equal(detail.outstandingBalance, 5000)
+    assert.equal(detail.outstandingBalance, 1600)
     assert.equal(detail.payments.length, 0)
-    assert.equal(detail.isOverdue, true)
+    assert.equal(detail.isOverdue, false)
 
     const paymentResponse = await fetch(
       `${baseUrl}/api/invoices/${created.id}/payments`,
@@ -108,7 +179,7 @@ describe("invoices API", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: 2000,
+          amount: 600,
           paidAt: "2026-06-10",
           notes: "Deposit received",
         }),
@@ -123,10 +194,10 @@ describe("invoices API", () => {
         outstandingBalance: number
       }
     }
-    assert.equal(paymentBody.payment.amount, 2000)
+    assert.equal(paymentBody.payment.amount, 600)
     assert.equal(paymentBody.invoice.status, "partially_paid")
-    assert.equal(paymentBody.invoice.amountPaid, 2000)
-    assert.equal(paymentBody.invoice.outstandingBalance, 3000)
+    assert.equal(paymentBody.invoice.amountPaid, 600)
+    assert.equal(paymentBody.invoice.outstandingBalance, 1000)
 
     const finalPaymentResponse = await fetch(
       `${baseUrl}/api/invoices/${created.id}/payments`,
@@ -134,7 +205,7 @@ describe("invoices API", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: 3000,
+          amount: 1000,
           paidAt: "2026-06-15",
         }),
       },
@@ -149,47 +220,77 @@ describe("invoices API", () => {
       }
     }
     assert.equal(finalBody.invoice.status, "paid")
-    assert.equal(finalBody.invoice.amountPaid, 5000)
+    assert.equal(finalBody.invoice.amountPaid, 1600)
     assert.equal(finalBody.invoice.outstandingBalance, 0)
     assert.equal(finalBody.invoice.isOverdue, false)
+
+    const pdfResponse = await fetch(
+      `${baseUrl}/api/invoices/${created.id}/pdf`,
+    )
+    assert.equal(pdfResponse.status, 200)
+    assert.equal(pdfResponse.headers.get("content-type"), "application/pdf")
+    const pdfBuffer = Buffer.from(await pdfResponse.arrayBuffer())
+    assert.ok(pdfBuffer.length > 100)
+    assert.equal(pdfBuffer.subarray(0, 4).toString(), "%PDF")
+  })
+
+  it("auto-increments invoice numbers across projects", async () => {
+    const client = createClient({
+      name: "Repeat Client",
+      email: "repeat@example.test",
+    })
+
+    const projectA = createProject({ name: "Project A", clientId: client.id })
+    const projectB = createProject({ name: "Project B", clientId: client.id })
+    const service = createService({
+      name: "Static Render",
+      hourEstimate: 2,
+      hourlyRate: 100,
+      type: "static",
+    })
+    linkServiceToProject(projectA.id, service.id)
+    linkServiceToProject(projectB.id, service.id)
+
+    const first = await fetch(`${baseUrl}/api/projects/${projectA.id}/invoices`, {
+      method: "POST",
+    })
+    const second = await fetch(`${baseUrl}/api/projects/${projectB.id}/invoices`, {
+      method: "POST",
+    })
+
+    assert.equal(first.status, 201)
+    assert.equal(second.status, 201)
+
+    const firstInvoice = (await first.json()) as { invoiceNumber: number }
+    const secondInvoice = (await second.json()) as { invoiceNumber: number }
+
+    assert.equal(firstInvoice.invoiceNumber, 2)
+    assert.equal(secondInvoice.invoiceNumber, 3)
   })
 
   it("includes outstanding balance on project and client detail", async () => {
-    const clientResponse = await fetch(`${baseUrl}/api/clients`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: "Acme Corp",
-        email: "billing@acme.test",
-      }),
+    const client = createClient({
+      name: "Acme Corp",
+      email: "billing@acme.test",
     })
-    assert.equal(clientResponse.status, 201)
-    const client = (await clientResponse.json()) as { id: string }
-
-    const projectResponse = await fetch(`${baseUrl}/api/projects`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: "invoice-client-project",
-        name: "Client Invoice Project",
-        clientId: client.id,
-      }),
+    const project = createProject({
+      name: "Client Invoice Project",
+      clientId: client.id,
     })
-    assert.equal(projectResponse.status, 201)
+    const service = createService({
+      name: "Editing",
+      hourEstimate: 5,
+      hourlyRate: 200,
+      type: "animated",
+    })
+    linkServiceToProject(project.id, service.id)
 
-    await fetch(`${baseUrl}/api/projects/invoice-client-project/invoices`, {
+    await fetch(`${baseUrl}/api/projects/${project.id}/invoices`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        invoiceNumber: "INV-100",
-        issuedAt: "2026-06-01",
-        dueDate: "2026-07-01",
-        total: 1000,
-      }),
     })
 
     const projectDetailResponse = await fetch(
-      `${baseUrl}/api/projects/invoice-client-project`,
+      `${baseUrl}/api/projects/${project.id}`,
     )
     assert.equal(projectDetailResponse.status, 200)
     const projectDetail = (await projectDetailResponse.json()) as {

@@ -1,13 +1,14 @@
 import { Router } from "express"
+import { generateInvoicePdf } from "../lib/invoice-pdf.js"
 import {
   createInvoice,
   createInvoicePayment,
+  getInvoice,
   getInvoiceWithPayments,
   getProject,
   listInvoicesByProject,
   updateInvoice,
 } from "../storage/index.js"
-import { addDaysToIsoDate } from "../lib/invoice.js"
 import { getParam, getProjectIdParam } from "../utils/params.js"
 
 const projectInvoicesRouter = Router({ mergeParams: true })
@@ -39,29 +40,6 @@ function parseIsoDate(
   return { value: value.trim() }
 }
 
-function parseDueDate(
-  body: Record<string, unknown>,
-  issuedAt: string,
-): { value: string } | { error: string } {
-  if (body.dueDate !== undefined) {
-    return parseIsoDate(body.dueDate, "dueDate")
-  }
-
-  if (body.netDays !== undefined) {
-    if (
-      typeof body.netDays !== "number" ||
-      !Number.isInteger(body.netDays) ||
-      body.netDays < 0
-    ) {
-      return { error: "netDays must be a non-negative integer." }
-    }
-
-    return { value: addDaysToIsoDate(issuedAt, body.netDays) }
-  }
-
-  return { error: "dueDate or netDays is required." }
-}
-
 projectInvoicesRouter.get("/", (req, res) => {
   const projectId = getProjectIdParam(req)
 
@@ -75,55 +53,35 @@ projectInvoicesRouter.get("/", (req, res) => {
 
 projectInvoicesRouter.post("/", (req, res) => {
   const projectId = getProjectIdParam(req)
+  const result = createInvoice(projectId)
 
-  if (!getProject(projectId)) {
+  if (result === "project_not_found") {
     res.status(404).json({ error: "Project not found." })
     return
   }
 
-  const invoiceNumber =
-    typeof req.body?.invoiceNumber === "string"
-      ? req.body.invoiceNumber.trim()
-      : ""
-  if (!invoiceNumber) {
-    res.status(400).json({ error: "invoiceNumber is required." })
+  if (result === "no_client") {
+    res.status(400).json({
+      error: "Link a client to this project before generating an invoice.",
+    })
     return
   }
 
-  const issuedAtResult = parseIsoDate(req.body?.issuedAt, "issuedAt")
-  if ("error" in issuedAtResult) {
-    res.status(400).json({ error: issuedAtResult.error })
+  if (result === "no_services") {
+    res.status(400).json({
+      error: "Add at least one service to the project before generating an invoice.",
+    })
     return
   }
 
-  const dueDateResult = parseDueDate(req.body ?? {}, issuedAtResult.value)
-  if ("error" in dueDateResult) {
-    res.status(400).json({ error: dueDateResult.error })
-    return
-  }
-
-  const totalResult = parsePositiveNumber(req.body?.total, "total")
-  if ("error" in totalResult) {
-    res.status(400).json({ error: totalResult.error })
-    return
-  }
-
-  const invoice = createInvoice({
-    projectId,
-    invoiceNumber,
-    issuedAt: issuedAtResult.value,
-    dueDate: dueDateResult.value,
-    total: totalResult.value,
-  })
-
-  res.status(201).json(invoice)
+  res.status(201).json(result)
 })
 
-const invoicesRouter = Router()
+const invoiceByIdRouter = Router()
 
-invoicesRouter.get("/:id", (req, res) => {
-  const id = getParam(req.params.id)
-  const invoice = getInvoiceWithPayments(id)
+invoiceByIdRouter.get("/:invoiceId", (req, res) => {
+  const invoiceId = getParam(req.params.invoiceId)
+  const invoice = getInvoiceWithPayments(invoiceId)
 
   if (!invoice) {
     res.status(404).json({ error: "Invoice not found." })
@@ -133,42 +91,16 @@ invoicesRouter.get("/:id", (req, res) => {
   res.json(invoice)
 })
 
-invoicesRouter.patch("/:id", (req, res) => {
-  const id = getParam(req.params.id)
-  const existing = getInvoiceWithPayments(id)
+invoiceByIdRouter.patch("/:invoiceId", (req, res) => {
+  const invoiceId = getParam(req.params.invoiceId)
+  const existing = getInvoice(invoiceId)
 
   if (!existing) {
     res.status(404).json({ error: "Invoice not found." })
     return
   }
 
-  const updates: {
-    invoiceNumber?: string
-    issuedAt?: string
-    dueDate?: string
-    total?: number
-  } = {}
-
-  if (req.body?.invoiceNumber !== undefined) {
-    const invoiceNumber =
-      typeof req.body.invoiceNumber === "string"
-        ? req.body.invoiceNumber.trim()
-        : ""
-    if (!invoiceNumber) {
-      res.status(400).json({ error: "invoiceNumber cannot be empty." })
-      return
-    }
-    updates.invoiceNumber = invoiceNumber
-  }
-
-  if (req.body?.issuedAt !== undefined) {
-    const issuedAtResult = parseIsoDate(req.body.issuedAt, "issuedAt")
-    if ("error" in issuedAtResult) {
-      res.status(400).json({ error: issuedAtResult.error })
-      return
-    }
-    updates.issuedAt = issuedAtResult.value
-  }
+  const updates: { dueDate?: string } = {}
 
   if (req.body?.dueDate !== undefined) {
     const dueDateResult = parseIsoDate(req.body.dueDate, "dueDate")
@@ -179,21 +111,12 @@ invoicesRouter.patch("/:id", (req, res) => {
     updates.dueDate = dueDateResult.value
   }
 
-  if (req.body?.total !== undefined) {
-    const totalResult = parsePositiveNumber(req.body.total, "total")
-    if ("error" in totalResult) {
-      res.status(400).json({ error: totalResult.error })
-      return
-    }
-    updates.total = totalResult.value
-  }
-
-  const invoice = updateInvoice(id, updates)
+  const invoice = updateInvoice(invoiceId, updates)
   res.json(invoice)
 })
 
-invoicesRouter.post("/:id/payments", (req, res) => {
-  const id = getParam(req.params.id)
+invoiceByIdRouter.post("/:invoiceId/payments", (req, res) => {
+  const invoiceId = getParam(req.params.invoiceId)
 
   const amountResult = parsePositiveNumber(req.body?.amount, "amount")
   if ("error" in amountResult) {
@@ -211,7 +134,7 @@ invoicesRouter.post("/:id/payments", (req, res) => {
     typeof req.body?.notes === "string" ? req.body.notes.trim() : undefined
 
   const result = createInvoicePayment({
-    invoiceId: id,
+    invoiceId,
     amount: amountResult.value,
     paidAt: paidAtResult.value,
     ...(notes ? { notes } : {}),
@@ -222,9 +145,30 @@ invoicesRouter.post("/:id/payments", (req, res) => {
     return
   }
 
-  const invoice = getInvoiceWithPayments(id)
+  const invoice = getInvoiceWithPayments(invoiceId)
   res.status(201).json({ payment: result, invoice })
 })
 
-export { invoicesRouter }
+invoiceByIdRouter.get("/:invoiceId/pdf", async (req, res) => {
+  const invoiceId = getParam(req.params.invoiceId)
+  const invoice = getInvoice(invoiceId)
+
+  if (!invoice) {
+    res.status(404).json({ error: "Invoice not found." })
+    return
+  }
+
+  try {
+    const pdf = await generateInvoicePdf(invoice)
+    const filename = `invoice-${invoice.invoiceNumber}.pdf`
+
+    res.setHeader("Content-Type", "application/pdf")
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`)
+    res.send(pdf)
+  } catch {
+    res.status(500).json({ error: "Failed to generate invoice PDF." })
+  }
+})
+
+export { invoiceByIdRouter }
 export default projectInvoicesRouter

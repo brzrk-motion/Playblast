@@ -179,10 +179,10 @@ export function InvoiceDetailSheet({
                   <Receipt className="mt-1 size-5 text-muted-foreground" />
                   <div className="space-y-1">
                     <SheetTitle className="text-2xl">
-                      {invoice.invoiceNumber}
+                      Invoice #{invoice.invoiceNumber}
                     </SheetTitle>
                     <SheetDescription>
-                      Issued {formatInvoiceDate(invoice.issuedAt)} · Due{" "}
+                      Issued {formatInvoiceDate(invoice.invoiceDate)} · Due{" "}
                       {formatInvoiceDate(invoice.dueDate)}
                     </SheetDescription>
                   </div>
@@ -198,17 +198,23 @@ export function InvoiceDetailSheet({
               <div className="grid gap-4 sm:grid-cols-3">
                 <DetailMetric
                   label="Total"
-                  value={formatEstimateCurrency(invoice.total, currency)}
+                  value={formatEstimateCurrency(
+                    invoice.grandTotal,
+                    invoice.currency || currency,
+                  )}
                 />
                 <DetailMetric
                   label="Paid"
-                  value={formatEstimateCurrency(invoice.amountPaid, currency)}
+                  value={formatEstimateCurrency(
+                    invoice.amountPaid,
+                    invoice.currency || currency,
+                  )}
                 />
                 <DetailMetric
                   label="Outstanding"
                   value={formatEstimateCurrency(
                     invoice.outstandingBalance,
-                    currency,
+                    invoice.currency || currency,
                   )}
                   className={
                     invoice.outstandingBalance > 0
@@ -239,7 +245,10 @@ export function InvoiceDetailSheet({
                           <TableRow key={payment.id}>
                             <TableCell>{formatInvoiceDate(payment.paidAt)}</TableCell>
                             <TableCell className="text-right tabular-nums">
-                              {formatEstimateCurrency(payment.amount, currency)}
+                              {formatEstimateCurrency(
+                                payment.amount,
+                                invoice.currency || currency,
+                              )}
                             </TableCell>
                             <TableCell className="text-muted-foreground">
                               {payment.notes ?? "—"}

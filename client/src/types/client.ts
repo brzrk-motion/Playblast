@@ -1,5 +1,16 @@
 import type { Project } from "./project"
 
+export interface RetainerSummary {
+  cycleStart: string
+  cycleEnd: string
+  hoursContracted: number
+  hoursLogged: number
+  hoursRemaining: number
+  estimatedValue: number
+  utilizationPercent: number
+  isOverage: boolean
+}
+
 export interface Client {
   id: string
   name: string
@@ -9,6 +20,10 @@ export interface Client {
   website?: string
   notes?: string
   convertedFromLeadId?: string
+  isRetainer?: boolean
+  retainerHours?: number
+  retainerRate?: number
+  retainerCycleDay?: number
   createdAt: string
   updatedAt: string
 }
@@ -21,6 +36,10 @@ export interface CreateClientInput {
   website?: string
   notes?: string
   convertedFromLeadId?: string
+  isRetainer?: boolean
+  retainerHours?: number
+  retainerRate?: number
+  retainerCycleDay?: number
 }
 
 export interface UpdateClientInput {
@@ -31,9 +50,14 @@ export interface UpdateClientInput {
   website?: string | null
   notes?: string | null
   convertedFromLeadId?: string | null
+  isRetainer?: boolean
+  retainerHours?: number | null
+  retainerRate?: number | null
+  retainerCycleDay?: number | null
 }
 
 export interface ClientWithProjects extends Client {
   projects: Project[]
   outstandingBalance?: number
+  retainerSummary?: RetainerSummary
 }
