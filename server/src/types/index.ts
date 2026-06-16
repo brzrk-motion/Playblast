@@ -5,6 +5,8 @@ export type {
 } from "./annotation.js"
 export type {
   Client,
+  ClientListItem,
+  ClientLifetimeValue,
   ClientWithProjects,
   CreateClientInput,
   UpdateClientInput,

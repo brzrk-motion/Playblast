@@ -10,6 +10,11 @@ import {
   effectiveProjectServiceHours,
   projectServiceLineTotal,
 } from "../lib/service-estimate.js"
+import {
+  accumulateClientLifetimeValue,
+  emptyClientLifetimeValue,
+  type ClientLifetimeValue,
+} from "../lib/client-lifetime-value.js"
 import { computeRetainerSummary, getCurrentCycleStart } from "../lib/retainer-cycle.js"
 import {
   addDaysToIsoDate,
@@ -24,6 +29,7 @@ import type {
   CreateContactLogInput,
   CreateDeliverableInput,
   Client,
+  ClientListItem,
   ClientWithProjects,
   CreateClientInput,
   CreateInvoicePaymentInput,
@@ -2028,14 +2034,23 @@ function buildRetainerSummary(client: Client) {
   })
 }
 
-export function listClients(): Client[] {
+export function listClients(): ClientListItem[] {
   const rows = getDb()
     .prepare(
       "SELECT * FROM clients ORDER BY updatedAt DESC, createdAt DESC",
     )
     .all() as ClientRow[]
 
-  return rows.map(rowToClient)
+  const lifetimeValues = listClientLifetimeValuesByClientId()
+
+  return rows.map((row) => {
+    const client = rowToClient(row)
+    return {
+      ...client,
+      lifetimeValue:
+        lifetimeValues.get(client.id) ?? emptyClientLifetimeValue(),
+    }
+  })
 }
 
 export function getClient(id: string): Client | undefined {
@@ -2068,10 +2083,12 @@ export function getClientWithProjects(
 
   const outstandingBalance = getClientOutstandingBalance(id)
   const retainerSummary = buildRetainerSummary(client)
+  const lifetimeValue = getClientLifetimeValue(id)
 
   return {
     ...client,
     projects: listProjectsByClientId(id),
+    lifetimeValue,
     ...(outstandingBalance > 0 ? { outstandingBalance } : {}),
     ...(retainerSummary ? { retainerSummary } : {}),
   }
@@ -2885,6 +2902,51 @@ export function listInvoicePayments(invoiceId: string): InvoicePayment[] {
 export function getProjectOutstandingBalance(projectId: string): number {
   const invoices = listInvoicesByProject(projectId)
   return invoices.reduce((sum, invoice) => sum + invoice.outstandingBalance, 0)
+}
+
+export function getProjectServicesEstimateAmount(projectId: string): number {
+  const services = listProjectServices(projectId)
+  if (services.length === 0) {
+    return 0
+  }
+
+  return calculateProjectServicesEstimate(services)
+}
+
+function buildClientLifetimeValueFromProjects(
+  projects: Project[],
+): ClientLifetimeValue {
+  return projects.reduce((value, project) => {
+    const estimate = getProjectServicesEstimateAmount(project.id)
+    return accumulateClientLifetimeValue(value, project.status, estimate)
+  }, emptyClientLifetimeValue())
+}
+
+export function getClientLifetimeValue(clientId: string): ClientLifetimeValue {
+  return buildClientLifetimeValueFromProjects(listProjectsByClientId(clientId))
+}
+
+function listClientLifetimeValuesByClientId(): Map<string, ClientLifetimeValue> {
+  const rows = getDb()
+    .prepare(
+      `SELECT p.id, p.clientId, p.status
+       FROM projects p
+       WHERE p.clientId IS NOT NULL`,
+    )
+    .all() as Array<{ id: string; clientId: string; status: Project["status"] }>
+
+  const values = new Map<string, ClientLifetimeValue>()
+
+  for (const row of rows) {
+    const estimate = getProjectServicesEstimateAmount(row.id)
+    const current = values.get(row.clientId) ?? emptyClientLifetimeValue()
+    values.set(
+      row.clientId,
+      accumulateClientLifetimeValue(current, row.status, estimate),
+    )
+  }
+
+  return values
 }
 
 export function getClientOutstandingBalance(clientId: string): number {

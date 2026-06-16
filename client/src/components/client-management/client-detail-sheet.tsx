@@ -33,6 +33,7 @@ import { formatDateAdded } from "@/lib/dates"
 import { isProjectArchived } from "@/lib/projects"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import { RetainerPanel } from "@/components/client-management/retainer-panel"
+import { ClientLifetimeValuePanel } from "@/components/client-management/client-lifetime-value-panel"
 import type { Client, ClientWithProjects } from "@/types/client"
 import type { Project } from "@/types/project"
 
@@ -472,6 +473,8 @@ export function ClientDetailSheet({
                 client={client}
                 onUpdated={(updated) => setClient(updated)}
               />
+
+              <ClientLifetimeValuePanel lifetimeValue={client.lifetimeValue} />
 
               <section className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">

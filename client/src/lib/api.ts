@@ -1,5 +1,5 @@
 import type { FrameAnnotation } from "@/types/annotation"
-import type { Client, ClientWithProjects, CreateClientInput, UpdateClientInput } from "@/types/client"
+import type { Client, ClientListItem, ClientWithProjects, CreateClientInput, UpdateClientInput } from "@/types/client"
 import type { Comment } from "@/types/comment"
 import type { Deliverable,
   DeliverableStatus,
@@ -735,9 +735,9 @@ export async function convertLeadToClient(
 
 // --- Clients ----------------------------------------------------------------
 
-export async function listClients(): Promise<Client[]> {
+export async function listClients(): Promise<ClientListItem[]> {
   const response = await fetch("/api/clients")
-  return parseJsonResponse<Client[]>(response)
+  return parseJsonResponse<ClientListItem[]>(response)
 }
 
 export async function getClient(id: string): Promise<ClientWithProjects> {

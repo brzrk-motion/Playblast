@@ -1,5 +1,6 @@
 import type { Project } from "./project.js"
 import type { RetainerSummary } from "../lib/retainer-cycle.js"
+import type { ClientLifetimeValue } from "../lib/client-lifetime-value.js"
 
 /** Converted lead or manually added business contact. */
 export interface Client {
@@ -49,11 +50,16 @@ export interface UpdateClientInput {
   retainerCycleDay?: number | null
 }
 
+export interface ClientListItem extends Client {
+  lifetimeValue: ClientLifetimeValue
+}
+
 export interface ClientWithProjects extends Client {
   projects: Project[]
+  lifetimeValue: ClientLifetimeValue
   /** Sum of outstanding invoice balances across all linked projects. */
   outstandingBalance?: number
   retainerSummary?: RetainerSummary
 }
 
-export type { RetainerSummary }
+export type { ClientLifetimeValue, RetainerSummary }

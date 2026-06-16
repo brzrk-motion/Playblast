@@ -1,5 +1,11 @@
 import type { Project } from "./project"
 
+export interface ClientLifetimeValue {
+  totalEstimated: number
+  activeEstimated: number
+  completedEstimated: number
+}
+
 export interface RetainerSummary {
   cycleStart: string
   cycleEnd: string
@@ -56,8 +62,13 @@ export interface UpdateClientInput {
   retainerCycleDay?: number | null
 }
 
+export interface ClientListItem extends Client {
+  lifetimeValue: ClientLifetimeValue
+}
+
 export interface ClientWithProjects extends Client {
   projects: Project[]
+  lifetimeValue: ClientLifetimeValue
   outstandingBalance?: number
   retainerSummary?: RetainerSummary
 }
