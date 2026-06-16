@@ -69,6 +69,8 @@ export interface ProjectDetail extends Omit<Project, "client"> {
   servicesEstimate?: number
   /** Sum of effective estimated hours from attached services. */
   servicesEstimatedHours?: number
+  /** Total hours logged on project tasks (time_logs → tasks → milestones). */
+  servicesLoggedHours?: number
 }
 
 export interface ProjectSummary extends Project {
@@ -86,6 +88,8 @@ export interface ProjectSummary extends Project {
   servicesEstimate?: number
   /** Sum of effective estimated hours from attached services. */
   servicesEstimatedHours?: number
+  /** Total hours logged on project tasks (time_logs → tasks → milestones). */
+  servicesLoggedHours?: number
 }
 
 export interface CreateProjectInput {

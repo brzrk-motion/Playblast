@@ -63,7 +63,7 @@ describe("calculateProjectProfitability", () => {
     assert.equal(result.effectiveHourlyRate, 350)
   })
 
-  it("omits effective hourly rate when actual matches estimated hours", () => {
+  it("shows effective hourly rate when time has been logged", () => {
     const result = calculateProjectProfitability({
       estimatedHours: 10,
       estimatedValue: 4200,
@@ -71,6 +71,6 @@ describe("calculateProjectProfitability", () => {
       internalHourlyCostRate: 120,
     })
 
-    assert.equal(result.effectiveHourlyRate, null)
+    assert.equal(result.effectiveHourlyRate, 420)
   })
 })

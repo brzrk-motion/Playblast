@@ -451,6 +451,7 @@ export function listProjectSummaries(
       projectServices.length > 0
         ? calculateProjectServicesEstimatedHours(projectServices)
         : undefined
+    const servicesLoggedHours = getProjectLoggedHours(project.id)
 
     return {
       ...project,
@@ -471,6 +472,7 @@ export function listProjectSummaries(
       ...(servicesEstimatedHours !== undefined
         ? { servicesEstimatedHours }
         : {}),
+      servicesLoggedHours,
     }
   })
 }
@@ -499,6 +501,7 @@ export function getProjectWithClient(id: string): ProjectDetail | undefined {
     projectServices.length > 0
       ? calculateProjectServicesEstimatedHours(projectServices)
       : undefined
+  const servicesLoggedHours = getProjectLoggedHours(id)
 
   return {
     ...project,
@@ -508,6 +511,7 @@ export function getProjectWithClient(id: string): ProjectDetail | undefined {
     ...(servicesEstimatedHours !== undefined
       ? { servicesEstimatedHours }
       : {}),
+    servicesLoggedHours,
   }
 }
 

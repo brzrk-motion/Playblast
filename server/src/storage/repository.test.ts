@@ -14,6 +14,8 @@ import {
   createMilestone,
   createProject,
   createService,
+  createTask,
+  createTimeLog,
   createVersion,
   deleteClient,
   deleteComment,
@@ -34,6 +36,7 @@ import {
   getLeadWithContactLog,
   getMilestone,
   getProject,
+  getProjectWithClient,
   getService,
   getServiceProjectUsage,
   getVersionByLabel,
@@ -425,6 +428,33 @@ describe("SQLite data store", () => {
     deleteProject(bare.id)
     deleteService(service.id)
     deleteClient(client.id)
+  })
+
+  it("includes logged hours from time logs in project summaries and detail", () => {
+    const project = createProject({
+      id: "logged-hours-summary",
+      name: "Logged Hours Summary",
+    })
+    const milestone = createMilestone({
+      projectId: project.id,
+      name: "Production",
+    })
+    const task = createTask({
+      milestoneId: milestone.id,
+      name: "Animation",
+    })
+    createTimeLog({ taskId: task.id, durationHours: 3.5 })
+    createTimeLog({ taskId: task.id, durationHours: 2 })
+
+    const summary = listProjectSummaries().find((item) => item.id === project.id)
+    assert.ok(summary)
+    assert.equal(summary.servicesLoggedHours, 5.5)
+
+    const detail = getProjectWithClient(project.id)
+    assert.ok(detail)
+    assert.equal(detail.servicesLoggedHours, 5.5)
+
+    deleteProject(project.id)
   })
 
   it("duplicates a project with services and milestones but clears dates and client", () => {

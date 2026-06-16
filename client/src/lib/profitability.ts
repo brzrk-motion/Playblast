@@ -18,7 +18,7 @@ export interface ProjectProfitability {
   isEstimatedMargin: boolean
   /** Billable rate implied by the services estimate. */
   billedHourlyRate: number | null
-  /** Revenue per actual hour when actual hours differ from estimated. */
+  /** Revenue per logged hour when time has been tracked. */
   effectiveHourlyRate: number | null
 }
 
@@ -94,9 +94,7 @@ export function calculateProjectProfitability(
       : null
 
   const effectiveHourlyRate =
-    hasActualHours &&
-    estimatedHours > 0 &&
-    Math.abs(actualHours - estimatedHours) > 0.001
+    hasActualHours && estimatedValue > 0
       ? estimatedValue / actualHours
       : null
 

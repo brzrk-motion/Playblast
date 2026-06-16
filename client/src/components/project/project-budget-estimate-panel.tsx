@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { FileOutput, Scale, TrendingUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -35,7 +35,7 @@ import {
 } from "@/lib/service-estimate"
 import { InvoiceClientRequiredDialog } from "@/components/project/invoice-client-required-dialog"
 import { Spinner } from "@/components/ui/spinner"
-import { createInvoice, downloadInvoicePdf } from "@/lib/api"
+import { createInvoice, downloadInvoicePdf, getProjectHoursSummary } from "@/lib/api"
 import { useInternalHourlyCostRate } from "@/lib/internal-hourly-cost-rate"
 import {
   calculateProjectProfitability,
@@ -59,6 +59,8 @@ interface ProjectBudgetEstimatePanelProps {
   hasClient: boolean
   onRequestClientLink: () => void
   onInvoiceCreated?: () => void
+  /** Bumps when task time logs change so logged hours refresh. */
+  hoursRefreshKey?: number
 }
 
 function formatSignedVariance(amount: number, currency: string): string {
@@ -85,16 +87,48 @@ export function ProjectBudgetEstimatePanel({
   hasClient,
   onRequestClientLink,
   onInvoiceCreated,
+  hoursRefreshKey = 0,
 }: ProjectBudgetEstimatePanelProps) {
   const [generating, setGenerating] = useState(false)
   const [clientRequiredOpen, setClientRequiredOpen] = useState(false)
+  const [loggedHours, setLoggedHours] = useState(0)
+  const [loggedHoursLoading, setLoggedHoursLoading] = useState(true)
   const currency = currencyProp ?? budget?.currency ?? "USD"
   const estimate = calculateProjectCostEstimate(projectServices)
   const internalHourlyCostRate = useInternalHourlyCostRate()
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchLoggedHours() {
+      setLoggedHoursLoading(true)
+      try {
+        const summary = await getProjectHoursSummary(projectId)
+        if (!cancelled) {
+          setLoggedHours(summary.totalLoggedHours)
+        }
+      } catch {
+        if (!cancelled) {
+          setLoggedHours(0)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoggedHoursLoading(false)
+        }
+      }
+    }
+
+    void fetchLoggedHours()
+
+    return () => {
+      cancelled = true
+    }
+  }, [projectId, hoursRefreshKey])
+
   const profitability = calculateProjectProfitability({
     estimatedHours: estimate.totalHours,
     estimatedValue: estimate.totalEstimate,
-    actualHours: 0,
+    actualHours: loggedHours,
     internalHourlyCostRate,
   })
   const budgetTotal = budget?.total
@@ -321,7 +355,7 @@ export function ProjectBudgetEstimatePanel({
             ) : null}
           </div>
 
-          {loading ? (
+          {loading || loggedHoursLoading ? (
             <Skeleton className="h-24 rounded-lg" />
           ) : estimate.lines.length === 0 ? (
             <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
@@ -382,8 +416,8 @@ export function ProjectBudgetEstimatePanel({
 
               {profitability.isEstimatedMargin ? (
                 <p className="text-sm text-muted-foreground">
-                  Margin is estimated from service hours until time tracking is
-                  available. Actual hours logged are currently 0.
+                  Margin is estimated from service hours until time is logged on
+                  project tasks.
                 </p>
               ) : null}
 

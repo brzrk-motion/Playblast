@@ -69,11 +69,13 @@ export function ProjectCardFinancials({
   budget,
   servicesEstimate,
   servicesEstimatedHours,
+  servicesLoggedHours = 0,
   className,
 }: {
   budget?: ProjectBudget
   servicesEstimate?: number
   servicesEstimatedHours?: number
+  servicesLoggedHours?: number
   className?: string
 }) {
   const internalHourlyCostRate = useInternalHourlyCostRate()
@@ -93,7 +95,7 @@ export function ProjectCardFinancials({
         ? calculateProjectProfitability({
             estimatedHours: servicesEstimatedHours,
             estimatedValue: servicesEstimate,
-            actualHours: 0,
+            actualHours: servicesLoggedHours,
             internalHourlyCostRate,
           })
         : null
@@ -145,6 +147,7 @@ interface DashboardProjectCardProps {
   budget?: ProjectBudget
   servicesEstimate?: number
   servicesEstimatedHours?: number
+  servicesLoggedHours?: number
   deliverableCount: number
   compact?: boolean
   onArchive?: () => void
@@ -161,6 +164,7 @@ export function DashboardProjectCard({
   budget,
   servicesEstimate,
   servicesEstimatedHours,
+  servicesLoggedHours,
   deliverableCount,
   compact = false,
   onArchive,
@@ -172,6 +176,7 @@ export function DashboardProjectCard({
       budget={budget}
       servicesEstimate={servicesEstimate}
       servicesEstimatedHours={servicesEstimatedHours}
+      servicesLoggedHours={servicesLoggedHours}
     />
   )
   return (
