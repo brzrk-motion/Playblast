@@ -1244,6 +1244,94 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(converted.id.length > 0, true)
   })
 
+  it("aggregates estimated lifetime value on client list and detail", async () => {
+    const {
+      createClient: repoCreateClient,
+      createProject: repoCreateProject,
+      createService: repoCreateService,
+      addProjectService,
+      updateProjectService,
+    } = await import("../storage/repository.js")
+
+    const client = repoCreateClient({
+      name: "Lifetime Client",
+      email: "lifetime@example.com",
+    })
+
+    const activeProject = repoCreateProject({
+      id: "ltv-active-project",
+      name: "Active Project",
+      clientId: client.id,
+      status: "active",
+    })
+    const onHoldProject = repoCreateProject({
+      id: "ltv-on-hold-project",
+      name: "On Hold Project",
+      clientId: client.id,
+      status: "on_hold",
+    })
+    const completedProject = repoCreateProject({
+      id: "ltv-completed-project",
+      name: "Completed Project",
+      clientId: client.id,
+      status: "completed",
+    })
+    const emptyProject = repoCreateProject({
+      id: "ltv-empty-project",
+      name: "No Services Project",
+      clientId: client.id,
+      status: "active",
+    })
+
+    const service = repoCreateService({
+      name: "Motion Design",
+      hourEstimate: 10,
+      hourlyRate: 100,
+      type: "animated",
+    })
+
+    addProjectService(activeProject.id, service.id)
+    addProjectService(onHoldProject.id, service.id)
+    updateProjectService(onHoldProject.id, service.id, { overrideHours: 5 })
+    addProjectService(completedProject.id, service.id)
+    updateProjectService(completedProject.id, service.id, { overrideHours: 8 })
+
+    const listResponse = await fetch(`${baseUrl}/api/clients`)
+    assert.equal(listResponse.status, 200)
+    const clients = (await listResponse.json()) as Array<{
+      id: string
+      lifetimeValue: {
+        totalEstimated: number
+        activeEstimated: number
+        completedEstimated: number
+      }
+    }>
+    const listed = clients.find((item) => item.id === client.id)
+    assert.ok(listed)
+    assert.deepEqual(listed?.lifetimeValue, {
+      totalEstimated: 2300,
+      activeEstimated: 1500,
+      completedEstimated: 800,
+    })
+
+    const detailResponse = await fetch(`${baseUrl}/api/clients/${client.id}`)
+    assert.equal(detailResponse.status, 200)
+    const detail = (await detailResponse.json()) as {
+      lifetimeValue: {
+        totalEstimated: number
+        activeEstimated: number
+        completedEstimated: number
+      }
+    }
+    assert.deepEqual(detail.lifetimeValue, {
+      totalEstimated: 2300,
+      activeEstimated: 1500,
+      completedEstimated: 800,
+    })
+
+    assert.equal(emptyProject.id.length > 0, true)
+  })
+
   it("manages retainer clients and cycle hour logging via API routes", async () => {
     const createResponse = await fetch(`${baseUrl}/api/clients`, {
       method: "POST",

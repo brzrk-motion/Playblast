@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
-import { Building2, MoreHorizontal, Plus } from "lucide-react"
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Building2,
+  MoreHorizontal,
+  Plus,
+} from "lucide-react"
 import { AddClientModal } from "@/components/client-management/add-client-modal"
 import { EditClientModal } from "@/components/client-management/edit-client-modal"
 import { ClientDetailSheet } from "@/components/client-management/client-detail-sheet"
@@ -41,19 +48,68 @@ import {
 } from "@/lib/api"
 import { formatDateAdded } from "@/lib/dates"
 import {
+  sortClients,
+  type ClientSortField,
+  type SortDirection,
+} from "@/lib/clients"
+import { formatEstimateCurrency } from "@/lib/budget"
+import {
   clientFormToPayload,
   type ClientFormValues,
 } from "@/lib/client-form"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
-import type { Client } from "@/types/client"
+import type { Client, ClientListItem } from "@/types/client"
+
+interface SortableTableHeadProps {
+  label: string
+  field: ClientSortField
+  activeField: ClientSortField
+  direction: SortDirection
+  onSort: (field: ClientSortField) => void
+}
+
+function SortableTableHead({
+  label,
+  field,
+  activeField,
+  direction,
+  onSort,
+}: SortableTableHeadProps) {
+  const isActive = activeField === field
+
+  return (
+    <TableHead>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="-ml-3 h-8 gap-1.5 px-2 font-medium"
+        onClick={() => onSort(field)}
+      >
+        {label}
+        {isActive ? (
+          direction === "asc" ? (
+            <ArrowUp className="size-3.5" />
+          ) : (
+            <ArrowDown className="size-3.5" />
+          )
+        ) : (
+          <ArrowUpDown className="size-3.5 opacity-40" />
+        )}
+      </Button>
+    </TableHead>
+  )
+}
 
 export function ClientsTab() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [clients, setClients] = useState<Client[]>([])
+  const [clients, setClients] = useState<ClientListItem[]>([])
   const [projectCounts, setProjectCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [sortField, setSortField] = useState<ClientSortField>("lifetimeValue")
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
@@ -156,14 +212,19 @@ export function ClientsTab() {
   }
 
   const sortedClients = useMemo(
-    () =>
-      [...clients].sort(
-        (left, right) =>
-          new Date(right.createdAt).getTime() -
-          new Date(left.createdAt).getTime(),
-      ),
-    [clients],
+    () => sortClients(clients, sortField, sortDirection),
+    [clients, sortField, sortDirection],
   )
+
+  function handleSort(field: ClientSortField) {
+    if (sortField === field) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"))
+      return
+    }
+
+    setSortField(field)
+    setSortDirection(field === "lifetimeValue" ? "desc" : "asc")
+  }
 
   function openCreateModal() {
     setFormError(null)
@@ -211,7 +272,11 @@ export function ClientsTab() {
       setEditModalOpen(false)
       setSelectedClient(null)
       setClients((current) =>
-        current.map((client) => (client.id === updated.id ? updated : client)),
+        current.map((client) =>
+          client.id === updated.id
+            ? { ...updated, lifetimeValue: client.lifetimeValue }
+            : client,
+        ),
       )
     } catch (err) {
       const message = humanizeApiError(err, "Failed to save client")
@@ -295,13 +360,32 @@ export function ClientsTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <SortableTableHead
+                    label="Name"
+                    field="name"
+                    activeField={sortField}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                  />
                   <TableHead>Type</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Linked Projects</TableHead>
-                  <TableHead>Date Added</TableHead>
+                  <SortableTableHead
+                    label="Est. Lifetime Value"
+                    field="lifetimeValue"
+                    activeField={sortField}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                  />
+                  <SortableTableHead
+                    label="Date Added"
+                    field="createdAt"
+                    activeField={sortField}
+                    direction={sortDirection}
+                    onSort={handleSort}
+                  />
                   <TableHead className="w-[4rem] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -335,6 +419,9 @@ export function ClientsTab() {
                         ) : (
                           <Badge variant="outline">0</Badge>
                         )}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {formatEstimateCurrency(client.lifetimeValue.totalEstimated)}
                       </TableCell>
                       <TableCell>{formatDateAdded(client.createdAt)}</TableCell>
                       <TableCell className="text-right">
