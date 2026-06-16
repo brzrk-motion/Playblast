@@ -42,6 +42,15 @@ export type {
   UpdateMilestoneInput,
 } from "./milestone.js"
 export type {
+  CreateTaskInput,
+  Task,
+  UpdateTaskInput,
+} from "./task.js"
+export type {
+  CreateTimeLogInput,
+  TimeLog,
+} from "./time-log.js"
+export type {
   BudgetLineItem,
   CreateProjectInput,
   Project,

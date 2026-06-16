@@ -14,6 +14,7 @@ import {
   getProject,
   getProjectWithClient,
   listProjectSummaries,
+  listTasksByProject,
   listVersionsByProject,
   unarchiveProject,
   updateProject,
@@ -241,6 +242,22 @@ projectsRouter.get(
     }
 
     res.json(listVersionsByProject(projectId))
+  },
+)
+
+projectsRouter.get(
+  "/:projectId/tasks",
+  validateProjectParams,
+  (req, res) => {
+    const projectId = getParam(req.params.projectId)
+    const project = getProject(projectId)
+
+    if (!project) {
+      res.status(404).json({ error: "Project not found." })
+      return
+    }
+
+    res.json(listTasksByProject(projectId))
   },
 )
 

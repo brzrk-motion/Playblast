@@ -26,6 +26,7 @@ import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { MilestoneTasksSection } from "@/components/milestone/milestone-tasks-section"
 import { ArchiveProjectDialog } from "@/components/project/archive-project-dialog"
 import { ProjectArchivedBadge } from "@/components/project/project-archived-badge"
 import { DeliverableStatusBadge } from "@/components/project/deliverable-status-badge"
@@ -56,6 +57,7 @@ import {
   listDeliverables,
   listMilestones,
   listProjectServices,
+  listProjectTasks,
   getProject,
   unarchiveProject,
   updateDeliverable,
@@ -76,6 +78,7 @@ import { cn } from "@/lib/utils"
 import { useProjectPageHeader } from "@/hooks/use-project-page-header"
 import type { DeliverableSummary } from "@/types/deliverable"
 import type { Milestone } from "@/types/milestone"
+import type { Task } from "@/types/task"
 import type { ProjectDetail } from "@/types/project"
 import type { ProjectServiceWithDetails } from "@/types/project-service"
 
@@ -105,6 +108,7 @@ export function ProjectOverviewPage() {
   const [project, setProject] = useState<ProjectDetail | null>(null)
   const [deliverables, setDeliverables] = useState<DeliverableSummary[]>([])
   const [milestones, setMilestones] = useState<Milestone[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
   const [projectServices, setProjectServices] = useState<ProjectServiceWithDetails[]>(
     [],
   )
@@ -159,17 +163,19 @@ export function ProjectOverviewPage() {
     if (!projectId) return
 
     try {
-      const [projectData, deliverableData, milestoneData, servicesData] =
+      const [projectData, deliverableData, milestoneData, taskData, servicesData] =
         await Promise.all([
           getProject(projectId),
           listDeliverables(projectId),
           listMilestones(projectId),
+          listProjectTasks(projectId),
           listProjectServices(projectId),
         ])
       setProject(projectData)
       setOutstandingBalance(projectData.outstandingBalance ?? 0)
       setDeliverables(deliverableData)
       setMilestones(milestoneData)
+      setTasks(taskData)
       setProjectServices(servicesData)
       setError(null)
     } catch (err) {
@@ -190,11 +196,12 @@ export function ProjectOverviewPage() {
 
     async function fetchData() {
       try {
-        const [projectData, deliverableData, milestoneData, servicesData] =
+        const [projectData, deliverableData, milestoneData, taskData, servicesData] =
           await Promise.all([
             getProject(projectId),
             listDeliverables(projectId),
             listMilestones(projectId),
+            listProjectTasks(projectId),
             listProjectServices(projectId),
           ])
         if (!cancelled) {
@@ -202,6 +209,7 @@ export function ProjectOverviewPage() {
           setOutstandingBalance(projectData.outstandingBalance ?? 0)
           setDeliverables(deliverableData)
           setMilestones(milestoneData)
+          setTasks(taskData)
           setProjectServices(servicesData)
           setError(null)
         }
@@ -373,10 +381,28 @@ export function ProjectOverviewPage() {
     try {
       await deleteMilestone(id)
       setMilestones((current) => current.filter((item) => item.id !== id))
+      setTasks((current) => current.filter((item) => item.milestoneId !== id))
     } catch (err) {
       showErrorToast(humanizeApiError(err, "Failed to delete milestone"))
     }
   }
+
+  function handleTasksChange(milestoneId: string, nextTasks: Task[]) {
+    setTasks((current) => [
+      ...current.filter((task) => task.milestoneId !== milestoneId),
+      ...nextTasks,
+    ])
+  }
+
+  const tasksByMilestone = useMemo(() => {
+    const grouped = new Map<string, Task[]>()
+    for (const task of tasks) {
+      const existing = grouped.get(task.milestoneId) ?? []
+      existing.push(task)
+      grouped.set(task.milestoneId, existing)
+    }
+    return grouped
+  }, [tasks])
 
   const sortedMilestones = useMemo(
     () =>
@@ -620,52 +646,56 @@ export function ProjectOverviewPage() {
             <CardHeader>
               <CardTitle>Milestones</CardTitle>
               <CardDescription>
-                Track key dates and deadlines for this project.
+                Track key dates, tasks, and logged hours for this project.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {sortedMilestones.length > 0 ? (
-                <ul className="space-y-1">
+                <ul className="space-y-3">
                   {sortedMilestones.map((milestone) => (
-                    <li
-                      key={milestone.id}
-                      className="interactive-row flex items-center gap-3 rounded-lg px-2 py-1.5"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => void handleToggleMilestone(milestone)}
-                        className="focus-ring rounded-full"
-                        aria-label={milestone.done ? "Mark incomplete" : "Mark complete"}
-                      >
-                        {milestone.done ? (
-                          <CheckCircle2 className="size-5 text-status-success-foreground" />
-                        ) : (
-                          <Circle className="size-5 text-muted-foreground" />
-                        )}
-                      </button>
-                      <div className="min-w-0 flex-1">
-                        <p
-                          className={cn(
-                            "truncate text-sm font-medium",
-                            milestone.done && "text-muted-foreground line-through",
-                          )}
+                    <li key={milestone.id} className="space-y-1">
+                      <div className="interactive-row flex items-center gap-3 rounded-lg px-2 py-1.5">
+                        <button
+                          type="button"
+                          onClick={() => void handleToggleMilestone(milestone)}
+                          className="focus-ring rounded-full"
+                          aria-label={milestone.done ? "Mark incomplete" : "Mark complete"}
                         >
-                          {milestone.name}
-                        </p>
+                          {milestone.done ? (
+                            <CheckCircle2 className="size-5 text-status-success-foreground" />
+                          ) : (
+                            <Circle className="size-5 text-muted-foreground" />
+                          )}
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <p
+                            className={cn(
+                              "truncate text-sm font-medium",
+                              milestone.done && "text-muted-foreground line-through",
+                            )}
+                          >
+                            {milestone.name}
+                          </p>
+                        </div>
+                        {milestone.dueDate ? (
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(milestone.dueDate)}
+                          </span>
+                        ) : null}
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => void handleDeleteMilestone(milestone.id)}
+                          aria-label="Delete milestone"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
                       </div>
-                      {milestone.dueDate ? (
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(milestone.dueDate)}
-                        </span>
-                      ) : null}
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => void handleDeleteMilestone(milestone.id)}
-                        aria-label="Delete milestone"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      <MilestoneTasksSection
+                        milestoneId={milestone.id}
+                        tasks={tasksByMilestone.get(milestone.id) ?? []}
+                        onTasksChange={handleTasksChange}
+                      />
                     </li>
                   ))}
                 </ul>
