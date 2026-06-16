@@ -93,6 +93,8 @@ projectsRouter.post("/", (req, res) => {
       typeof req.body?.startDate === "string" ? req.body.startDate : undefined,
     endDate: typeof req.body?.endDate === "string" ? req.body.endDate : undefined,
     budget,
+    notes:
+      typeof req.body?.notes === "string" ? req.body.notes.trim() : undefined,
   })
   res.status(201).json(project)
 })

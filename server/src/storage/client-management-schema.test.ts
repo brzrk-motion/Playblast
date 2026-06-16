@@ -69,6 +69,7 @@ describe("client management schema", () => {
     assert.ok(tables.includes("contact_log"))
     assert.ok(tables.includes("clients"))
     assert.ok(__testOnly_tableHasColumn(db, "projects", "clientId"))
+    assert.ok(__testOnly_tableHasColumn(db, "projects", "notes"))
     db.close()
     closeDatabase()
   })

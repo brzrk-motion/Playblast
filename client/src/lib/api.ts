@@ -161,6 +161,7 @@ export interface UpdateProjectInput {
   startDate?: string | null
   endDate?: string | null
   budget?: ProjectBudget | null
+  notes?: string | null
 }
 
 export async function updateProject(

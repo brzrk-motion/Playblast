@@ -37,6 +37,8 @@ export interface Project {
   startDate?: string
   endDate?: string
   budget?: ProjectBudget
+  /** Internal free-text notes; only shown on the project overview page. */
+  notes?: string
 }
 
 /** Project detail with the linked client record populated (or null). */

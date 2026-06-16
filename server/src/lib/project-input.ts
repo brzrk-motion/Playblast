@@ -173,6 +173,7 @@ export function parseProjectPatch(
   if (raw.startDate !== undefined)
     input.startDate = parseNullableTrimmed(raw.startDate)
   if (raw.endDate !== undefined) input.endDate = parseNullableTrimmed(raw.endDate)
+  if (raw.notes !== undefined) input.notes = parseNullableTrimmed(raw.notes)
 
   if (raw.budget !== undefined) {
     if (raw.budget === null) {

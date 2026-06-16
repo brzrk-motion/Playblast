@@ -169,6 +169,24 @@ describe("SQLite data store", () => {
     assert.equal(cleared?.budget, undefined)
   })
 
+  it("persists internal project notes", () => {
+    const project = createProject({ id: "notes-test", name: "Notes Test" })
+    assert.equal(project.notes, undefined)
+
+    const withNotes = updateProject(project.id, {
+      notes: "Client prefers warm color grade.\nSend WIP on Fridays.",
+    })
+    assert.equal(
+      withNotes?.notes,
+      "Client prefers warm color grade.\nSend WIP on Fridays.",
+    )
+    assert.equal(getProject(project.id)?.notes, withNotes?.notes)
+
+    const cleared = updateProject(project.id, { notes: null })
+    assert.equal(cleared?.notes, undefined)
+    assert.equal(getProject(project.id)?.notes, undefined)
+  })
+
   it("updates an existing version when re-uploading the same label", () => {
     const { deliverable, project } = setupDeliverable("reupload-test")
     const first = createVersion({

@@ -51,6 +51,8 @@ export interface Project {
   /** ISO date string. */
   endDate?: string
   budget?: ProjectBudget
+  /** Internal free-text notes; not shown on client-facing review views. */
+  notes?: string
   /** Sum of unpaid/partially paid invoice balances for this project. */
   outstandingBalance?: number
 }
@@ -88,6 +90,7 @@ export interface CreateProjectInput {
   startDate?: string
   endDate?: string
   budget?: ProjectBudget
+  notes?: string
 }
 
 export interface UpdateProjectInput {
@@ -99,4 +102,5 @@ export interface UpdateProjectInput {
   startDate?: string | null
   endDate?: string | null
   budget?: ProjectBudget | null
+  notes?: string | null
 }
