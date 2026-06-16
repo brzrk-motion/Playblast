@@ -28,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { ProjectCardSkeleton } from "@/components/dashboard/project-card-skeleton"
 import { ClientDetailSheet } from "@/components/client-management/client-detail-sheet"
+import { ProjectActionsMenu } from "@/components/project/project-actions-menu"
 import { ProjectClientBadge } from "@/components/project/project-client-badge"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
 import { ProjectFormSheet } from "@/components/project/project-form-sheet"
@@ -77,12 +78,18 @@ function ProjectCard({
   onClientClick: (clientId: string) => void
 }) {
   return (
-    <Link
-      to={`/projects/${encodeURIComponent(project.id)}`}
-      className="block rounded-xl focus-ring"
-    >
-      <Card className="interactive-card h-full border-muted">
-        <CardHeader className="pb-3">
+    <Card className="interactive-card relative h-full border-muted">
+      <div className="absolute top-3 right-3 z-10">
+        <ProjectActionsMenu
+          projectId={project.id}
+          projectName={project.name}
+        />
+      </div>
+      <Link
+        to={`/projects/${encodeURIComponent(project.id)}`}
+        className="block rounded-xl focus-ring"
+      >
+        <CardHeader className="pb-3 pr-10">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <CardTitle className="text-base leading-snug">
@@ -125,8 +132,8 @@ function ProjectCard({
           ) : null}
           <p>Updated {formatRelativeDate(project.updatedAt)}</p>
         </CardContent>
-      </Card>
-    </Link>
+      </Link>
+    </Card>
   )
 }
 

@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { ProjectActionsMenu } from "@/components/project/project-actions-menu"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
 import {
   ESTIMATE_BUDGET_STATUS_DOT_STYLES,
@@ -12,6 +13,14 @@ import {
   estimateBudgetStatus,
   formatCurrency,
 } from "@/lib/budget"
+import { useInternalHourlyCostRate } from "@/lib/internal-hourly-cost-rate"
+import {
+  calculateProjectProfitability,
+  formatMarginPercent,
+  MARGIN_STATUS_DOT_STYLES,
+  MARGIN_STATUS_LABELS,
+  marginStatus,
+} from "@/lib/profitability"
 import { cn } from "@/lib/utils"
 import type { ProjectBudget } from "@/types/project"
 
@@ -35,33 +44,83 @@ function BudgetHealthDot({
   )
 }
 
+function MarginHealthDot({
+  status,
+  className,
+}: {
+  status: ReturnType<typeof marginStatus>
+  className?: string
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-block size-2 shrink-0 rounded-full",
+        MARGIN_STATUS_DOT_STYLES[status],
+        className,
+      )}
+      title={MARGIN_STATUS_LABELS[status]}
+      aria-label={MARGIN_STATUS_LABELS[status]}
+    />
+  )
+}
+
 export function ProjectCardFinancials({
   budget,
   servicesEstimate,
+  servicesEstimatedHours,
   className,
 }: {
   budget?: ProjectBudget
   servicesEstimate?: number
+  servicesEstimatedHours?: number
   className?: string
 }) {
+  const internalHourlyCostRate = useInternalHourlyCostRate()
   const currency = budget?.currency ?? "USD"
   const hasEstimate = servicesEstimate !== undefined && servicesEstimate > 0
   const budgetTotal = budget?.total
   const hasBudget = budgetTotal !== undefined && budgetTotal > 0
 
   if (hasEstimate) {
-    const showHealth = hasBudget
-    const status = showHealth
+    const showBudgetHealth = hasBudget
+    const budgetStatus = showBudgetHealth
       ? estimateBudgetStatus(budgetTotal, servicesEstimate)
       : null
 
+    const profitability =
+      servicesEstimatedHours !== undefined && servicesEstimatedHours > 0
+        ? calculateProjectProfitability({
+            estimatedHours: servicesEstimatedHours,
+            estimatedValue: servicesEstimate,
+            actualHours: 0,
+            internalHourlyCostRate,
+          })
+        : null
+
+    const showMargin =
+      profitability?.marginPercent !== null &&
+      profitability?.marginPercent !== undefined
+
     return (
-      <p className={cn("flex min-w-0 items-center gap-1.5 truncate", className)}>
-        <span className="tabular-nums">
-          Est. {formatCurrency(servicesEstimate, currency)}
-        </span>
-        {status ? <BudgetHealthDot status={status} /> : null}
-      </p>
+      <div className={cn("flex min-w-0 flex-col gap-1", className)}>
+        <p className="flex min-w-0 items-center gap-1.5 truncate">
+          <span className="tabular-nums">
+            Est. {formatCurrency(servicesEstimate, currency)}
+          </span>
+          {budgetStatus ? <BudgetHealthDot status={budgetStatus} /> : null}
+        </p>
+        {showMargin ? (
+          <p className="flex min-w-0 items-center gap-1.5 truncate text-xs">
+            <span className="tabular-nums">
+              {profitability.isEstimatedMargin ? "Est. " : ""}
+              {formatMarginPercent(profitability.marginPercent!)} margin
+            </span>
+            <MarginHealthDot
+              status={marginStatus(profitability.marginPercent!)}
+            />
+          </p>
+        ) : null}
+      </div>
     )
   }
 
@@ -83,6 +142,7 @@ interface DashboardProjectCardProps {
   clientName?: string
   budget?: ProjectBudget
   servicesEstimate?: number
+  servicesEstimatedHours?: number
   deliverableCount: number
   compact?: boolean
 }
@@ -94,20 +154,32 @@ export function DashboardProjectCard({
   clientName,
   budget,
   servicesEstimate,
+  servicesEstimatedHours,
   deliverableCount,
   compact = false,
 }: DashboardProjectCardProps) {
   const financials = (
-    <ProjectCardFinancials budget={budget} servicesEstimate={servicesEstimate} />
+    <ProjectCardFinancials
+      budget={budget}
+      servicesEstimate={servicesEstimate}
+      servicesEstimatedHours={servicesEstimatedHours}
+    />
   )
 
   return (
-    <Link
-      to={`/projects/${encodeURIComponent(projectId)}`}
-      className="block rounded-xl focus-ring"
-    >
-      <Card className="interactive-card h-full border-muted">
-        <CardHeader className={compact ? "gap-2 pb-2" : "pb-3"}>
+    <Card className="interactive-card relative h-full border-muted">
+      <div className="absolute top-2 right-2 z-10">
+        <ProjectActionsMenu
+          projectId={projectId}
+          projectName={name}
+          className="size-7"
+        />
+      </div>
+      <Link
+        to={`/projects/${encodeURIComponent(projectId)}`}
+        className="block rounded-xl focus-ring"
+      >
+        <CardHeader className={compact ? "gap-2 pb-2 pr-10" : "pb-3 pr-10"}>
           <CardTitle
             className={cn(
               "leading-snug",
@@ -133,7 +205,7 @@ export function DashboardProjectCard({
             {deliverableCount === 1 ? "deliverable" : "deliverables"}
           </p>
         </CardContent>
-      </Card>
-    </Link>
+      </Link>
+    </Card>
   )
 }

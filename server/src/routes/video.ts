@@ -21,7 +21,7 @@ const videoRouter = Router({ mergeParams: true })
  * crashes the Node process. We tear down the stream on client close and
  * swallow the resulting stream errors instead.
  */
-function pipeVideo(
+export function pipeVideo(
   res: Response,
   videoPath: string,
   options?: { start: number; end: number },

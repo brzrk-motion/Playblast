@@ -153,9 +153,46 @@ function runMigrations(db: Database.Database): void {
 
     if (
       id === "006_project_notes" &&
+      tableExists(db, "projects") &&
       !tableHasColumn(db, "projects", "notes")
     ) {
       db.exec("ALTER TABLE projects ADD COLUMN notes TEXT")
+    }
+
+    if (id === "006_retainer_clients") {
+      if (tableExists(db, "clients")) {
+        if (!tableHasColumn(db, "clients", "isRetainer")) {
+          db.exec(
+            "ALTER TABLE clients ADD COLUMN isRetainer INTEGER NOT NULL DEFAULT 0",
+          )
+        }
+        if (!tableHasColumn(db, "clients", "retainerHours")) {
+          db.exec("ALTER TABLE clients ADD COLUMN retainerHours REAL")
+        }
+        if (!tableHasColumn(db, "clients", "retainerRate")) {
+          db.exec("ALTER TABLE clients ADD COLUMN retainerRate REAL")
+        }
+        if (!tableHasColumn(db, "clients", "retainerCycleDay")) {
+          db.exec("ALTER TABLE clients ADD COLUMN retainerCycleDay INTEGER")
+        }
+      }
+
+      if (tableExists(db, "clients") && !tableExists(db, "retainer_cycle_hours")) {
+        db.exec(`
+          CREATE TABLE retainer_cycle_hours (
+            id TEXT PRIMARY KEY,
+            clientId TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+            cycleStart TEXT NOT NULL,
+            hoursLogged REAL NOT NULL DEFAULT 0 CHECK (hoursLogged >= 0),
+            createdAt TEXT NOT NULL,
+            updatedAt TEXT NOT NULL,
+            UNIQUE (clientId, cycleStart)
+          )
+        `)
+        db.exec(
+          "CREATE INDEX IF NOT EXISTS idx_retainer_cycle_hours_clientId ON retainer_cycle_hours(clientId)",
+        )
+      }
     }
 
     recordMigration(db, id)

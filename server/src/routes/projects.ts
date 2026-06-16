@@ -8,6 +8,7 @@ import {
 import {
   createProject,
   deleteProject,
+  duplicateProject,
   getClient,
   getProject,
   getProjectWithClient,
@@ -97,6 +98,22 @@ projectsRouter.post("/", (req, res) => {
   })
   res.status(201).json(project)
 })
+
+projectsRouter.post(
+  "/:projectId/duplicate",
+  validateProjectIdParam,
+  (req, res) => {
+    const projectId = getParam(req.params.projectId)
+    const duplicated = duplicateProject(projectId)
+
+    if (!duplicated) {
+      res.status(404).json({ error: "Project not found." })
+      return
+    }
+
+    res.status(201).json(duplicated)
+  },
+)
 
 projectsRouter.get("/:projectId", (req, res) => {
   const projectId = getParam(req.params.projectId)

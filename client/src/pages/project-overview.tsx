@@ -27,6 +27,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DeliverableStatusBadge } from "@/components/project/deliverable-status-badge"
+import { EditableProjectName } from "@/components/project/editable-project-name"
+import { ProjectActionsMenu } from "@/components/project/project-actions-menu"
 import { ProjectClientInfoBlock } from "@/components/project/project-client-info-block"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
 import { ClientDetailSheet } from "@/components/client-management/client-detail-sheet"
@@ -35,6 +37,7 @@ import {
   type DeliverableFormValues,
 } from "@/components/project/deliverable-dialog"
 import { ProjectBudgetEstimatePanel } from "@/components/project/project-budget-estimate-panel"
+import { ProjectInvoicesSection } from "@/components/project/project-invoices-section"
 import { ProjectFormSheet } from "@/components/project/project-form-sheet"
 import { ProjectNotesField } from "@/components/project/project-notes-field"
 import { ProjectServicesSection } from "@/components/project/project-services-section"
@@ -61,6 +64,7 @@ import {
   budgetHealth,
   budgetSpentRatio,
   formatCurrency,
+  formatEstimateCurrency,
 } from "@/lib/budget"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
@@ -71,6 +75,7 @@ import type { ProjectDetail } from "@/types/project"
 import type { ProjectServiceWithDetails } from "@/types/project-service"
 
 const TAB_PARAM = "tab"
+const EDIT_NAME_PARAM = "editName"
 type ProjectOverviewTab = "milestones" | "deliverables" | "services"
 
 function parseTab(value: string | null): ProjectOverviewTab {
@@ -91,6 +96,7 @@ export function ProjectOverviewPage() {
   const { projectId = "" } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = parseTab(searchParams.get(TAB_PARAM))
+  const shouldEditName = searchParams.get(EDIT_NAME_PARAM) === "1"
   const [project, setProject] = useState<ProjectDetail | null>(null)
   const [deliverables, setDeliverables] = useState<DeliverableSummary[]>([])
   const [milestones, setMilestones] = useState<Milestone[]>([])
@@ -115,6 +121,9 @@ export function ProjectOverviewPage() {
   const [newMilestoneDate, setNewMilestoneDate] = useState("")
   const [addingMilestone, setAddingMilestone] = useState(false)
   const [viewClientId, setViewClientId] = useState<string | null>(null)
+  const [outstandingBalance, setOutstandingBalance] = useState(0)
+  const [clientLinkOpen, setClientLinkOpen] = useState(false)
+  const [invoiceRefreshKey, setInvoiceRefreshKey] = useState(0)
 
   useProjectPageHeader(projectId, project)
 
@@ -125,6 +134,16 @@ export function ProjectOverviewPage() {
     } else {
       next.set(TAB_PARAM, value)
     }
+    setSearchParams(next, { replace: true })
+  }
+
+  function clearEditNameParam() {
+    if (!searchParams.has(EDIT_NAME_PARAM)) {
+      return
+    }
+
+    const next = new URLSearchParams(searchParams)
+    next.delete(EDIT_NAME_PARAM)
     setSearchParams(next, { replace: true })
   }
 
@@ -140,6 +159,7 @@ export function ProjectOverviewPage() {
           listProjectServices(projectId),
         ])
       setProject(projectData)
+      setOutstandingBalance(projectData.outstandingBalance ?? 0)
       setDeliverables(deliverableData)
       setMilestones(milestoneData)
       setProjectServices(servicesData)
@@ -171,6 +191,7 @@ export function ProjectOverviewPage() {
           ])
         if (!cancelled) {
           setProject(projectData)
+          setOutstandingBalance(projectData.outstandingBalance ?? 0)
           setDeliverables(deliverableData)
           setMilestones(milestoneData)
           setProjectServices(servicesData)
@@ -373,6 +394,7 @@ export function ProjectOverviewPage() {
 
   const budget = project.budget
   const health = budget ? budgetHealth(budget) : null
+  const currency = budget?.currency ?? "USD"
 
   return (
     <div className="space-y-6">
@@ -386,8 +408,22 @@ export function ProjectOverviewPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="type-page-title">{project.name}</h2>
+              <EditableProjectName
+                projectId={project.id}
+                name={project.name}
+                autoFocus={shouldEditName}
+                onNameChange={(name) => setProject({ ...project, name })}
+                onEditEnd={clearEditNameParam}
+              />
               <ProjectStatusBadge status={project.status} />
+              {outstandingBalance > 0 ? (
+                <Badge
+                  variant="outline"
+                  className="border-destructive/40 text-destructive"
+                >
+                  {formatEstimateCurrency(outstandingBalance, currency)} outstanding
+                </Badge>
+              ) : null}
             </div>
             {project.description ? (
               <p className="max-w-2xl text-sm text-muted-foreground">
@@ -395,16 +431,24 @@ export function ProjectOverviewPage() {
               </p>
             ) : null}
           </div>
-          <Button variant="outline" onClick={() => setEditOpen(true)}>
-            <Pencil />
-            Edit project
-          </Button>
+          <div className="flex items-center gap-2">
+            <ProjectActionsMenu
+              projectId={project.id}
+              projectName={project.name}
+            />
+            <Button variant="outline" onClick={() => setEditOpen(true)}>
+              <Pencil />
+              Edit project
+            </Button>
+          </div>
         </div>
         <ProjectClientInfoBlock
           projectId={project.id}
           client={project.client}
           onViewClient={setViewClientId}
           onProjectUpdated={setProject}
+          linkDialogOpen={clientLinkOpen}
+          onLinkDialogOpenChange={setClientLinkOpen}
         />
       </div>
 
@@ -486,9 +530,23 @@ export function ProjectOverviewPage() {
       />
 
       <ProjectBudgetEstimatePanel
+        projectId={project.id}
         projectServices={projectServices}
         budget={project.budget}
         loading={servicesLoading}
+        outstandingBalance={outstandingBalance}
+        currency={currency}
+        hasClient={project.client !== null}
+        onRequestClientLink={() => setClientLinkOpen(true)}
+        onInvoiceCreated={() => setInvoiceRefreshKey((key) => key + 1)}
+      />
+
+      <ProjectInvoicesSection
+        key={invoiceRefreshKey}
+        projectId={project.id}
+        currency={currency}
+        refreshKey={invoiceRefreshKey}
+        onOutstandingBalanceChange={setOutstandingBalance}
       />
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>

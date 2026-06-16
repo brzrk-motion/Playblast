@@ -3,7 +3,19 @@ import path from "node:path"
 import { randomUUID } from "node:crypto"
 import type { Database } from "better-sqlite3"
 import { getUploadDir } from "../config/paths.js"
-import { calculateProjectServicesEstimate } from "../lib/service-estimate.js"
+import {
+  calculateProjectServicesEstimate,
+  calculateProjectServicesEstimatedHours,
+  effectiveProjectServiceHours,
+  projectServiceLineTotal,
+} from "../lib/service-estimate.js"
+import { computeRetainerSummary, getCurrentCycleStart } from "../lib/retainer-cycle.js"
+import {
+  addDaysToIsoDate,
+  computeInvoiceStatus,
+  computeOutstandingBalance,
+  isInvoiceOverdue,
+} from "../lib/invoice.js"
 import type {
   Comment,
   ContactLog,
@@ -13,6 +25,7 @@ import type {
   Client,
   ClientWithProjects,
   CreateClientInput,
+  CreateInvoicePaymentInput,
   CreateLeadInput,
   CreateMilestoneInput,
   CreateProjectInput,
@@ -21,6 +34,11 @@ import type {
   Deliverable,
   DeliverableStatus,
   DeliverableSummary,
+  Invoice,
+  InvoiceLineItem,
+  InvoicePayment,
+  InvoiceSummary,
+  InvoiceWithPayments,
   Lead,
   LeadStatus,
   LeadWithContactLog,
@@ -36,6 +54,7 @@ import type {
   UpdateClientInput,
   UpdateCommentInput,
   UpdateDeliverableInput,
+  UpdateInvoiceInput,
   UpdateLeadInput,
   UpdateMilestoneInput,
   UpdateProjectInput,
@@ -137,6 +156,19 @@ interface ClientRow {
   website: string | null
   notes: string | null
   convertedFromLeadId: string | null
+  isRetainer: number
+  retainerHours: number | null
+  retainerRate: number | null
+  retainerCycleDay: number | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface RetainerCycleHoursRow {
+  id: string
+  clientId: string
+  cycleStart: string
+  hoursLogged: number
   createdAt: string
   updatedAt: string
 }
@@ -335,6 +367,10 @@ export function listProjectSummaries(clientId?: string): ProjectSummary[] {
     const servicesTotal = calculateProjectServicesEstimate(projectServices)
     const servicesEstimate =
       projectServices.length > 0 ? servicesTotal : undefined
+    const servicesEstimatedHours =
+      projectServices.length > 0
+        ? calculateProjectServicesEstimatedHours(projectServices)
+        : undefined
 
     return {
       ...project,
@@ -352,6 +388,9 @@ export function listProjectSummaries(clientId?: string): ProjectSummary[] {
         : null,
       ...(clientName ? { clientName } : {}),
       ...(servicesEstimate !== undefined ? { servicesEstimate } : {}),
+      ...(servicesEstimatedHours !== undefined
+        ? { servicesEstimatedHours }
+        : {}),
     }
   })
 }
@@ -371,8 +410,13 @@ export function getProjectWithClient(id: string): ProjectDetail | undefined {
   }
 
   const client = project.clientId ? (getClient(project.clientId) ?? null) : null
+  const outstandingBalance = getProjectOutstandingBalance(id)
 
-  return { ...project, client }
+  return {
+    ...project,
+    client,
+    ...(outstandingBalance > 0 ? { outstandingBalance } : {}),
+  }
 }
 
 export function createProject(input: CreateProjectInput): Project {
@@ -413,6 +457,101 @@ export function createProject(input: CreateProjectInput): Project {
       )
 
     return project
+  })
+}
+
+export function duplicateProject(sourceProjectId: string): Project | undefined {
+  return withTransaction(() => {
+    const source = getProject(sourceProjectId)
+    if (!source) {
+      return undefined
+    }
+
+    const now = new Date().toISOString()
+    const newProject: Project = {
+      id: randomUUID(),
+      name: `${source.name} (Copy)`,
+      createdAt: now,
+      status: "active",
+      ...(source.description ? { description: source.description } : {}),
+    }
+
+    getDb()
+      .prepare(
+        `INSERT INTO projects (
+          id, name, createdAt, status, client, clientId, description, startDate, endDate, budget
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        newProject.id,
+        newProject.name,
+        newProject.createdAt,
+        newProject.status,
+        null,
+        null,
+        newProject.description ?? null,
+        null,
+        null,
+        null,
+      )
+
+    const sourceServices = getDb()
+      .prepare(
+        `SELECT serviceId, quantity, overrideHours
+         FROM project_services
+         WHERE projectId = ?`,
+      )
+      .all(sourceProjectId) as Array<{
+      serviceId: string
+      quantity: number
+      overrideHours: number | null
+    }>
+
+    const insertService = getDb().prepare(
+      `INSERT INTO project_services (
+        id, projectId, serviceId, quantity, overrideHours, createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+
+    for (const service of sourceServices) {
+      insertService.run(
+        randomUUID(),
+        newProject.id,
+        service.serviceId,
+        service.quantity,
+        service.overrideHours,
+        now,
+      )
+    }
+
+    const sourceMilestones = getDb()
+      .prepare(
+        `SELECT name, "order"
+         FROM milestones
+         WHERE projectId = ?
+         ORDER BY "order" ASC`,
+      )
+      .all(sourceProjectId) as Array<{ name: string; order: number }>
+
+    const insertMilestone = getDb().prepare(
+      `INSERT INTO milestones (
+        id, projectId, name, dueDate, done, "order", createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+
+    for (const milestone of sourceMilestones) {
+      insertMilestone.run(
+        randomUUID(),
+        newProject.id,
+        milestone.name,
+        null,
+        0,
+        milestone.order,
+        now,
+      )
+    }
+
+    return newProject
   })
 }
 
@@ -1286,8 +1425,87 @@ function rowToClient(row: ClientRow): Client {
   if (row.convertedFromLeadId) {
     client.convertedFromLeadId = row.convertedFromLeadId
   }
+  if (row.isRetainer) {
+    client.isRetainer = true
+    if (row.retainerHours != null) client.retainerHours = row.retainerHours
+    if (row.retainerRate != null) client.retainerRate = row.retainerRate
+    if (row.retainerCycleDay != null) {
+      client.retainerCycleDay = row.retainerCycleDay
+    }
+  }
 
   return client
+}
+
+function getRetainerCycleHours(
+  clientId: string,
+  cycleStart: string,
+): number {
+  const row = getDb()
+    .prepare(
+      `SELECT hoursLogged FROM retainer_cycle_hours
+       WHERE clientId = ? AND cycleStart = ?`,
+    )
+    .get(clientId, cycleStart) as { hoursLogged: number } | undefined
+
+  return row?.hoursLogged ?? 0
+}
+
+export function upsertRetainerCycleHours(
+  clientId: string,
+  cycleStart: string,
+  hoursLogged: number,
+): number {
+  return withTransaction(() => {
+    const now = new Date().toISOString()
+    const existing = getDb()
+      .prepare(
+        `SELECT id FROM retainer_cycle_hours
+         WHERE clientId = ? AND cycleStart = ?`,
+      )
+      .get(clientId, cycleStart) as { id: string } | undefined
+
+    if (existing) {
+      getDb()
+        .prepare(
+          `UPDATE retainer_cycle_hours
+           SET hoursLogged = ?, updatedAt = ?
+           WHERE id = ?`,
+        )
+        .run(hoursLogged, now, existing.id)
+    } else {
+      getDb()
+        .prepare(
+          `INSERT INTO retainer_cycle_hours (
+            id, clientId, cycleStart, hoursLogged, createdAt, updatedAt
+          ) VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+        .run(randomUUID(), clientId, cycleStart, hoursLogged, now, now)
+    }
+
+    return hoursLogged
+  })
+}
+
+function buildRetainerSummary(client: Client) {
+  if (
+    !client.isRetainer ||
+    client.retainerHours == null ||
+    client.retainerRate == null ||
+    client.retainerCycleDay == null
+  ) {
+    return undefined
+  }
+
+  const cycleStart = getCurrentCycleStart(client.retainerCycleDay)
+  const hoursLogged = getRetainerCycleHours(client.id, cycleStart)
+
+  return computeRetainerSummary({
+    retainerHours: client.retainerHours,
+    retainerRate: client.retainerRate,
+    retainerCycleDay: client.retainerCycleDay,
+    hoursLogged,
+  })
 }
 
 export function listClients(): Client[] {
@@ -1328,9 +1546,14 @@ export function getClientWithProjects(
     return undefined
   }
 
+  const outstandingBalance = getClientOutstandingBalance(id)
+  const retainerSummary = buildRetainerSummary(client)
+
   return {
     ...client,
     projects: listProjectsByClientId(id),
+    ...(outstandingBalance > 0 ? { outstandingBalance } : {}),
+    ...(retainerSummary ? { retainerSummary } : {}),
   }
 }
 
@@ -1350,14 +1573,29 @@ export function createClient(input: CreateClientInput): Client {
       ...(input.convertedFromLeadId
         ? { convertedFromLeadId: input.convertedFromLeadId }
         : {}),
+      ...(input.isRetainer
+        ? {
+            isRetainer: true,
+            ...(input.retainerHours != null
+              ? { retainerHours: input.retainerHours }
+              : {}),
+            ...(input.retainerRate != null
+              ? { retainerRate: input.retainerRate }
+              : {}),
+            ...(input.retainerCycleDay != null
+              ? { retainerCycleDay: input.retainerCycleDay }
+              : {}),
+          }
+        : {}),
     }
 
     getDb()
       .prepare(
         `INSERT INTO clients (
           id, name, company, email, phone, website, notes,
-          convertedFromLeadId, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          convertedFromLeadId, isRetainer, retainerHours, retainerRate,
+          retainerCycleDay, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         client.id,
@@ -1368,6 +1606,10 @@ export function createClient(input: CreateClientInput): Client {
         client.website ?? null,
         client.notes ?? null,
         client.convertedFromLeadId ?? null,
+        client.isRetainer ? 1 : 0,
+        client.retainerHours ?? null,
+        client.retainerRate ?? null,
+        client.retainerCycleDay ?? null,
         client.createdAt,
         client.updatedAt,
       )
@@ -1395,13 +1637,48 @@ export function updateClient(
     applyNullableString(client, "notes", input.notes)
     applyNullableString(client, "convertedFromLeadId", input.convertedFromLeadId)
 
+    if (input.isRetainer !== undefined) {
+      client.isRetainer = input.isRetainer
+      if (!input.isRetainer) {
+        delete client.retainerHours
+        delete client.retainerRate
+        delete client.retainerCycleDay
+      }
+    }
+
+    if (input.retainerHours !== undefined) {
+      if (input.retainerHours === null) {
+        delete client.retainerHours
+      } else {
+        client.retainerHours = input.retainerHours
+      }
+    }
+
+    if (input.retainerRate !== undefined) {
+      if (input.retainerRate === null) {
+        delete client.retainerRate
+      } else {
+        client.retainerRate = input.retainerRate
+      }
+    }
+
+    if (input.retainerCycleDay !== undefined) {
+      if (input.retainerCycleDay === null) {
+        delete client.retainerCycleDay
+      } else {
+        client.retainerCycleDay = input.retainerCycleDay
+      }
+    }
+
     client.updatedAt = new Date().toISOString()
 
     getDb()
       .prepare(
         `UPDATE clients
          SET name = ?, company = ?, email = ?, phone = ?, website = ?,
-             notes = ?, convertedFromLeadId = ?, updatedAt = ?
+             notes = ?, convertedFromLeadId = ?, isRetainer = ?,
+             retainerHours = ?, retainerRate = ?, retainerCycleDay = ?,
+             updatedAt = ?
          WHERE id = ?`,
       )
       .run(
@@ -1412,6 +1689,10 @@ export function updateClient(
         client.website ?? null,
         client.notes ?? null,
         client.convertedFromLeadId ?? null,
+        client.isRetainer ? 1 : 0,
+        client.retainerHours ?? null,
+        client.retainerRate ?? null,
+        client.retainerCycleDay ?? null,
         client.updatedAt,
         id,
       )
@@ -1489,8 +1770,9 @@ export function convertLeadToClient(
       .prepare(
         `INSERT INTO clients (
           id, name, company, email, phone, website, notes,
-          convertedFromLeadId, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          convertedFromLeadId, isRetainer, retainerHours, retainerRate,
+          retainerCycleDay, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         client.id,
@@ -1501,6 +1783,10 @@ export function convertLeadToClient(
         null,
         client.notes ?? null,
         client.convertedFromLeadId ?? null,
+        0,
+        null,
+        null,
+        null,
         client.createdAt,
         client.updatedAt,
       )
@@ -1723,6 +2009,33 @@ interface ProjectServiceRow {
   createdAt: string
 }
 
+interface InvoiceRow {
+  id: string
+  invoiceNumber: number
+  projectId: string
+  clientId: string
+  projectName: string
+  clientName: string
+  clientCompany: string | null
+  clientEmail: string
+  currency: string
+  grandTotal: number
+  lineItems: string
+  invoiceDate: string
+  dueDate: string
+  status: string
+  createdAt: string
+}
+
+interface InvoicePaymentRow {
+  id: string
+  invoiceId: string
+  amount: number
+  paidAt: string
+  notes: string | null
+  createdAt: string
+}
+
 function rowToProjectService(row: ProjectServiceRow): ProjectService {
   return {
     id: row.id,
@@ -1912,4 +2225,285 @@ export function linkServiceToProject(
   if (result === "already_linked") {
     return
   }
+}
+
+function rowToInvoice(row: InvoiceRow): Invoice {
+  const lineItems = JSON.parse(row.lineItems) as InvoiceLineItem[]
+
+  return {
+    id: row.id,
+    invoiceNumber: row.invoiceNumber,
+    projectId: row.projectId,
+    clientId: row.clientId,
+    projectName: row.projectName,
+    clientName: row.clientName,
+    ...(row.clientCompany ? { clientCompany: row.clientCompany } : {}),
+    clientEmail: row.clientEmail,
+    currency: row.currency,
+    grandTotal: row.grandTotal,
+    lineItems,
+    invoiceDate: row.invoiceDate,
+    dueDate: row.dueDate,
+    status: row.status as Invoice["status"],
+    createdAt: row.createdAt,
+  }
+}
+
+function rowToInvoicePayment(row: InvoicePaymentRow): InvoicePayment {
+  const payment: InvoicePayment = {
+    id: row.id,
+    invoiceId: row.invoiceId,
+    amount: row.amount,
+    paidAt: row.paidAt,
+    createdAt: row.createdAt,
+  }
+
+  if (row.notes) {
+    payment.notes = row.notes
+  }
+
+  return payment
+}
+
+function getInvoiceAmountPaid(invoiceId: string): number {
+  const row = getDb()
+    .prepare(
+      "SELECT COALESCE(SUM(amount), 0) AS totalPaid FROM invoice_payments WHERE invoiceId = ?",
+    )
+    .get(invoiceId) as { totalPaid: number }
+
+  return row.totalPaid
+}
+
+function enrichInvoiceSummary(invoice: Invoice): InvoiceSummary {
+  const amountPaid = getInvoiceAmountPaid(invoice.id)
+  const outstandingBalance = computeOutstandingBalance(
+    invoice.grandTotal,
+    amountPaid,
+  )
+  const status = computeInvoiceStatus(invoice.grandTotal, amountPaid)
+
+  return {
+    ...invoice,
+    status,
+    amountPaid,
+    outstandingBalance,
+    isOverdue: isInvoiceOverdue(invoice.dueDate, status),
+  }
+}
+
+function syncInvoiceStatus(invoiceId: string): void {
+  const invoice = getInvoice(invoiceId)
+  if (!invoice) {
+    return
+  }
+
+  const amountPaid = getInvoiceAmountPaid(invoiceId)
+  const status = computeInvoiceStatus(invoice.grandTotal, amountPaid)
+
+  getDb()
+    .prepare("UPDATE invoices SET status = ? WHERE id = ?")
+    .run(status, invoiceId)
+}
+
+function nextInvoiceNumber(db: Database): number {
+  const row = db
+    .prepare("SELECT COALESCE(MAX(invoiceNumber), 0) AS maxNum FROM invoices")
+    .get() as { maxNum: number }
+  return row.maxNum + 1
+}
+
+export function listInvoicesByProject(projectId: string): InvoiceSummary[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM invoices
+       WHERE projectId = ?
+       ORDER BY invoiceNumber DESC`,
+    )
+    .all(projectId) as InvoiceRow[]
+
+  return rows.map((row) => enrichInvoiceSummary(rowToInvoice(row)))
+}
+
+export function getInvoice(id: string): Invoice | undefined {
+  const row = getDb()
+    .prepare("SELECT * FROM invoices WHERE id = ?")
+    .get(id) as InvoiceRow | undefined
+
+  return row ? rowToInvoice(row) : undefined
+}
+
+export function getInvoiceWithPayments(
+  id: string,
+): InvoiceWithPayments | undefined {
+  const invoice = getInvoice(id)
+  if (!invoice) {
+    return undefined
+  }
+
+  const payments = listInvoicePayments(id)
+  const summary = enrichInvoiceSummary(invoice)
+
+  return {
+    ...summary,
+    payments,
+  }
+}
+
+export function listInvoicePayments(invoiceId: string): InvoicePayment[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM invoice_payments
+       WHERE invoiceId = ?
+       ORDER BY paidAt DESC, createdAt DESC`,
+    )
+    .all(invoiceId) as InvoicePaymentRow[]
+
+  return rows.map(rowToInvoicePayment)
+}
+
+export function getProjectOutstandingBalance(projectId: string): number {
+  const invoices = listInvoicesByProject(projectId)
+  return invoices.reduce((sum, invoice) => sum + invoice.outstandingBalance, 0)
+}
+
+export function getClientOutstandingBalance(clientId: string): number {
+  const projects = listProjectsByClientId(clientId)
+  return projects.reduce(
+    (sum, project) => sum + getProjectOutstandingBalance(project.id),
+    0,
+  )
+}
+
+export type CreateInvoiceResult =
+  | InvoiceSummary
+  | "project_not_found"
+  | "no_client"
+  | "no_services"
+
+export function createInvoice(projectId: string): CreateInvoiceResult {
+  const project = getProjectWithClient(projectId)
+  if (!project) {
+    return "project_not_found"
+  }
+
+  if (!project.clientId || !project.client) {
+    return "no_client"
+  }
+
+  const services = listProjectServices(projectId)
+  if (services.length === 0) {
+    return "no_services"
+  }
+
+  const lineItems: InvoiceLineItem[] = services.map((item) => ({
+    serviceName: item.service.name,
+    hours: effectiveProjectServiceHours(item),
+    hourlyRate: item.service.hourlyRate,
+    lineTotal: projectServiceLineTotal(item),
+  }))
+
+  const grandTotal = calculateProjectServicesEstimate(services)
+  const currency = project.budget?.currency ?? "USD"
+  const now = new Date()
+  const invoiceDate = now.toISOString().slice(0, 10)
+  const dueDate = addDaysToIsoDate(invoiceDate, 30)
+  const createdAt = now.toISOString()
+  const client = project.client
+
+  return withTransaction(() => {
+    const db = getDb()
+    const id = randomUUID()
+    const invoiceNumber = nextInvoiceNumber(db)
+
+    db.prepare(
+      `INSERT INTO invoices (
+        id, invoiceNumber, projectId, clientId, projectName,
+        clientName, clientCompany, clientEmail, currency,
+        grandTotal, lineItems, invoiceDate, dueDate, status, createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      id,
+      invoiceNumber,
+      projectId,
+      project.clientId,
+      project.name,
+      client.name,
+      client.company ?? null,
+      client.email,
+      currency,
+      grandTotal,
+      JSON.stringify(lineItems),
+      invoiceDate,
+      dueDate,
+      "unpaid",
+      createdAt,
+    )
+
+    const row = db
+      .prepare("SELECT * FROM invoices WHERE id = ?")
+      .get(id) as InvoiceRow
+
+    return enrichInvoiceSummary(rowToInvoice(row))
+  })
+}
+
+export function updateInvoice(
+  id: string,
+  input: UpdateInvoiceInput,
+): InvoiceSummary | undefined {
+  return withTransaction(() => {
+    const invoice = getInvoice(id)
+    if (!invoice) {
+      return undefined
+    }
+
+    if (input.dueDate !== undefined) {
+      getDb()
+        .prepare("UPDATE invoices SET dueDate = ? WHERE id = ?")
+        .run(input.dueDate, id)
+    }
+
+    const updated = getInvoice(id)
+    return updated ? enrichInvoiceSummary(updated) : undefined
+  })
+}
+
+export function createInvoicePayment(
+  input: CreateInvoicePaymentInput,
+): InvoicePayment | "invoice_not_found" {
+  return withTransaction(() => {
+    const invoice = getInvoice(input.invoiceId)
+    if (!invoice) {
+      return "invoice_not_found"
+    }
+
+    const now = new Date().toISOString()
+    const payment: InvoicePayment = {
+      id: randomUUID(),
+      invoiceId: input.invoiceId,
+      amount: input.amount,
+      paidAt: input.paidAt,
+      createdAt: now,
+      ...(input.notes ? { notes: input.notes } : {}),
+    }
+
+    getDb()
+      .prepare(
+        `INSERT INTO invoice_payments (
+          id, invoiceId, amount, paidAt, notes, createdAt
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        payment.id,
+        payment.invoiceId,
+        payment.amount,
+        payment.paidAt,
+        payment.notes ?? null,
+        payment.createdAt,
+      )
+
+    syncInvoiceStatus(input.invoiceId)
+    return payment
+  })
 }

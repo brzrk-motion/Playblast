@@ -36,9 +36,26 @@ CREATE TABLE IF NOT EXISTS clients (
   website TEXT,
   notes TEXT,
   convertedFromLeadId TEXT REFERENCES leads(id) ON DELETE SET NULL,
+  isRetainer INTEGER NOT NULL DEFAULT 0,
+  retainerHours REAL,
+  retainerRate REAL,
+  retainerCycleDay INTEGER,
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS retainer_cycle_hours (
+  id TEXT PRIMARY KEY,
+  clientId TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  cycleStart TEXT NOT NULL,
+  hoursLogged REAL NOT NULL DEFAULT 0 CHECK (hoursLogged >= 0),
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  UNIQUE (clientId, cycleStart)
+);
+
+CREATE INDEX IF NOT EXISTS idx_retainer_cycle_hours_clientId
+  ON retainer_cycle_hours(clientId);
 
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,
@@ -135,3 +152,36 @@ CREATE TABLE IF NOT EXISTS project_services (
 
 CREATE INDEX IF NOT EXISTS idx_project_services_serviceId ON project_services(serviceId);
 CREATE INDEX IF NOT EXISTS idx_project_services_projectId ON project_services(projectId);
+
+-- Invoices with payment tracking (see migrations/006_invoices.sql)
+CREATE TABLE IF NOT EXISTS invoices (
+  id TEXT PRIMARY KEY,
+  invoiceNumber INTEGER NOT NULL UNIQUE,
+  projectId TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  clientId TEXT NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
+  projectName TEXT NOT NULL,
+  clientName TEXT NOT NULL,
+  clientCompany TEXT,
+  clientEmail TEXT NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  grandTotal REAL NOT NULL CHECK (grandTotal > 0),
+  lineItems TEXT NOT NULL,
+  invoiceDate TEXT NOT NULL,
+  dueDate TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'unpaid'
+    CHECK (status IN ('unpaid', 'partially_paid', 'paid')),
+  createdAt TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS invoice_payments (
+  id TEXT PRIMARY KEY,
+  invoiceId TEXT NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+  amount REAL NOT NULL CHECK (amount > 0),
+  paidAt TEXT NOT NULL,
+  notes TEXT,
+  createdAt TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_projectId ON invoices(projectId);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoice_payments_invoiceId ON invoice_payments(invoiceId);

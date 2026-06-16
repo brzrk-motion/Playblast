@@ -878,6 +878,71 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(converted.id.length > 0, true)
   })
 
+  it("manages retainer clients and cycle hour logging via API routes", async () => {
+    const createResponse = await fetch(`${baseUrl}/api/clients`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Retainer Client",
+        email: "retainer@example.com",
+        company: "Retainer Studio",
+        isRetainer: true,
+        retainerHours: 30,
+        retainerRate: 120,
+        retainerCycleDay: 5,
+      }),
+    })
+    assert.equal(createResponse.status, 201)
+    const created = (await createResponse.json()) as {
+      id: string
+      isRetainer: boolean
+      retainerHours: number
+    }
+    assert.equal(created.isRetainer, true)
+    assert.equal(created.retainerHours, 30)
+
+    const getResponse = await fetch(`${baseUrl}/api/clients/${created.id}`)
+    assert.equal(getResponse.status, 200)
+    const detail = (await getResponse.json()) as {
+      retainerSummary?: {
+        hoursContracted: number
+        hoursLogged: number
+        estimatedValue: number
+      }
+    }
+    assert.ok(detail.retainerSummary)
+    assert.equal(detail.retainerSummary.hoursContracted, 30)
+    assert.equal(detail.retainerSummary.hoursLogged, 0)
+    assert.equal(detail.retainerSummary.estimatedValue, 3600)
+
+    const hoursResponse = await fetch(
+      `${baseUrl}/api/clients/${created.id}/retainer-hours`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hoursLogged: 18.5 }),
+      },
+    )
+    assert.equal(hoursResponse.status, 200)
+    const updated = (await hoursResponse.json()) as {
+      retainerSummary?: { hoursLogged: number; utilizationPercent: number }
+    }
+    assert.equal(updated.retainerSummary?.hoursLogged, 18.5)
+    assert.equal(updated.retainerSummary?.utilizationPercent, 62)
+
+    const invalidRetainerResponse = await fetch(`${baseUrl}/api/clients`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Bad Retainer",
+        email: "bad@example.com",
+        isRetainer: true,
+        retainerHours: 10,
+      }),
+    })
+    assert.equal(invalidRetainerResponse.status, 400)
+  })
+
   it("reverts clients back to leads via API routes", async () => {
     // A converted lead reverts onto its original lead record.
     const leadResponse = await fetch(`${baseUrl}/api/leads`, {
@@ -1282,5 +1347,112 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
       `${baseUrl}/api/projects/missing-project/services`,
     )
     assert.equal(missingProjectResponse.status, 404)
+  })
+
+  it("duplicates a project via POST /api/projects/:projectId/duplicate", async () => {
+    await createProject("dup-source", "Original Project", {
+      status: "on_hold",
+      startDate: "2026-03-01",
+      endDate: "2026-08-01",
+      budget: { total: 25_000, currency: "USD" },
+      description: "Project brief",
+    })
+    await createDeliverable("dup-source", "Main Film")
+
+    const serviceResponse = await fetch(`${baseUrl}/api/services`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Edit Package",
+        hourEstimate: 6,
+        hourlyRate: 180,
+        type: "static",
+      }),
+    })
+    assert.equal(serviceResponse.status, 201)
+    const service = (await serviceResponse.json()) as { id: string }
+
+    const attachResponse = await fetch(
+      `${baseUrl}/api/projects/dup-source/services`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serviceId: service.id, quantity: 1 }),
+      },
+    )
+    assert.equal(attachResponse.status, 201)
+
+    const milestoneResponse = await fetch(
+      `${baseUrl}/api/projects/dup-source/milestones`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Client review",
+          dueDate: "2026-04-15",
+          done: true,
+        }),
+      },
+    )
+    assert.equal(milestoneResponse.status, 201)
+
+    const duplicateResponse = await fetch(
+      `${baseUrl}/api/projects/dup-source/duplicate`,
+      { method: "POST" },
+    )
+    assert.equal(duplicateResponse.status, 201)
+    const duplicate = (await duplicateResponse.json()) as {
+      id: string
+      name: string
+      status: string
+      description?: string
+      startDate?: string
+      endDate?: string
+      budget?: unknown
+      clientId?: string
+    }
+
+    assert.notEqual(duplicate.id, "dup-source")
+    assert.equal(duplicate.name, "Original Project (Copy)")
+    assert.equal(duplicate.status, "active")
+    assert.equal(duplicate.description, "Project brief")
+    assert.equal(duplicate.startDate, undefined)
+    assert.equal(duplicate.endDate, undefined)
+    assert.equal(duplicate.budget, undefined)
+    assert.equal(duplicate.clientId, undefined)
+
+    const deliverablesResponse = await fetch(
+      `${baseUrl}/api/projects/${duplicate.id}/deliverables`,
+    )
+    assert.equal(deliverablesResponse.status, 200)
+    assert.deepEqual(await deliverablesResponse.json(), [])
+
+    const servicesResponse = await fetch(
+      `${baseUrl}/api/projects/${duplicate.id}/services`,
+    )
+    assert.equal(servicesResponse.status, 200)
+    const services = (await servicesResponse.json()) as Array<{ serviceId: string }>
+    assert.equal(services.length, 1)
+    assert.equal(services[0]?.serviceId, service.id)
+
+    const milestonesResponse = await fetch(
+      `${baseUrl}/api/projects/${duplicate.id}/milestones`,
+    )
+    assert.equal(milestonesResponse.status, 200)
+    const milestones = (await milestonesResponse.json()) as Array<{
+      name: string
+      done: boolean
+      dueDate?: string
+    }>
+    assert.equal(milestones.length, 1)
+    assert.equal(milestones[0]?.name, "Client review")
+    assert.equal(milestones[0]?.done, false)
+    assert.equal(milestones[0]?.dueDate, undefined)
+
+    const missingResponse = await fetch(
+      `${baseUrl}/api/projects/missing-project/duplicate`,
+      { method: "POST" },
+    )
+    assert.equal(missingResponse.status, 404)
   })
 })

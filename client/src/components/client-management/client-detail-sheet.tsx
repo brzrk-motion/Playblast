@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -27,8 +28,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { deleteClient, getClient, updateProject } from "@/lib/api"
+import { formatEstimateCurrency } from "@/lib/budget"
 import { formatDateAdded } from "@/lib/dates"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { RetainerPanel } from "@/components/client-management/retainer-panel"
 import type { Client, ClientWithProjects } from "@/types/client"
 import type { Project } from "@/types/project"
 
@@ -349,6 +352,16 @@ export function ClientDetailSheet({
                   </SheetDescription>
                 </div>
 
+                {client.outstandingBalance && client.outstandingBalance > 0 ? (
+                  <Badge
+                    variant="outline"
+                    className="w-fit border-destructive/40 text-destructive"
+                  >
+                    {formatEstimateCurrency(client.outstandingBalance)} outstanding
+                    across projects
+                  </Badge>
+                ) : null}
+
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
@@ -453,6 +466,11 @@ export function ClientDetailSheet({
                   ) : null}
                 </dl>
               </section>
+
+              <RetainerPanel
+                client={client}
+                onUpdated={(updated) => setClient(updated)}
+              />
 
               <section className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">

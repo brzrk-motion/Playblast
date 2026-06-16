@@ -1,5 +1,8 @@
-import { Scale } from "lucide-react"
+import { useState } from "react"
+import { Link } from "react-router-dom"
+import { FileOutput, Scale, TrendingUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -30,15 +33,32 @@ import {
   calculateProjectCostEstimate,
   isProjectServiceHoursOverridden,
 } from "@/lib/service-estimate"
+import { InvoiceClientRequiredDialog } from "@/components/project/invoice-client-required-dialog"
+import { Spinner } from "@/components/ui/spinner"
+import { createInvoice, downloadInvoicePdf } from "@/lib/api"
+import { useInternalHourlyCostRate } from "@/lib/internal-hourly-cost-rate"
+import {
+  calculateProjectProfitability,
+  formatMarginPercent,
+  MARGIN_STATUS_STYLES,
+  marginStatus,
+} from "@/lib/profitability"
+import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import { formatHourEstimate } from "@/lib/services"
 import { cn } from "@/lib/utils"
 import type { ProjectBudget } from "@/types/project"
 import type { ProjectServiceWithDetails } from "@/types/project-service"
 
 interface ProjectBudgetEstimatePanelProps {
+  projectId: string
   projectServices: ProjectServiceWithDetails[]
   budget?: ProjectBudget
   loading?: boolean
+  outstandingBalance?: number
+  currency?: string
+  hasClient: boolean
+  onRequestClientLink: () => void
+  onInvoiceCreated?: () => void
 }
 
 function formatSignedVariance(amount: number, currency: string): string {
@@ -56,12 +76,27 @@ function formatSignedVariancePercent(percent: number): string {
 }
 
 export function ProjectBudgetEstimatePanel({
+  projectId,
   projectServices,
   budget,
   loading = false,
+  outstandingBalance = 0,
+  currency: currencyProp,
+  hasClient,
+  onRequestClientLink,
+  onInvoiceCreated,
 }: ProjectBudgetEstimatePanelProps) {
-  const currency = budget?.currency ?? "USD"
+  const [generating, setGenerating] = useState(false)
+  const [clientRequiredOpen, setClientRequiredOpen] = useState(false)
+  const currency = currencyProp ?? budget?.currency ?? "USD"
   const estimate = calculateProjectCostEstimate(projectServices)
+  const internalHourlyCostRate = useInternalHourlyCostRate()
+  const profitability = calculateProjectProfitability({
+    estimatedHours: estimate.totalHours,
+    estimatedValue: estimate.totalEstimate,
+    actualHours: 0,
+    internalHourlyCostRate,
+  })
   const budgetTotal = budget?.total
   const hasBudget = budgetTotal !== undefined && budgetTotal > 0
   const status = estimateBudgetStatus(budgetTotal, estimate.totalEstimate)
@@ -71,6 +106,30 @@ export function ProjectBudgetEstimatePanel({
   const variancePercent = hasBudget
     ? estimateBudgetVariancePercent(budgetTotal, estimate.totalEstimate)
     : null
+
+  async function handleGenerateInvoice() {
+    if (!hasClient) {
+      setClientRequiredOpen(true)
+      return
+    }
+
+    if (estimate.lines.length === 0) {
+      showErrorToast("Add at least one service before generating an invoice.")
+      return
+    }
+
+    setGenerating(true)
+    try {
+      const invoice = await createInvoice(projectId)
+      await downloadInvoicePdf(invoice.id)
+      showSuccessToast(`Invoice #${invoice.invoiceNumber} generated`)
+      onInvoiceCreated?.()
+    } catch (err) {
+      showErrorToast(humanizeApiError(err, "Failed to generate invoice"))
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   return (
     <Card
@@ -97,6 +156,16 @@ export function ProjectBudgetEstimatePanel({
               {ESTIMATE_BUDGET_STATUS_LABELS[status]}
             </Badge>
           ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={loading || generating}
+            onClick={() => void handleGenerateInvoice()}
+          >
+            {generating ? <Spinner className="size-4" /> : <FileOutput />}
+            Generate Invoice
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -110,7 +179,9 @@ export function ProjectBudgetEstimatePanel({
           <div
             className={cn(
               "grid gap-4",
-              hasBudget ? "sm:grid-cols-3" : "sm:grid-cols-1 sm:max-w-xs",
+              hasBudget || outstandingBalance > 0
+                ? "sm:grid-cols-2 lg:grid-cols-4"
+                : "sm:grid-cols-1 sm:max-w-xs",
             )}
           >
             <SummaryMetric
@@ -140,12 +211,20 @@ export function ProjectBudgetEstimatePanel({
                   )}
                 />
               </>
-            ) : (
+            ) : null}
+            {outstandingBalance > 0 ? (
+              <SummaryMetric
+                label="Outstanding Invoices"
+                value={formatEstimateCurrency(outstandingBalance, currency)}
+                className="text-destructive"
+              />
+            ) : null}
+            {!hasBudget && outstandingBalance <= 0 ? (
               <p className="text-sm text-muted-foreground sm:col-span-1">
                 No client budget set. Edit the project to add one and compare
                 against the services estimate.
               </p>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -220,7 +299,114 @@ export function ProjectBudgetEstimatePanel({
             </Table>
           </div>
         </section>
+
+        <section aria-label="Profitability">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="flex items-center gap-2 text-sm font-medium">
+              <TrendingUp className="size-4 text-muted-foreground" />
+              Profitability
+            </h3>
+            {profitability.marginPercent !== null ? (
+              <Badge
+                variant="outline"
+                className={
+                  MARGIN_STATUS_STYLES[
+                    marginStatus(profitability.marginPercent)
+                  ]
+                }
+              >
+                {profitability.isEstimatedMargin ? "Estimated " : ""}
+                {formatMarginPercent(profitability.marginPercent)} margin
+              </Badge>
+            ) : null}
+          </div>
+
+          {loading ? (
+            <Skeleton className="h-24 rounded-lg" />
+          ) : estimate.lines.length === 0 ? (
+            <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+              Attach services to see profitability metrics.
+            </p>
+          ) : (
+            <div className="space-y-4 rounded-lg border bg-muted/10 p-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <SummaryMetric
+                  label="Estimated Hours"
+                  value={formatHourEstimate(profitability.estimatedHours)}
+                />
+                <SummaryMetric
+                  label="Actual Hours Logged"
+                  value={formatHourEstimate(profitability.actualHours)}
+                />
+                <SummaryMetric
+                  label="Estimated Value"
+                  value={formatEstimateCurrency(
+                    profitability.estimatedValue,
+                    currency,
+                  )}
+                />
+                {profitability.costBasis !== null ? (
+                  <SummaryMetric
+                    label="Cost Basis"
+                    value={formatEstimateCurrency(
+                      profitability.costBasis,
+                      currency,
+                    )}
+                  />
+                ) : null}
+                {profitability.billedHourlyRate !== null ? (
+                  <SummaryMetric
+                    label="Billed Hourly Rate"
+                    value={`${formatEstimateCurrency(profitability.billedHourlyRate, currency)}/hr`}
+                  />
+                ) : null}
+                {profitability.effectiveHourlyRate !== null ? (
+                  <SummaryMetric
+                    label="Effective Hourly Rate"
+                    value={`${formatEstimateCurrency(profitability.effectiveHourlyRate, currency)}/hr`}
+                  />
+                ) : null}
+                {profitability.marginPercent !== null ? (
+                  <SummaryMetric
+                    label="Margin"
+                    value={formatMarginPercent(profitability.marginPercent)}
+                    className={cn(
+                      marginStatus(profitability.marginPercent) === "critical" &&
+                        "text-destructive",
+                      marginStatus(profitability.marginPercent) === "healthy" &&
+                        "text-status-success-foreground",
+                    )}
+                  />
+                ) : null}
+              </div>
+
+              {profitability.isEstimatedMargin ? (
+                <p className="text-sm text-muted-foreground">
+                  Margin is estimated from service hours until time tracking is
+                  available. Actual hours logged are currently 0.
+                </p>
+              ) : null}
+
+              {profitability.marginPercent === null ? (
+                <p className="text-sm text-muted-foreground">
+                  Set an internal hourly cost rate in{" "}
+                  <Link to="/settings" className="underline underline-offset-4">
+                    Settings
+                  </Link>{" "}
+                  to calculate margin. Until then, compare estimated value to
+                  billed hourly rates above.
+                </p>
+              ) : null}
+            </div>
+          )}
+        </section>
       </CardContent>
+
+      <InvoiceClientRequiredDialog
+        open={clientRequiredOpen}
+        onOpenChange={setClientRequiredOpen}
+        onAddClient={onRequestClientLink}
+      />
     </Card>
   )
 }

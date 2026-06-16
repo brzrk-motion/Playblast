@@ -53,6 +53,8 @@ export interface Project {
   budget?: ProjectBudget
   /** Internal free-text notes; not shown on client-facing review views. */
   notes?: string
+  /** Sum of unpaid/partially paid invoice balances for this project. */
+  outstandingBalance?: number
 }
 
 /** Project detail with the linked client record populated (or null). */
@@ -73,6 +75,8 @@ export interface ProjectSummary extends Project {
   clientName?: string
   /** Total services estimate when at least one service is attached. */
   servicesEstimate?: number
+  /** Sum of effective estimated hours from attached services. */
+  servicesEstimatedHours?: number
 }
 
 export interface CreateProjectInput {

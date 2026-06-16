@@ -9,6 +9,12 @@ import type {
   ContactLog,
   CreateContactLogBody,
 } from "@/types/contact-log"
+import type {
+  CreateInvoicePaymentInput,
+  CreateInvoicePaymentResponse,
+  InvoiceSummary,
+  InvoiceWithPayments,
+} from "@/types/invoice"
 import type { CreateLeadInput, Lead, LeadWithContactLog, UpdateLeadInput } from "@/types/lead"
 import type { Milestone } from "@/types/milestone"
 import type {
@@ -44,6 +50,19 @@ export function getVideoUrl(
     .join("/")
 
   return `/video/${encodeURIComponent(projectId)}/${encodeURIComponent(deliverableId)}/${encodeURIComponent(version)}/${encodedFilename}`
+}
+
+export function getVersionDownloadUrl(versionId: string): string {
+  return `/api/versions/${encodeURIComponent(versionId)}/download`
+}
+
+export function downloadVersion(versionId: string): void {
+  const link = document.createElement("a")
+  link.href = getVersionDownloadUrl(versionId)
+  link.style.display = "none"
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 }
 
 function humanizeHttpError(status: number, serverMessage?: string): string {
@@ -162,6 +181,14 @@ export async function deleteProject(id: string): Promise<void> {
     method: "DELETE",
   })
   await expectOk(response)
+}
+
+export async function duplicateProject(id: string): Promise<Project> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(id)}/duplicate`,
+    { method: "POST" },
+  )
+  return parseJsonResponse<Project>(response)
 }
 
 // --- Deliverables -----------------------------------------------------------
@@ -598,6 +625,21 @@ export async function updateClient(
   return parseJsonResponse<Client>(response)
 }
 
+export async function updateRetainerHours(
+  id: string,
+  hoursLogged: number,
+): Promise<ClientWithProjects> {
+  const response = await fetch(
+    `/api/clients/${encodeURIComponent(id)}/retainer-hours`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hoursLogged }),
+    },
+  )
+  return parseJsonResponse<ClientWithProjects>(response)
+}
+
 export async function deleteClient(id: string): Promise<void> {
   const response = await fetch(`/api/clients/${encodeURIComponent(id)}`, {
     method: "DELETE",
@@ -710,4 +752,69 @@ export async function updateProjectService(
     },
   )
   return parseJsonResponse<ProjectServiceWithDetails>(response)
+}
+
+// --- Invoices ---------------------------------------------------------------
+
+export async function listProjectInvoices(
+  projectId: string,
+): Promise<InvoiceSummary[]> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/invoices`,
+  )
+  return parseJsonResponse<InvoiceSummary[]>(response)
+}
+
+export async function createInvoice(projectId: string): Promise<InvoiceSummary> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/invoices`,
+    { method: "POST" },
+  )
+  return parseJsonResponse<InvoiceSummary>(response)
+}
+
+export async function getInvoice(id: string): Promise<InvoiceWithPayments> {
+  const response = await fetch(`/api/invoices/${encodeURIComponent(id)}`)
+  return parseJsonResponse<InvoiceWithPayments>(response)
+}
+
+export async function createInvoicePayment(
+  invoiceId: string,
+  body: CreateInvoicePaymentInput,
+): Promise<CreateInvoicePaymentResponse> {
+  const response = await fetch(
+    `/api/invoices/${encodeURIComponent(invoiceId)}/payments`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  )
+  return parseJsonResponse<CreateInvoicePaymentResponse>(response)
+}
+
+export function getInvoicePdfUrl(invoiceId: string): string {
+  return `/api/invoices/${encodeURIComponent(invoiceId)}/pdf`
+}
+
+export async function downloadInvoicePdf(invoiceId: string): Promise<void> {
+  const response = await fetch(getInvoicePdfUrl(invoiceId))
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: string
+    } | null
+    throw new Error(humanizeHttpError(response.status, body?.error))
+  }
+
+  const blob = await response.blob()
+  const disposition = response.headers.get("content-disposition") ?? ""
+  const filenameMatch = disposition.match(/filename="([^"]+)"/)
+  const filename = filenameMatch?.[1] ?? `invoice-${invoiceId}.pdf`
+
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
 }
