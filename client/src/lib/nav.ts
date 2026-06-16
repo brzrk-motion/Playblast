@@ -3,6 +3,7 @@ import {
   Briefcase,
   Clock,
   FolderKanban,
+  Gauge,
   LayoutDashboard,
   Settings,
   TrendingUp,
@@ -53,6 +54,11 @@ export const navMain: NavItem[] = [
     title: "Timesheet",
     icon: Clock,
     url: "/timesheet",
+  },
+  {
+    title: "Capacity",
+    icon: Gauge,
+    url: "/capacity",
   },
 ]
 
@@ -109,6 +115,10 @@ export function getPageHeader(pathname: string): { title: string; subtitle?: str
     return { title: "Pipeline", subtitle: "Revenue by project stage" }
   }
 
+  if (pathname === "/capacity") {
+    return { title: "Capacity", subtitle: "Active workload & hours remaining" }
+  }
+
   if (pathname === "/") {
     return { title: "Dashboard" }
   }
@@ -140,6 +150,9 @@ export function isNavItemActive(pathname: string, url: string): boolean {
   }
   if (url === "/pipeline") {
     return pathname === "/pipeline" || pathname.startsWith("/pipeline/")
+  }
+  if (url === "/capacity") {
+    return pathname === "/capacity" || pathname.startsWith("/capacity/")
   }
   return pathname === url
 }

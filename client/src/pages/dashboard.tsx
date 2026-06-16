@@ -2,12 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import {
   AlertTriangle,
+  ArrowRight,
   CalendarClock,
   CheckCircle2,
   FolderKanban,
+  Gauge,
   MessageSquare,
   Wallet,
 } from "lucide-react"
+import { CapacityView } from "@/components/capacity/capacity-view"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -310,6 +313,31 @@ export function DashboardPage() {
           to="/projects"
         />
       </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Gauge className="size-4 text-muted-foreground" />
+                Studio capacity
+              </CardTitle>
+              <CardDescription>
+                Active in-flight projects and estimated hours remaining.
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/capacity">
+                View capacity
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <CapacityView projects={activeProjects} compact />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
