@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 import { ThemeProvider } from "@/components/layout/theme-provider"
 import { AppLayout } from "@/components/layout/app-layout"
+import { CapacityPage } from "@/pages/capacity"
 import { ComparePage } from "@/pages/compare"
 import { ComingSoonPage } from "@/pages/coming-soon"
 import { ClientsPage } from "@/pages/clients"
@@ -29,6 +30,7 @@ function App() {
               <Route path="services" element={<ServicesPage />} />
               <Route path="timesheet" element={<TimesheetPage />} />
               <Route path="pipeline" element={<PipelinePage />} />
+              <Route path="capacity" element={<CapacityPage />} />
               <Route path="projects/:projectId" element={<ProjectOverviewPage />} />
               <Route
                 path="projects/:projectId/deliverables/:deliverableId"
