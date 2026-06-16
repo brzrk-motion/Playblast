@@ -46,6 +46,19 @@ export function getVideoUrl(
   return `/video/${encodeURIComponent(projectId)}/${encodeURIComponent(deliverableId)}/${encodeURIComponent(version)}/${encodedFilename}`
 }
 
+export function getVersionDownloadUrl(versionId: string): string {
+  return `/api/versions/${encodeURIComponent(versionId)}/download`
+}
+
+export function downloadVersion(versionId: string): void {
+  const link = document.createElement("a")
+  link.href = getVersionDownloadUrl(versionId)
+  link.style.display = "none"
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
 function humanizeHttpError(status: number, serverMessage?: string): string {
   if (serverMessage) {
     return serverMessage
