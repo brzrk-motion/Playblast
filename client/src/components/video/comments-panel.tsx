@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronRight,
   MessageSquare,
+  MessageSquareReply,
   Pencil,
   Play,
   RotateCcw,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react"
 
 import { CommentComposerInline } from "@/components/video/comment-composer"
+import { CommentBody } from "@/components/video/comment-body"
 import { CommentsPanelSkeleton } from "@/components/video/comments-panel-skeleton"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -24,9 +26,20 @@ import {
 } from "@/components/ui/collapsible"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useVideoPlayer } from "@/hooks/use-video-player"
+import { buildMentionCandidates } from "@/lib/mentions"
 import { cn } from "@/lib/utils"
 import type { Comment } from "@/types/comment"
 import type { FrameAnnotation } from "@/types/annotation"
+
+const AUTHOR_STORAGE_KEY = "playblast-comment-author"
+
+function getStoredAuthor() {
+  if (typeof window === "undefined") {
+    return "Reviewer"
+  }
+
+  return window.localStorage.getItem(AUTHOR_STORAGE_KEY) ?? "Reviewer"
+}
 
 type CommentFilter = "all" | "open" | "resolved"
 
@@ -103,9 +116,11 @@ function findActiveCommentId(
 
 interface CommentRowProps {
   comment: Comment
+  mentionNames: string[]
   isActive?: boolean
   onResolveComment?: (commentId: string, resolved: boolean) => void
   onDeleteComment?: (commentId: string) => void
+  onReply?: (comment: Comment) => void
   resolving?: boolean
   deleting?: boolean
   confirmingDelete?: boolean
@@ -117,9 +132,11 @@ interface CommentRowProps {
 
 function CommentRow({
   comment,
+  mentionNames,
   isActive = false,
   onResolveComment,
   onDeleteComment,
+  onReply,
   resolving = false,
   deleting = false,
   confirmingDelete = false,
@@ -194,14 +211,14 @@ function CommentRow({
             ) : null}
           </div>
 
-          <p
+          <CommentBody
+            body={comment.body}
+            mentionNames={mentionNames}
             className={cn(
               "mt-1 text-sm text-foreground",
               !bodyExpanded && "line-clamp-2",
             )}
-          >
-            {comment.body}
-          </p>
+          />
 
           {showExpandToggle ? (
             <button
@@ -256,6 +273,20 @@ function CommentRow({
             </div>
           ) : (
             <>
+              {onReply ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={resolving || deleting}
+                  aria-label={`Reply to ${comment.author}`}
+                  title="Reply"
+                  onClick={() => onReply(comment)}
+                >
+                  <MessageSquareReply />
+                </Button>
+              ) : null}
+
               {onResolveComment ? (
                 <Button
                   type="button"
@@ -307,12 +338,27 @@ export function CommentsPanel({
   deletingCommentId = null,
   className,
 }: CommentsPanelProps) {
-  const { openComposer, currentTime } = useVideoPlayer()
+  const { openComposer, closeComposer, currentTime } = useVideoPlayer()
   const [filter, setFilter] = useState<CommentFilter>("all")
   const [resolvedExpanded, setResolvedExpanded] = useState(false)
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
+  const [replyDraft, setReplyDraft] = useState<string | null>(null)
   const rowRefs = useRef(new Map<string, HTMLLIElement>())
   const lastScrolledActiveId = useRef<string | null>(null)
+
+  function handleCloseComposer(options?: { resumePlayback?: boolean }) {
+    setReplyDraft(null)
+    closeComposer(options)
+  }
+
+  const mentionCandidates = useMemo(
+    () =>
+      buildMentionCandidates(
+        comments.map((comment) => comment.author),
+        getStoredAuthor(),
+      ),
+    [comments],
+  )
 
   const sortedComments = sortByTimestamp(comments)
   const openComments = sortedComments.filter((comment) => !comment.resolved)
@@ -368,15 +414,32 @@ export function CommentsPanel({
     }
   }
 
+  function handleReply(comment: Comment) {
+    setReplyDraft(`@${comment.author.trim()} `)
+    openComposer(comment.timestamp)
+  }
+
+  function handleCreateComment(input: {
+    timestamp: number
+    body: string
+    author: string
+    annotation?: FrameAnnotation
+  }) {
+    setReplyDraft(null)
+    return onCreateComment(input)
+  }
+
   function renderCommentRow(comment: Comment) {
     return (
       <CommentRow
         key={comment.id}
         comment={comment}
+        mentionNames={mentionCandidates}
         isActive={activeCommentId === comment.id}
         rowRef={setRowRef(comment.id)}
         onResolveComment={onResolveComment}
         onDeleteComment={onDeleteComment}
+        onReply={handleReply}
         resolving={resolvingCommentId === comment.id}
         deleting={deletingCommentId === comment.id}
         confirmingDelete={confirmingDeleteId === comment.id}
@@ -481,8 +544,14 @@ export function CommentsPanel({
         )}
 
         <CommentComposerInline
-          onSubmit={onCreateComment}
-          onOpenComposer={openComposer}
+          onSubmit={handleCreateComment}
+          onOpenComposer={(timestamp) => {
+            setReplyDraft(null)
+            openComposer(timestamp)
+          }}
+          onClose={handleCloseComposer}
+          mentionCandidates={mentionCandidates}
+          initialBody={replyDraft ?? undefined}
         />
       </CardContent>
     </Card>

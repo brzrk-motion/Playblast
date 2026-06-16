@@ -2,6 +2,7 @@ import { useRef, useState } from "react"
 import { formatTime } from "@vidstack/react"
 import { MessageSquarePlus, Pencil, X } from "lucide-react"
 
+import { MentionTextarea } from "@/components/video/mention-textarea"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Input } from "@/components/ui/input"
@@ -27,6 +28,8 @@ export interface CommentComposerProps {
     author: string
     annotation?: FrameAnnotation
   }) => Promise<void>
+  mentionCandidates?: string[]
+  initialBody?: string
   className?: string
 }
 
@@ -35,17 +38,20 @@ export function CommentComposerForm({
   draftAnnotation,
   onSubmit,
   onClose,
+  mentionCandidates = [],
+  initialBody = "",
   variant = "inline",
 }: {
   timestamp: number
   draftAnnotation: FrameAnnotation | null
   onSubmit: CommentComposerProps["onSubmit"]
   onClose: (options?: { resumePlayback?: boolean }) => void
+  mentionCandidates?: string[]
+  initialBody?: string
   variant?: "inline" | "overlay"
 }) {
-  const bodyRef = useRef<HTMLTextAreaElement>(null)
   const authorRef = useRef<HTMLInputElement>(null)
-  const [body, setBody] = useState("")
+  const [body, setBody] = useState(initialBody)
   const [author, setAuthor] = useState(getStoredAuthor)
   const [fieldErrors, setFieldErrors] = useState<{
     body?: string
@@ -72,9 +78,7 @@ export function CommentComposerForm({
 
     if (nextFieldErrors.body || nextFieldErrors.author) {
       setFieldErrors(nextFieldErrors)
-      if (nextFieldErrors.body) {
-        bodyRef.current?.focus()
-      } else {
+      if (!nextFieldErrors.body) {
         authorRef.current?.focus()
       }
       return
@@ -151,34 +155,26 @@ export function CommentComposerForm({
         </div>
 
         <div className="min-w-0 flex-1 space-y-1">
-          <textarea
-            ref={bodyRef}
-            name="body"
+          <MentionTextarea
             value={body}
-            onChange={(event) => {
-              setBody(event.target.value)
+            onChange={(nextBody) => {
+              setBody(nextBody)
               if (fieldErrors.body) {
                 setFieldErrors((current) => ({ ...current, body: undefined }))
               }
             }}
+            mentionCandidates={mentionCandidates}
             autoFocus
-            placeholder="Leave feedback at this timestamp…"
+            placeholder="Leave feedback at this timestamp… Type @ to mention someone."
             aria-label="Comment body"
             aria-invalid={fieldErrors.body ? true : undefined}
             rows={isInline ? 2 : 3}
             className="w-full flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] duration-150 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:aria-invalid:ring-destructive/40"
             disabled={submitting}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                event.preventDefault()
-                onClose()
-                return
-              }
-
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault()
-                event.currentTarget.form?.requestSubmit()
-              }
+            onEscape={() => onClose()}
+            onSubmit={() => {
+              const form = authorRef.current?.form
+              form?.requestSubmit()
             }}
           />
           {fieldErrors.body ? (
@@ -244,21 +240,28 @@ export function CommentComposerForm({
 export function CommentComposerInline({
   onSubmit,
   onOpenComposer,
+  mentionCandidates = [],
+  initialBody,
+  onClose,
   className,
 }: CommentComposerProps & {
   onOpenComposer: (timestamp: number) => void
+  onClose?: (options?: { resumePlayback?: boolean }) => void
 }) {
   const { composer, draftAnnotation, closeComposer, currentTime } = useVideoPlayer()
+  const handleClose = onClose ?? closeComposer
 
   if (composer) {
     return (
       <div className={cn("border-t bg-muted/20 p-3", className)}>
         <CommentComposerForm
-          key={composer.timestamp}
+          key={`${composer.timestamp}-${initialBody ?? ""}`}
           timestamp={composer.timestamp}
           draftAnnotation={draftAnnotation}
           onSubmit={onSubmit}
-          onClose={closeComposer}
+          onClose={handleClose}
+          mentionCandidates={mentionCandidates}
+          initialBody={initialBody}
           variant="inline"
         />
       </div>
