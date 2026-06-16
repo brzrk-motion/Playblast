@@ -63,12 +63,15 @@ import type {
   UpdateProjectInput,
   UpdateServiceInput,
   UpdateTaskInput,
+  UpdateTimeLogInput,
   Task,
   TimeLog,
   Version,
   VersionStatus,
 } from "../types/index.js"
 import type { ProjectHoursSummary } from "../types/hours-summary.js"
+import type { TimesheetWeek } from "../types/timesheet.js"
+import { getWeekEnd } from "../lib/timesheet.js"
 import { contactLogTypeIndicatesResponse } from "../types/index.js"
 import { DELIVERABLE_STATUSES } from "../types/index.js"
 import type { FrameAnnotation } from "../types/annotation.js"
@@ -1235,6 +1238,152 @@ export function deleteTimeLog(id: string): boolean {
       .prepare("DELETE FROM time_logs WHERE id = ?")
       .run(id)
     return result.changes > 0
+  })
+}
+
+interface TimesheetAggregateRow {
+  projectId: string
+  projectName: string
+  taskId: string
+  taskName: string
+  logDate: string
+  hours: number
+}
+
+export function getWeeklyTimesheet(weekStart: string): TimesheetWeek {
+  const weekEnd = getWeekEnd(weekStart)
+  const rows = getDb()
+    .prepare(
+      `SELECT
+         projects.id AS projectId,
+         projects.name AS projectName,
+         tasks.id AS taskId,
+         tasks.name AS taskName,
+         date(time_logs.loggedAt) AS logDate,
+         SUM(time_logs.durationHours) AS hours
+       FROM time_logs
+       INNER JOIN tasks ON tasks.id = time_logs.taskId
+       INNER JOIN milestones ON milestones.id = tasks.milestoneId
+       INNER JOIN projects ON projects.id = milestones.projectId
+       WHERE projects.archived_at IS NULL
+         AND date(time_logs.loggedAt) >= ?
+         AND date(time_logs.loggedAt) <= ?
+       GROUP BY projects.id, tasks.id, date(time_logs.loggedAt)
+       ORDER BY projects.name COLLATE NOCASE, tasks.name COLLATE NOCASE`,
+    )
+    .all(weekStart, weekEnd) as TimesheetAggregateRow[]
+
+  const weekDates = Array.from({ length: 7 }, (_, index) =>
+    addDaysToIsoDate(weekStart, index),
+  )
+
+  const dateIndex = new Map(weekDates.map((date, index) => [date, index]))
+  const dayTotals = Array.from({ length: 7 }, () => 0)
+  const projectMap = new Map<
+    string,
+    {
+      projectId: string
+      projectName: string
+      tasks: Map<
+        string,
+        { taskId: string; taskName: string; days: number[]; weekTotal: number }
+      >
+      weekTotal: number
+    }
+  >()
+
+  for (const row of rows) {
+    const dayIdx = dateIndex.get(row.logDate)
+    if (dayIdx === undefined) continue
+
+    let project = projectMap.get(row.projectId)
+    if (!project) {
+      project = {
+        projectId: row.projectId,
+        projectName: row.projectName,
+        tasks: new Map(),
+        weekTotal: 0,
+      }
+      projectMap.set(row.projectId, project)
+    }
+
+    let task = project.tasks.get(row.taskId)
+    if (!task) {
+      task = {
+        taskId: row.taskId,
+        taskName: row.taskName,
+        days: Array.from({ length: 7 }, () => 0),
+        weekTotal: 0,
+      }
+      project.tasks.set(row.taskId, task)
+    }
+
+    task.days[dayIdx] += row.hours
+    task.weekTotal += row.hours
+    project.weekTotal += row.hours
+    dayTotals[dayIdx] += row.hours
+  }
+
+  const projects = [...projectMap.values()].map((project) => ({
+    projectId: project.projectId,
+    projectName: project.projectName,
+    weekTotal: project.weekTotal,
+    tasks: [...project.tasks.values()],
+  }))
+
+  const grandTotal = dayTotals.reduce((sum, hours) => sum + hours, 0)
+
+  return {
+    weekStart,
+    weekEnd,
+    projects,
+    dayTotals,
+    grandTotal,
+  }
+}
+
+export function updateTimeLog(
+  id: string,
+  input: UpdateTimeLogInput,
+): TimeLog | undefined {
+  return withTransaction(() => {
+    const existing = getTimeLog(id)
+    if (!existing) return undefined
+
+    if (input.durationHours !== undefined) {
+      if (!Number.isFinite(input.durationHours) || input.durationHours <= 0) {
+        throw new Error("durationHours must be a positive number.")
+      }
+    }
+
+    const updated: TimeLog = {
+      ...existing,
+      ...(input.durationHours !== undefined
+        ? { durationHours: input.durationHours }
+        : {}),
+      ...(input.loggedAt !== undefined ? { loggedAt: input.loggedAt } : {}),
+    }
+
+    if (input.notes === null) {
+      delete updated.notes
+    } else if (input.notes !== undefined) {
+      updated.notes = input.notes || undefined
+    }
+
+    getDb()
+      .prepare(
+        `UPDATE time_logs
+         SET durationHours = ?, loggedAt = ?, notes = ?
+         WHERE id = ?`,
+      )
+      .run(
+        updated.durationHours,
+        updated.loggedAt,
+        updated.notes ?? null,
+        id,
+      )
+
+    return updated
   })
 }
 

@@ -49,7 +49,13 @@ export type {
 export type {
   CreateTimeLogInput,
   TimeLog,
+  UpdateTimeLogInput,
 } from "./time-log.js"
+export type {
+  TimesheetProjectGroup,
+  TimesheetTaskRow,
+  TimesheetWeek,
+} from "./timesheet.js"
 export type {
   ProjectHoursSummary,
   ProjectHoursSummaryLine,
