@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArchiveProjectDialog } from "@/components/project/archive-project-dialog"
 import { DashboardProjectCard } from "@/components/dashboard/project-card"
+import { MonthlyRevenueChart } from "@/components/dashboard/monthly-revenue-chart"
 import { archiveProject, listProjects, unarchiveProject } from "@/lib/api"
 import {
   budgetHealth,
@@ -313,6 +314,8 @@ export function DashboardPage() {
           to="/projects"
         />
       </div>
+
+      <MonthlyRevenueChart projects={activeProjects} />
 
       <Card>
         <CardHeader>
