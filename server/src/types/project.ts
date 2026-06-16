@@ -71,6 +71,8 @@ export interface ProjectSummary extends Project {
   clientName?: string
   /** Total services estimate when at least one service is attached. */
   servicesEstimate?: number
+  /** Sum of effective estimated hours from attached services. */
+  servicesEstimatedHours?: number
 }
 
 export interface CreateProjectInput {

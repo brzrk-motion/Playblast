@@ -1,4 +1,5 @@
-import { Scale } from "lucide-react"
+import { Link } from "react-router-dom"
+import { Scale, TrendingUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -30,6 +31,13 @@ import {
   calculateProjectCostEstimate,
   isProjectServiceHoursOverridden,
 } from "@/lib/service-estimate"
+import { useInternalHourlyCostRate } from "@/lib/internal-hourly-cost-rate"
+import {
+  calculateProjectProfitability,
+  formatMarginPercent,
+  MARGIN_STATUS_STYLES,
+  marginStatus,
+} from "@/lib/profitability"
 import { formatHourEstimate } from "@/lib/services"
 import { cn } from "@/lib/utils"
 import type { ProjectBudget } from "@/types/project"
@@ -62,6 +70,13 @@ export function ProjectBudgetEstimatePanel({
 }: ProjectBudgetEstimatePanelProps) {
   const currency = budget?.currency ?? "USD"
   const estimate = calculateProjectCostEstimate(projectServices)
+  const internalHourlyCostRate = useInternalHourlyCostRate()
+  const profitability = calculateProjectProfitability({
+    estimatedHours: estimate.totalHours,
+    estimatedValue: estimate.totalEstimate,
+    actualHours: 0,
+    internalHourlyCostRate,
+  })
   const budgetTotal = budget?.total
   const hasBudget = budgetTotal !== undefined && budgetTotal > 0
   const status = estimateBudgetStatus(budgetTotal, estimate.totalEstimate)
@@ -219,6 +234,107 @@ export function ProjectBudgetEstimatePanel({
               ) : null}
             </Table>
           </div>
+        </section>
+
+        <section aria-label="Profitability">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="flex items-center gap-2 text-sm font-medium">
+              <TrendingUp className="size-4 text-muted-foreground" />
+              Profitability
+            </h3>
+            {profitability.marginPercent !== null ? (
+              <Badge
+                variant="outline"
+                className={
+                  MARGIN_STATUS_STYLES[
+                    marginStatus(profitability.marginPercent)
+                  ]
+                }
+              >
+                {profitability.isEstimatedMargin ? "Estimated " : ""}
+                {formatMarginPercent(profitability.marginPercent)} margin
+              </Badge>
+            ) : null}
+          </div>
+
+          {loading ? (
+            <Skeleton className="h-24 rounded-lg" />
+          ) : estimate.lines.length === 0 ? (
+            <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+              Attach services to see profitability metrics.
+            </p>
+          ) : (
+            <div className="space-y-4 rounded-lg border bg-muted/10 p-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <SummaryMetric
+                  label="Estimated Hours"
+                  value={formatHourEstimate(profitability.estimatedHours)}
+                />
+                <SummaryMetric
+                  label="Actual Hours Logged"
+                  value={formatHourEstimate(profitability.actualHours)}
+                />
+                <SummaryMetric
+                  label="Estimated Value"
+                  value={formatEstimateCurrency(
+                    profitability.estimatedValue,
+                    currency,
+                  )}
+                />
+                {profitability.costBasis !== null ? (
+                  <SummaryMetric
+                    label="Cost Basis"
+                    value={formatEstimateCurrency(
+                      profitability.costBasis,
+                      currency,
+                    )}
+                  />
+                ) : null}
+                {profitability.billedHourlyRate !== null ? (
+                  <SummaryMetric
+                    label="Billed Hourly Rate"
+                    value={`${formatEstimateCurrency(profitability.billedHourlyRate, currency)}/hr`}
+                  />
+                ) : null}
+                {profitability.effectiveHourlyRate !== null ? (
+                  <SummaryMetric
+                    label="Effective Hourly Rate"
+                    value={`${formatEstimateCurrency(profitability.effectiveHourlyRate, currency)}/hr`}
+                  />
+                ) : null}
+                {profitability.marginPercent !== null ? (
+                  <SummaryMetric
+                    label="Margin"
+                    value={formatMarginPercent(profitability.marginPercent)}
+                    className={cn(
+                      marginStatus(profitability.marginPercent) === "critical" &&
+                        "text-destructive",
+                      marginStatus(profitability.marginPercent) === "healthy" &&
+                        "text-status-success-foreground",
+                    )}
+                  />
+                ) : null}
+              </div>
+
+              {profitability.isEstimatedMargin ? (
+                <p className="text-sm text-muted-foreground">
+                  Margin is estimated from service hours until time tracking is
+                  available. Actual hours logged are currently 0.
+                </p>
+              ) : null}
+
+              {profitability.marginPercent === null ? (
+                <p className="text-sm text-muted-foreground">
+                  Set an internal hourly cost rate in{" "}
+                  <Link to="/settings" className="underline underline-offset-4">
+                    Settings
+                  </Link>{" "}
+                  to calculate margin. Until then, compare estimated value to
+                  billed hourly rates above.
+                </p>
+              ) : null}
+            </div>
+          )}
         </section>
       </CardContent>
     </Card>
