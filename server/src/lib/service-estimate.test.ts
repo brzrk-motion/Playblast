@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import {
   calculateProjectServicesEstimate,
+  calculateProjectServicesEstimatedHours,
   effectiveProjectServiceHours,
   projectServiceLineTotal,
 } from "./service-estimate.js"
@@ -60,5 +61,6 @@ describe("calculateProjectServicesEstimate", () => {
     assert.equal(effectiveProjectServiceHours(items[0]!), 6)
     assert.equal(projectServiceLineTotal(items[0]!), 600)
     assert.equal(calculateProjectServicesEstimate(items), 2200)
+    assert.equal(calculateProjectServicesEstimatedHours(items), 14)
   })
 })

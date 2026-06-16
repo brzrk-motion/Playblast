@@ -22,6 +22,7 @@ import {
   deleteLead,
   deleteMilestone,
   deleteProject,
+  duplicateProject,
   deleteService,
   ensureProject,
   getClient,
@@ -346,16 +347,102 @@ describe("SQLite data store", () => {
     assert.ok(summary)
     assert.equal(summary.clientName, "Acme Co")
     assert.equal(summary.servicesEstimate, 4200)
+    assert.equal(summary.servicesEstimatedHours, 10)
 
     const bare = createProject({ id: "summary-bare", name: "Bare Project" })
     const bareSummary = listProjectSummaries().find((item) => item.id === bare.id)
     assert.ok(bareSummary)
     assert.equal(bareSummary.clientName, undefined)
     assert.equal(bareSummary.servicesEstimate, undefined)
+    assert.equal(bareSummary.servicesEstimatedHours, undefined)
 
     removeProjectService(project.id, service.id)
     deleteProject(project.id)
     deleteProject(bare.id)
+    deleteService(service.id)
+    deleteClient(client.id)
+  })
+
+  it("duplicates a project with services and milestones but clears dates and client", () => {
+    const client = createClient({
+      name: "Copy Client",
+      email: "copy@example.com",
+    })
+    const service = createService({
+      name: "Motion Design",
+      hourEstimate: 12,
+      hourlyRate: 200,
+      type: "animated",
+    })
+    const source = createProject({
+      id: "copy-source",
+      name: "Source Project",
+      status: "completed",
+      clientId: client.id,
+      startDate: "2026-01-01",
+      endDate: "2026-06-01",
+      budget: { total: 50_000, currency: "USD", spent: 10_000 },
+      description: "Keep this description",
+    })
+    const deliverable = createDeliverable({
+      projectId: source.id,
+      name: "Hero Spot",
+    })
+    createVersion({
+      projectId: source.id,
+      deliverableId: deliverable.id,
+      label: "v1",
+      filename: "hero.mp4",
+    })
+    addProjectService(source.id, service.id, 2)
+    updateProjectService(source.id, service.id, { overrideHours: 15 })
+    createMilestone({
+      projectId: source.id,
+      name: "Kickoff",
+      dueDate: "2026-02-01",
+      done: true,
+    })
+    createMilestone({
+      projectId: source.id,
+      name: "Delivery",
+      dueDate: "2026-05-01",
+    })
+
+    const copy = duplicateProject(source.id)
+    assert.ok(copy)
+    assert.notEqual(copy.id, source.id)
+    assert.equal(copy.name, "Source Project (Copy)")
+    assert.equal(copy.status, "active")
+    assert.equal(copy.description, "Keep this description")
+    assert.equal(copy.clientId, undefined)
+    assert.equal(copy.startDate, undefined)
+    assert.equal(copy.endDate, undefined)
+    assert.equal(copy.budget, undefined)
+
+    assert.equal(listDeliverables(copy.id).length, 0)
+
+    const copiedServices = listProjectServices(copy.id)
+    assert.equal(copiedServices.length, 1)
+    assert.equal(copiedServices[0]?.serviceId, service.id)
+    assert.equal(copiedServices[0]?.quantity, 2)
+    assert.equal(copiedServices[0]?.overrideHours, 15)
+
+    const copiedMilestones = listMilestones(copy.id)
+    assert.equal(copiedMilestones.length, 2)
+    assert.equal(copiedMilestones.every((milestone) => !milestone.done), true)
+    assert.equal(
+      copiedMilestones.every((milestone) => milestone.dueDate === undefined),
+      true,
+    )
+    assert.deepEqual(
+      copiedMilestones.map((milestone) => milestone.name),
+      ["Kickoff", "Delivery"],
+    )
+
+    assert.equal(duplicateProject("missing-project"), undefined)
+
+    deleteProject(copy.id)
+    deleteProject(source.id)
     deleteService(service.id)
     deleteClient(client.id)
   })
