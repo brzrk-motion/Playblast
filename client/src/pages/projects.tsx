@@ -26,6 +26,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { ArchiveProjectDialog } from "@/components/project/archive-project-dialog"
+import { ProjectArchivedBadge } from "@/components/project/project-archived-badge"
 import { ProjectCardSkeleton } from "@/components/dashboard/project-card-skeleton"
 import { ClientDetailSheet } from "@/components/client-management/client-detail-sheet"
 import { ProjectActionsMenu } from "@/components/project/project-actions-menu"
@@ -36,7 +38,7 @@ import {
   projectFormToPayload,
   type ProjectFormValues,
 } from "@/lib/project-form"
-import { createProject, listClients, listProjects } from "@/lib/api"
+import { createProject, archiveProject, listClients, listProjects, unarchiveProject } from "@/lib/api"
 import { clientsById } from "@/lib/clients"
 import { formatCurrency } from "@/lib/budget"
 import {
@@ -44,6 +46,7 @@ import {
   filterProjectsByDashboardFilter,
   filterProjectsByName,
   getDashboardFilterLabel,
+  isProjectArchived,
   parseDashboardFilterFromSearchParams,
   PROJECT_SORT_LABELS,
   sortProjects,
@@ -72,10 +75,18 @@ function ProjectCard({
   project,
   linkedClient,
   onClientClick,
+  showArchivedBadge = false,
+  onArchive,
+  onUnarchive,
+  actionPending = false,
 }: {
   project: ProjectSummary
   linkedClient?: Client
   onClientClick: (clientId: string) => void
+  showArchivedBadge?: boolean
+  onArchive?: (project: ProjectSummary) => void
+  onUnarchive?: (project: ProjectSummary) => void
+  actionPending?: boolean
 }) {
   return (
     <Card className="interactive-card relative h-full border-muted">
@@ -83,6 +94,9 @@ function ProjectCard({
         <ProjectActionsMenu
           projectId={project.id}
           projectName={project.name}
+          onArchive={onArchive ? () => onArchive(project) : undefined}
+          onUnarchive={onUnarchive ? () => onUnarchive(project) : undefined}
+          actionPending={actionPending}
         />
       </div>
       <Link
@@ -121,7 +135,10 @@ function ProjectCard({
               </Badge>
             </div>
           </div>
-          <ProjectStatusBadge status={project.status} />
+          <div className="flex flex-wrap items-center gap-1.5">
+            {showArchivedBadge ? <ProjectArchivedBadge /> : null}
+            <ProjectStatusBadge status={project.status} />
+          </div>
         </CardHeader>
         <CardContent className="space-y-1 text-sm text-muted-foreground">
           {project.budget ? (
@@ -149,6 +166,9 @@ export function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [sortField, setSortField] = useState<ProjectSortField>("updatedAt")
   const [viewClientId, setViewClientId] = useState<string | null>(null)
+  const [archiveTarget, setArchiveTarget] = useState<ProjectSummary | null>(null)
+  const [archiving, setArchiving] = useState(false)
+  const [actionProjectId, setActionProjectId] = useState<string | null>(null)
 
   const clientLookup = useMemo(() => clientsById(clients), [clients])
 
@@ -156,6 +176,8 @@ export function ProjectsPage() {
     () => parseDashboardFilterFromSearchParams(searchParams),
     [searchParams],
   )
+
+  const showingArchived = activeFilter?.type === "archived"
 
   const clearFilter = useCallback(() => {
     const next = new URLSearchParams(searchParams)
@@ -166,7 +188,7 @@ export function ProjectsPage() {
   const loadProjects = useCallback(async () => {
     try {
       const [projectData, clientData] = await Promise.all([
-        listProjects(),
+        listProjects(showingArchived ? { archived: true } : undefined),
         listClients(),
       ])
       setProjects(projectData)
@@ -179,7 +201,7 @@ export function ProjectsPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [showingArchived])
 
   useEffect(() => {
     let cancelled = false
@@ -187,7 +209,7 @@ export function ProjectsPage() {
     async function fetchProjects() {
       try {
         const [projectData, clientData] = await Promise.all([
-          listProjects(),
+          listProjects(showingArchived ? { archived: true } : undefined),
           listClients(),
         ])
         if (!cancelled) {
@@ -213,7 +235,7 @@ export function ProjectsPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [showingArchived])
 
   async function handleCreateProject(values: ProjectFormValues) {
     const payload = projectFormToPayload(values)
@@ -243,6 +265,37 @@ export function ProjectsPage() {
       showErrorToast(message)
     } finally {
       setCreating(false)
+    }
+  }
+
+  async function handleArchiveConfirm() {
+    if (!archiveTarget) {
+      return
+    }
+
+    setArchiving(true)
+    try {
+      await archiveProject(archiveTarget.id)
+      showSuccessToast("Project archived")
+      setArchiveTarget(null)
+      await loadProjects()
+    } catch (err) {
+      showErrorToast(humanizeApiError(err, "Failed to archive project"))
+    } finally {
+      setArchiving(false)
+    }
+  }
+
+  async function handleUnarchive(project: ProjectSummary) {
+    setActionProjectId(project.id)
+    try {
+      await unarchiveProject(project.id)
+      showSuccessToast("Project restored")
+      await loadProjects()
+    } catch (err) {
+      showErrorToast(humanizeApiError(err, "Failed to restore project"))
+    } finally {
+      setActionProjectId(null)
     }
   }
 
@@ -400,6 +453,18 @@ export function ProjectsPage() {
                       : undefined
                   }
                   onClientClick={setViewClientId}
+                  showArchivedBadge={showingArchived || isProjectArchived(project)}
+                  onArchive={
+                    showingArchived || isProjectArchived(project)
+                      ? undefined
+                      : setArchiveTarget
+                  }
+                  onUnarchive={
+                    showingArchived || isProjectArchived(project)
+                      ? handleUnarchive
+                      : undefined
+                  }
+                  actionPending={actionProjectId === project.id}
                 />
               ))}
             </div>
@@ -414,6 +479,18 @@ export function ProjectsPage() {
         submitting={creating}
         error={createError}
         onSubmit={handleCreateProject}
+      />
+
+      <ArchiveProjectDialog
+        projectName={archiveTarget?.name ?? null}
+        open={archiveTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiveTarget(null)
+          }
+        }}
+        archiving={archiving}
+        onConfirm={() => void handleArchiveConfirm()}
       />
 
       <ClientDetailSheet

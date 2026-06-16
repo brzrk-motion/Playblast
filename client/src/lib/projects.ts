@@ -1,4 +1,4 @@
-import { PROJECT_STATUSES } from "../types/project"
+import { PROJECT_STATUSES, isProjectArchived } from "../types/project"
 import type { ProjectStatus, ProjectSummary } from "../types/project"
 
 export type ProjectSortField = "updatedAt" | "name" | "status"
@@ -13,7 +13,6 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
   active: "Active",
   on_hold: "On Hold",
   completed: "Completed",
-  archived: "Archived",
 }
 
 export const PROJECT_STATUS_ORDER: ProjectStatus[] = PROJECT_STATUSES
@@ -84,7 +83,6 @@ export function countProjectsByStatus(
       active: 0,
       on_hold: 0,
       completed: 0,
-      archived: 0,
     } satisfies Record<ProjectStatus, number>,
   )
 }
@@ -110,6 +108,7 @@ export function recentlyUpdatedProjects(
 export type DashboardProjectFilter =
   | { type: "open_comments" }
   | { type: "status"; status: ProjectStatus }
+  | { type: "archived" }
 
 const DASHBOARD_FILTER_PARAM = "filter"
 
@@ -128,6 +127,10 @@ export function parseDashboardFilter(
     return { type: "open_comments" }
   }
 
+  if (value === "archived") {
+    return { type: "archived" }
+  }
+
   if (isProjectStatusValue(value)) {
     return { type: "status", status: value }
   }
@@ -142,7 +145,15 @@ export function dashboardFilterToParam(
     return null
   }
 
-  return filter.type === "open_comments" ? "open_comments" : filter.status
+  if (filter.type === "open_comments") {
+    return "open_comments"
+  }
+
+  if (filter.type === "archived") {
+    return "archived"
+  }
+
+  return filter.status
 }
 
 export function parseDashboardFilterFromSearchParams(
@@ -156,6 +167,10 @@ export function getDashboardFilterLabel(
 ): string {
   if (filter.type === "open_comments") {
     return "projects with open comments"
+  }
+
+  if (filter.type === "archived") {
+    return "archived projects"
   }
 
   return `${PROJECT_STATUS_LABELS[filter.status].toLowerCase()} projects`
@@ -173,7 +188,11 @@ export function filterProjectsByDashboardFilter(
     return projects.filter((project) => project.openCommentCount > 0)
   }
 
+  if (filter.type === "archived") {
+    return projects.filter((project) => isProjectArchived(project))
+  }
+
   return projects.filter((project) => project.status === filter.status)
 }
 
-export { DASHBOARD_FILTER_PARAM }
+export { DASHBOARD_FILTER_PARAM, isProjectArchived }

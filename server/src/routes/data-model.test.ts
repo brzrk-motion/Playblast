@@ -858,14 +858,14 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(blockedDeleteResponse.status, 409)
 
     const archiveResponse = await fetch(
-      `${baseUrl}/api/projects/proj-client-api`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "archived" }),
-      },
+      `${baseUrl}/api/projects/proj-client-api/archive`,
+      { method: "POST" },
     )
     assert.equal(archiveResponse.status, 200)
+    const archivedProject = (await archiveResponse.json()) as {
+      archivedAt?: string
+    }
+    assert.ok(archivedProject.archivedAt)
 
     const deleteResponse = await fetch(`${baseUrl}/api/clients/${created.id}`, {
       method: "DELETE",

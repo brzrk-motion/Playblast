@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import {
   AlertTriangle,
@@ -18,8 +18,10 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ArchiveProjectDialog } from "@/components/project/archive-project-dialog"
 import { DashboardProjectCard } from "@/components/dashboard/project-card"
-import { listProjects } from "@/lib/api"
+import { archiveProject, listProjects, unarchiveProject } from "@/lib/api"
 import {
   budgetHealth,
   formatCurrency,
@@ -31,8 +33,10 @@ import {
   totalOpenComments,
 } from "@/lib/projects"
 import { getTimeOfDayGreeting } from "@/lib/greeting"
-import { humanizeApiError, showErrorToast } from "@/lib/toast"
+import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import type { ProjectSummary } from "@/types/project"
+
+type DashboardView = "active" | "archived"
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString(undefined, {
@@ -83,22 +87,45 @@ function StatCard({ title, icon, value, description, to }: StatCardProps) {
 }
 
 export function DashboardPage() {
-  const [projects, setProjects] = useState<ProjectSummary[]>([])
+  const [activeProjects, setActiveProjects] = useState<ProjectSummary[]>([])
+  const [archivedProjects, setArchivedProjects] = useState<ProjectSummary[]>([])
+  const [view, setView] = useState<DashboardView>("active")
   const [loading, setLoading] = useState(true)
+  const [archivedLoading, setArchivedLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [archiveTarget, setArchiveTarget] = useState<ProjectSummary | null>(null)
+  const [archiving, setArchiving] = useState(false)
+  const [unarchivingId, setUnarchivingId] = useState<string | null>(null)
 
   const greeting = useMemo(() => getTimeOfDayGreeting(), [])
+
+  const loadActiveProjects = useCallback(async () => {
+    const data = await listProjects()
+    setActiveProjects(data)
+    return data
+  }, [])
+
+  const loadArchivedProjects = useCallback(async () => {
+    setArchivedLoading(true)
+    try {
+      const data = await listProjects({ archived: true })
+      setArchivedProjects(data)
+      return data
+    } finally {
+      setArchivedLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
 
     async function fetchProjects() {
       try {
-        const data = await listProjects()
+        const data = await loadActiveProjects()
         if (!cancelled) {
-          setProjects(data)
           setError(null)
         }
+        return data
       } catch (err) {
         if (!cancelled) {
           const message = humanizeApiError(err, "Failed to load projects")
@@ -116,11 +143,65 @@ export function DashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [loadActiveProjects])
 
-  const statusCounts = useMemo(() => countProjectsByStatus(projects), [projects])
-  const openComments = useMemo(() => totalOpenComments(projects), [projects])
-  const inReview = useMemo(() => countDeliverablesInReview(projects), [projects])
+  function handleViewChange(nextView: DashboardView) {
+    setView(nextView)
+    if (nextView === "archived" && archivedProjects.length === 0) {
+      void loadArchivedProjects().catch((err) => {
+        showErrorToast(humanizeApiError(err, "Failed to load archived projects"))
+      })
+    }
+  }
+
+  const projects = view === "archived" ? archivedProjects : activeProjects
+
+  async function handleArchiveConfirm() {
+    if (!archiveTarget) {
+      return
+    }
+
+    setArchiving(true)
+    try {
+      await archiveProject(archiveTarget.id)
+      showSuccessToast("Project archived")
+      setArchiveTarget(null)
+      await loadActiveProjects()
+      if (archivedProjects.length > 0 || view === "archived") {
+        await loadArchivedProjects()
+      }
+    } catch (err) {
+      showErrorToast(humanizeApiError(err, "Failed to archive project"))
+    } finally {
+      setArchiving(false)
+    }
+  }
+
+  async function handleUnarchive(projectId: string) {
+    setUnarchivingId(projectId)
+    try {
+      await unarchiveProject(projectId)
+      showSuccessToast("Project restored")
+      await Promise.all([loadActiveProjects(), loadArchivedProjects()])
+    } catch (err) {
+      showErrorToast(humanizeApiError(err, "Failed to restore project"))
+    } finally {
+      setUnarchivingId(null)
+    }
+  }
+
+  const statusCounts = useMemo(
+    () => countProjectsByStatus(activeProjects),
+    [activeProjects],
+  )
+  const openComments = useMemo(
+    () => totalOpenComments(activeProjects),
+    [activeProjects],
+  )
+  const inReview = useMemo(
+    () => countDeliverablesInReview(activeProjects),
+    [activeProjects],
+  )
   const recentProjects = useMemo(
     () => recentlyUpdatedProjects(projects),
     [projects],
@@ -128,19 +209,19 @@ export function DashboardPage() {
 
   const budgetAttention = useMemo(
     () =>
-      projects.filter((project) => {
+      activeProjects.filter((project) => {
         if (!project.budget) return false
         const health = budgetHealth(project.budget)
         return health === "warning" || health === "over"
       }),
-    [projects],
+    [activeProjects],
   )
 
   const upcomingDeadlines = useMemo<Deadline[]>(() => {
     const today = new Date().toISOString().slice(0, 10)
     const deadlines: Deadline[] = []
 
-    for (const project of projects) {
+    for (const project of activeProjects) {
       if (project.nextMilestone?.dueDate) {
         deadlines.push({
           projectId: project.id,
@@ -163,7 +244,7 @@ export function DashboardPage() {
       .filter((deadline) => deadline.dueDate >= today)
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
       .slice(0, 5)
-  }, [projects])
+  }, [activeProjects])
 
   if (loading) {
     return (
@@ -204,7 +285,7 @@ export function DashboardPage() {
           title="Active Projects"
           icon={<FolderKanban className="size-4 text-muted-foreground" />}
           value={statusCounts.active}
-          description={`${projects.length} total in portfolio`}
+          description={`${activeProjects.length} active in portfolio`}
           to="/projects?filter=active"
         />
         <StatCard
@@ -325,13 +406,36 @@ export function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recently Updated</CardTitle>
-          <CardDescription>
-            Projects with the latest activity across your portfolio.
-          </CardDescription>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle>
+                {view === "archived" ? "Archived Projects" : "Recently Updated"}
+              </CardTitle>
+              <CardDescription>
+                {view === "archived"
+                  ? "Completed or inactive projects hidden from your main dashboard."
+                  : "Projects with the latest activity across your portfolio."}
+              </CardDescription>
+            </div>
+            <Tabs
+              value={view}
+              onValueChange={(value) => handleViewChange(value as DashboardView)}
+            >
+              <TabsList>
+                <TabsTrigger value="active">Active</TabsTrigger>
+                <TabsTrigger value="archived">Archived</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
         <CardContent>
-          {recentProjects.length > 0 ? (
+          {view === "archived" && archivedLoading ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <Skeleton key={index} className="h-28 rounded-xl" aria-hidden />
+              ))}
+            </div>
+          ) : recentProjects.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {recentProjects.map((project) => (
                 <DashboardProjectCard
@@ -339,12 +443,24 @@ export function DashboardPage() {
                   projectId={project.id}
                   name={project.name}
                   status={project.status}
+                  archived={view === "archived"}
                   clientName={project.clientName}
                   budget={project.budget}
                   servicesEstimate={project.servicesEstimate}
                   servicesEstimatedHours={project.servicesEstimatedHours}
                   deliverableCount={project.deliverableCount}
                   compact
+                  onArchive={
+                    view === "active"
+                      ? () => setArchiveTarget(project)
+                      : undefined
+                  }
+                  onUnarchive={
+                    view === "archived"
+                      ? () => void handleUnarchive(project.id)
+                      : undefined
+                  }
+                  actionPending={unarchivingId === project.id}
                 />
               ))}
             </div>
@@ -352,18 +468,36 @@ export function DashboardPage() {
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-8 text-center">
               <FolderKanban className="size-8 text-muted-foreground" />
               <div>
-                <p className="font-medium">No projects yet</p>
+                <p className="font-medium">
+                  {view === "archived" ? "No archived projects" : "No projects yet"}
+                </p>
                 <p className="text-sm text-muted-foreground">
-                  Create your first project to start planning work.
+                  {view === "archived"
+                    ? "Archived projects will appear here."
+                    : "Create your first project to start planning work."}
                 </p>
               </div>
-              <Button asChild>
-                <Link to="/projects">Go to projects</Link>
-              </Button>
+              {view === "active" ? (
+                <Button asChild>
+                  <Link to="/projects">Go to projects</Link>
+                </Button>
+              ) : null}
             </div>
           )}
         </CardContent>
       </Card>
+
+      <ArchiveProjectDialog
+        projectName={archiveTarget?.name ?? null}
+        open={archiveTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiveTarget(null)
+          }
+        }}
+        archiving={archiving}
+        onConfirm={() => void handleArchiveConfirm()}
+      />
     </div>
   )
 }

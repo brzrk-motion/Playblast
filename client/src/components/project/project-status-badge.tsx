@@ -7,7 +7,6 @@ const STATUS_STYLES: Record<ProjectStatus, string> = {
   active: "status-success",
   on_hold: "status-warning",
   completed: "status-pending",
-  archived: "status-pending opacity-70",
 }
 
 interface ProjectStatusBadgeProps {

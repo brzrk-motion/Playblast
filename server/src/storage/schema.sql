@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS projects (
   startDate TEXT,
   endDate TEXT,
   budget TEXT,
+  archived_at TEXT,
   notes TEXT
 );
 

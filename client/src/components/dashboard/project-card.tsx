@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { ProjectActionsMenu } from "@/components/project/project-actions-menu"
+import { ProjectArchivedBadge } from "@/components/project/project-archived-badge"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
 import {
   ESTIMATE_BUDGET_STATUS_DOT_STYLES,
@@ -139,24 +140,32 @@ interface DashboardProjectCardProps {
   projectId: string
   name: string
   status: Parameters<typeof ProjectStatusBadge>[0]["status"]
+  archived?: boolean
   clientName?: string
   budget?: ProjectBudget
   servicesEstimate?: number
   servicesEstimatedHours?: number
   deliverableCount: number
   compact?: boolean
+  onArchive?: () => void
+  onUnarchive?: () => void
+  actionPending?: boolean
 }
 
 export function DashboardProjectCard({
   projectId,
   name,
   status,
+  archived = false,
   clientName,
   budget,
   servicesEstimate,
   servicesEstimatedHours,
   deliverableCount,
   compact = false,
+  onArchive,
+  onUnarchive,
+  actionPending = false,
 }: DashboardProjectCardProps) {
   const financials = (
     <ProjectCardFinancials
@@ -165,7 +174,6 @@ export function DashboardProjectCard({
       servicesEstimatedHours={servicesEstimatedHours}
     />
   )
-
   return (
     <Card className="interactive-card relative h-full border-muted">
       <div className="absolute top-2 right-2 z-10">
@@ -173,6 +181,9 @@ export function DashboardProjectCard({
           projectId={projectId}
           projectName={name}
           className="size-7"
+          onArchive={onArchive}
+          onUnarchive={onUnarchive}
+          actionPending={actionPending}
         />
       </div>
       <Link
@@ -191,7 +202,10 @@ export function DashboardProjectCard({
           {clientName ? (
             <p className="truncate text-xs text-muted-foreground">{clientName}</p>
           ) : null}
-          <ProjectStatusBadge status={status} />
+          <div className="flex flex-wrap items-center gap-1.5">
+            {archived ? <ProjectArchivedBadge /> : null}
+            <ProjectStatusBadge status={status} />
+          </div>
         </CardHeader>
         <CardContent
           className={cn(

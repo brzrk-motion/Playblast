@@ -30,6 +30,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { deleteClient, getClient, updateProject } from "@/lib/api"
 import { formatEstimateCurrency } from "@/lib/budget"
 import { formatDateAdded } from "@/lib/dates"
+import { isProjectArchived } from "@/lib/projects"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import { RetainerPanel } from "@/components/client-management/retainer-panel"
 import type { Client, ClientWithProjects } from "@/types/client"
@@ -152,7 +153,7 @@ export function ClientDetailSheet({
   const [unlinkingAll, setUnlinkingAll] = useState(false)
 
   const hasActiveProjects = useMemo(
-    () => client?.projects.some((project) => project.status !== "archived") ?? false,
+    () => client?.projects.some((project) => !isProjectArchived(project)) ?? false,
     [client?.projects],
   )
 

@@ -114,10 +114,18 @@ async function expectOk(response: Response): Promise<void> {
 
 export async function listProjects(options?: {
   clientId?: string
+  archived?: boolean
+  includeArchived?: boolean
 }): Promise<ProjectSummary[]> {
   const params = new URLSearchParams()
   if (options?.clientId) {
     params.set("clientId", options.clientId)
+  }
+  if (options?.archived) {
+    params.set("archived", "true")
+  }
+  if (options?.includeArchived) {
+    params.set("includeArchived", "true")
   }
   const query = params.toString()
   const response = await fetch(
@@ -181,6 +189,22 @@ export async function deleteProject(id: string): Promise<void> {
     method: "DELETE",
   })
   await expectOk(response)
+}
+
+export async function archiveProject(id: string): Promise<Project> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(id)}/archive`,
+    { method: "POST" },
+  )
+  return parseJsonResponse<Project>(response)
+}
+
+export async function unarchiveProject(id: string): Promise<Project> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(id)}/unarchive`,
+    { method: "POST" },
+  )
+  return parseJsonResponse<Project>(response)
 }
 
 export async function duplicateProject(id: string): Promise<Project> {

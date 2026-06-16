@@ -49,6 +49,7 @@ import {
   listProjects,
   listServices,
   addProjectService,
+  archiveProject,
   linkServiceToProject,
   removeProjectService,
   updateProjectService,
@@ -59,6 +60,7 @@ import {
   updateLead,
   updateMilestone,
   updateProject,
+  unarchiveProject,
   updateService,
   updateVersionLabel,
   updateVersionStatus,
@@ -167,6 +169,50 @@ describe("SQLite data store", () => {
     const cleared = updateProject(project.id, { client: null, budget: null })
     assert.equal(cleared?.client, undefined)
     assert.equal(cleared?.budget, undefined)
+  })
+
+  it("archives and unarchives projects while preserving related data", () => {
+    const project = createProject({ id: "archive-me", name: "Archive Me" })
+    const deliverable = createDeliverable({
+      projectId: project.id,
+      name: "Hero Spot",
+    })
+    createMilestone({
+      projectId: project.id,
+      name: "Final delivery",
+      dueDate: "2026-06-01",
+    })
+
+    assert.equal(getProject(project.id)?.archivedAt, undefined)
+    assert.equal(
+      listProjects({ archivedOnly: true }).some((item) => item.id === project.id),
+      false,
+    )
+
+    const archived = archiveProject(project.id)
+    assert.ok(archived?.archivedAt)
+    assert.equal(getProject(project.id)?.archivedAt, archived?.archivedAt)
+    assert.equal(
+      listProjects().some((item) => item.id === project.id),
+      false,
+    )
+    assert.equal(
+      listProjects({ archivedOnly: true }).some((item) => item.id === project.id),
+      true,
+    )
+    assert.equal(listDeliverables(project.id).length, 1)
+    assert.equal(listMilestones(project.id).length, 1)
+
+    const restored = unarchiveProject(project.id)
+    assert.equal(restored?.archivedAt, undefined)
+    assert.equal(
+      listProjects().some((item) => item.id === project.id),
+      true,
+    )
+    assert.equal(
+      listProjects({ archivedOnly: true }).some((item) => item.id === project.id),
+      false,
+    )
   })
 
   it("persists internal project notes", () => {
@@ -750,7 +796,9 @@ describe("SQLite data store", () => {
     assert.equal(getClientWithProjects(manual.id)?.projects.length, 1)
     assert.equal(deleteClient(manual.id), "has_active_projects")
 
-    updateProject("proj-client", { status: "archived" })
+    updateProject("proj-client", { status: "completed" })
+    archiveProject("proj-client")
+    assert.ok(getProject("proj-client")?.archivedAt)
     assert.equal(deleteClient(manual.id), "deleted")
     assert.equal(getProject("proj-client")?.clientId, undefined)
 

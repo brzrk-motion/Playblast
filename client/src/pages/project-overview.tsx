@@ -26,6 +26,8 @@ import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ArchiveProjectDialog } from "@/components/project/archive-project-dialog"
+import { ProjectArchivedBadge } from "@/components/project/project-archived-badge"
 import { DeliverableStatusBadge } from "@/components/project/deliverable-status-badge"
 import { EditableProjectName } from "@/components/project/editable-project-name"
 import { ProjectActionsMenu } from "@/components/project/project-actions-menu"
@@ -48,12 +50,14 @@ import {
 import {
   createDeliverable,
   createMilestone,
+  archiveProject,
   deleteDeliverable,
   deleteMilestone,
   listDeliverables,
   listMilestones,
   listProjectServices,
   getProject,
+  unarchiveProject,
   updateDeliverable,
   updateMilestone,
   updateProject,
@@ -67,6 +71,7 @@ import {
   formatEstimateCurrency,
 } from "@/lib/budget"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { isProjectArchived } from "@/lib/projects"
 import { cn } from "@/lib/utils"
 import { useProjectPageHeader } from "@/hooks/use-project-page-header"
 import type { DeliverableSummary } from "@/types/deliverable"
@@ -121,6 +126,9 @@ export function ProjectOverviewPage() {
   const [newMilestoneDate, setNewMilestoneDate] = useState("")
   const [addingMilestone, setAddingMilestone] = useState(false)
   const [viewClientId, setViewClientId] = useState<string | null>(null)
+  const [archiveOpen, setArchiveOpen] = useState(false)
+  const [archiving, setArchiving] = useState(false)
+  const [unarchiving, setUnarchiving] = useState(false)
   const [outstandingBalance, setOutstandingBalance] = useState(0)
   const [clientLinkOpen, setClientLinkOpen] = useState(false)
   const [invoiceRefreshKey, setInvoiceRefreshKey] = useState(0)
@@ -241,6 +249,43 @@ export function ProjectOverviewPage() {
       showErrorToast(message)
     } finally {
       setSavingProject(false)
+    }
+  }
+
+  async function handleArchiveConfirm() {
+    if (!project) {
+      return
+    }
+
+    setArchiving(true)
+    try {
+      await archiveProject(project.id)
+      const refreshed = await getProject(project.id)
+      setProject(refreshed)
+      setArchiveOpen(false)
+      showSuccessToast("Project archived")
+    } catch (err) {
+      showErrorToast(humanizeApiError(err, "Failed to archive project"))
+    } finally {
+      setArchiving(false)
+    }
+  }
+
+  async function handleUnarchive() {
+    if (!project) {
+      return
+    }
+
+    setUnarchiving(true)
+    try {
+      await unarchiveProject(project.id)
+      const refreshed = await getProject(project.id)
+      setProject(refreshed)
+      showSuccessToast("Project restored")
+    } catch (err) {
+      showErrorToast(humanizeApiError(err, "Failed to restore project"))
+    } finally {
+      setUnarchiving(false)
     }
   }
 
@@ -415,6 +460,7 @@ export function ProjectOverviewPage() {
                 onNameChange={(name) => setProject({ ...project, name })}
                 onEditEnd={clearEditNameParam}
               />
+              {isProjectArchived(project) ? <ProjectArchivedBadge /> : null}
               <ProjectStatusBadge status={project.status} />
               {outstandingBalance > 0 ? (
                 <Badge
@@ -435,6 +481,15 @@ export function ProjectOverviewPage() {
             <ProjectActionsMenu
               projectId={project.id}
               projectName={project.name}
+              onArchive={
+                isProjectArchived(project) ? undefined : () => setArchiveOpen(true)
+              }
+              onUnarchive={
+                isProjectArchived(project)
+                  ? () => void handleUnarchive()
+                  : undefined
+              }
+              actionPending={unarchiving}
             />
             <Button variant="outline" onClick={() => setEditOpen(true)}>
               <Pencil />
@@ -793,6 +848,14 @@ export function ProjectOverviewPage() {
         submitting={savingProject}
         error={projectError}
         onSubmit={handleSaveProject}
+      />
+
+      <ArchiveProjectDialog
+        projectName={project.name}
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        archiving={archiving}
+        onConfirm={() => void handleArchiveConfirm()}
       />
 
       <DeliverableDialog
