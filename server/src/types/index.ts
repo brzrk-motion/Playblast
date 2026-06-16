@@ -59,6 +59,10 @@ export type {
   UpdateProjectServiceInput,
 } from "./project-service.js"
 export type {
+  Invoice,
+  InvoiceLineItem,
+} from "./invoice.js"
+export type {
   CreateServiceInput,
   Service,
   ServiceType,

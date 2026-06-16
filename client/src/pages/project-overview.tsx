@@ -36,6 +36,7 @@ import {
 } from "@/components/project/deliverable-dialog"
 import { ProjectBudgetEstimatePanel } from "@/components/project/project-budget-estimate-panel"
 import { ProjectFormSheet } from "@/components/project/project-form-sheet"
+import { ProjectInvoicesSection } from "@/components/project/project-invoices-section"
 import { ProjectServicesSection } from "@/components/project/project-services-section"
 import {
   projectFormToPayload,
@@ -114,6 +115,8 @@ export function ProjectOverviewPage() {
   const [newMilestoneDate, setNewMilestoneDate] = useState("")
   const [addingMilestone, setAddingMilestone] = useState(false)
   const [viewClientId, setViewClientId] = useState<string | null>(null)
+  const [clientLinkOpen, setClientLinkOpen] = useState(false)
+  const [invoiceRefreshKey, setInvoiceRefreshKey] = useState(0)
 
   useProjectPageHeader(projectId, project)
 
@@ -404,6 +407,8 @@ export function ProjectOverviewPage() {
           client={project.client}
           onViewClient={setViewClientId}
           onProjectUpdated={setProject}
+          linkDialogOpen={clientLinkOpen}
+          onLinkDialogOpenChange={setClientLinkOpen}
         />
       </div>
 
@@ -475,9 +480,19 @@ export function ProjectOverviewPage() {
       </div>
 
       <ProjectBudgetEstimatePanel
+        projectId={project.id}
         projectServices={projectServices}
         budget={project.budget}
         loading={servicesLoading}
+        hasClient={project.client !== null}
+        onRequestClientLink={() => setClientLinkOpen(true)}
+        onInvoiceCreated={() => setInvoiceRefreshKey((key) => key + 1)}
+      />
+
+      <ProjectInvoicesSection
+        key={invoiceRefreshKey}
+        projectId={project.id}
+        currency={project.budget?.currency}
       />
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>

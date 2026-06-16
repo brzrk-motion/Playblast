@@ -18,6 +18,7 @@ import type {
   ProjectStatus,
   ProjectSummary,
 } from "@/types/project"
+import type { Invoice } from "@/types/invoice"
 import type {
   AddProjectServiceInput,
   ProjectServiceWithDetails,
@@ -709,4 +710,47 @@ export async function updateProjectService(
     },
   )
   return parseJsonResponse<ProjectServiceWithDetails>(response)
+}
+
+// --- Invoices ---------------------------------------------------------------
+
+export async function listInvoices(projectId: string): Promise<Invoice[]> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/invoices`,
+  )
+  return parseJsonResponse<Invoice[]>(response)
+}
+
+export async function createInvoice(projectId: string): Promise<Invoice> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/invoices`,
+    { method: "POST" },
+  )
+  return parseJsonResponse<Invoice>(response)
+}
+
+export function getInvoicePdfUrl(invoiceId: string): string {
+  return `/api/invoices/${encodeURIComponent(invoiceId)}/pdf`
+}
+
+export async function downloadInvoicePdf(invoiceId: string): Promise<void> {
+  const response = await fetch(getInvoicePdfUrl(invoiceId))
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: string
+    } | null
+    throw new Error(humanizeHttpError(response.status, body?.error))
+  }
+
+  const blob = await response.blob()
+  const disposition = response.headers.get("content-disposition") ?? ""
+  const filenameMatch = disposition.match(/filename="([^"]+)"/)
+  const filename = filenameMatch?.[1] ?? `invoice-${invoiceId}.pdf`
+
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
 }
