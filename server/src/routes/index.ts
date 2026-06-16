@@ -6,9 +6,9 @@ import {
 import commentsRouter, { commentByIdRouter } from "./comments.js"
 import clientsRouter from "./clients.js"
 import deliverablesRouter, { deliverableByIdRouter } from "./deliverables.js"
+import projectInvoicesRouter, { invoiceByIdRouter } from "./invoices.js"
 import leadsRouter from "./leads.js"
 import milestonesRouter, { milestoneByIdRouter } from "./milestones.js"
-import projectInvoicesRouter, { invoiceByIdRouter } from "./invoices.js"
 import projectServicesRouter from "./project-services.js"
 import projectsRouter from "./projects.js"
 import servicesRouter from "./services.js"
@@ -28,7 +28,11 @@ apiRouter.use(
 )
 apiRouter.use("/projects/:projectId/milestones", milestonesRouter)
 apiRouter.use("/projects/:projectId/services", projectServicesRouter)
-apiRouter.use("/projects/:projectId/invoices", projectInvoicesRouter)
+apiRouter.use(
+  "/projects/:projectId/invoices",
+  validateProjectParams,
+  projectInvoicesRouter,
+)
 apiRouter.use("/invoices", invoiceByIdRouter)
 apiRouter.use("/deliverables", deliverableByIdRouter)
 apiRouter.use("/milestones", milestoneByIdRouter)

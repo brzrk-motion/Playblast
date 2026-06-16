@@ -9,6 +9,12 @@ import type {
   ContactLog,
   CreateContactLogBody,
 } from "@/types/contact-log"
+import type {
+  CreateInvoicePaymentInput,
+  CreateInvoicePaymentResponse,
+  InvoiceSummary,
+  InvoiceWithPayments,
+} from "@/types/invoice"
 import type { CreateLeadInput, Lead, LeadWithContactLog, UpdateLeadInput } from "@/types/lead"
 import type { Milestone } from "@/types/milestone"
 import type {
@@ -18,7 +24,6 @@ import type {
   ProjectStatus,
   ProjectSummary,
 } from "@/types/project"
-import type { Invoice } from "@/types/invoice"
 import type {
   AddProjectServiceInput,
   ProjectServiceWithDetails,
@@ -750,19 +755,41 @@ export async function updateProjectService(
 
 // --- Invoices ---------------------------------------------------------------
 
-export async function listInvoices(projectId: string): Promise<Invoice[]> {
+export async function listProjectInvoices(
+  projectId: string,
+): Promise<InvoiceSummary[]> {
   const response = await fetch(
     `/api/projects/${encodeURIComponent(projectId)}/invoices`,
   )
-  return parseJsonResponse<Invoice[]>(response)
+  return parseJsonResponse<InvoiceSummary[]>(response)
 }
 
-export async function createInvoice(projectId: string): Promise<Invoice> {
+export async function createInvoice(projectId: string): Promise<InvoiceSummary> {
   const response = await fetch(
     `/api/projects/${encodeURIComponent(projectId)}/invoices`,
     { method: "POST" },
   )
-  return parseJsonResponse<Invoice>(response)
+  return parseJsonResponse<InvoiceSummary>(response)
+}
+
+export async function getInvoice(id: string): Promise<InvoiceWithPayments> {
+  const response = await fetch(`/api/invoices/${encodeURIComponent(id)}`)
+  return parseJsonResponse<InvoiceWithPayments>(response)
+}
+
+export async function createInvoicePayment(
+  invoiceId: string,
+  body: CreateInvoicePaymentInput,
+): Promise<CreateInvoicePaymentResponse> {
+  const response = await fetch(
+    `/api/invoices/${encodeURIComponent(invoiceId)}/payments`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  )
+  return parseJsonResponse<CreateInvoicePaymentResponse>(response)
 }
 
 export function getInvoicePdfUrl(invoiceId: string): string {

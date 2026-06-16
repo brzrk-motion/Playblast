@@ -37,8 +37,8 @@ import {
   type DeliverableFormValues,
 } from "@/components/project/deliverable-dialog"
 import { ProjectBudgetEstimatePanel } from "@/components/project/project-budget-estimate-panel"
-import { ProjectFormSheet } from "@/components/project/project-form-sheet"
 import { ProjectInvoicesSection } from "@/components/project/project-invoices-section"
+import { ProjectFormSheet } from "@/components/project/project-form-sheet"
 import { ProjectServicesSection } from "@/components/project/project-services-section"
 import {
   projectFormToPayload,
@@ -63,6 +63,7 @@ import {
   budgetHealth,
   budgetSpentRatio,
   formatCurrency,
+  formatEstimateCurrency,
 } from "@/lib/budget"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
@@ -119,6 +120,7 @@ export function ProjectOverviewPage() {
   const [newMilestoneDate, setNewMilestoneDate] = useState("")
   const [addingMilestone, setAddingMilestone] = useState(false)
   const [viewClientId, setViewClientId] = useState<string | null>(null)
+  const [outstandingBalance, setOutstandingBalance] = useState(0)
   const [clientLinkOpen, setClientLinkOpen] = useState(false)
   const [invoiceRefreshKey, setInvoiceRefreshKey] = useState(0)
 
@@ -156,6 +158,7 @@ export function ProjectOverviewPage() {
           listProjectServices(projectId),
         ])
       setProject(projectData)
+      setOutstandingBalance(projectData.outstandingBalance ?? 0)
       setDeliverables(deliverableData)
       setMilestones(milestoneData)
       setProjectServices(servicesData)
@@ -187,6 +190,7 @@ export function ProjectOverviewPage() {
           ])
         if (!cancelled) {
           setProject(projectData)
+          setOutstandingBalance(projectData.outstandingBalance ?? 0)
           setDeliverables(deliverableData)
           setMilestones(milestoneData)
           setProjectServices(servicesData)
@@ -389,6 +393,7 @@ export function ProjectOverviewPage() {
 
   const budget = project.budget
   const health = budget ? budgetHealth(budget) : null
+  const currency = budget?.currency ?? "USD"
 
   return (
     <div className="space-y-6">
@@ -410,6 +415,14 @@ export function ProjectOverviewPage() {
                 onEditEnd={clearEditNameParam}
               />
               <ProjectStatusBadge status={project.status} />
+              {outstandingBalance > 0 ? (
+                <Badge
+                  variant="outline"
+                  className="border-destructive/40 text-destructive"
+                >
+                  {formatEstimateCurrency(outstandingBalance, currency)} outstanding
+                </Badge>
+              ) : null}
             </div>
             {project.description ? (
               <p className="max-w-2xl text-sm text-muted-foreground">
@@ -510,6 +523,8 @@ export function ProjectOverviewPage() {
         projectServices={projectServices}
         budget={project.budget}
         loading={servicesLoading}
+        outstandingBalance={outstandingBalance}
+        currency={currency}
         hasClient={project.client !== null}
         onRequestClientLink={() => setClientLinkOpen(true)}
         onInvoiceCreated={() => setInvoiceRefreshKey((key) => key + 1)}
@@ -518,7 +533,9 @@ export function ProjectOverviewPage() {
       <ProjectInvoicesSection
         key={invoiceRefreshKey}
         projectId={project.id}
-        currency={project.budget?.currency}
+        currency={currency}
+        refreshKey={invoiceRefreshKey}
+        onOutstandingBalanceChange={setOutstandingBalance}
       />
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>

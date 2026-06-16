@@ -54,6 +54,8 @@ interface ProjectBudgetEstimatePanelProps {
   projectServices: ProjectServiceWithDetails[]
   budget?: ProjectBudget
   loading?: boolean
+  outstandingBalance?: number
+  currency?: string
   hasClient: boolean
   onRequestClientLink: () => void
   onInvoiceCreated?: () => void
@@ -78,13 +80,15 @@ export function ProjectBudgetEstimatePanel({
   projectServices,
   budget,
   loading = false,
+  outstandingBalance = 0,
+  currency: currencyProp,
   hasClient,
   onRequestClientLink,
   onInvoiceCreated,
 }: ProjectBudgetEstimatePanelProps) {
   const [generating, setGenerating] = useState(false)
   const [clientRequiredOpen, setClientRequiredOpen] = useState(false)
-  const currency = budget?.currency ?? "USD"
+  const currency = currencyProp ?? budget?.currency ?? "USD"
   const estimate = calculateProjectCostEstimate(projectServices)
   const internalHourlyCostRate = useInternalHourlyCostRate()
   const profitability = calculateProjectProfitability({
@@ -175,7 +179,9 @@ export function ProjectBudgetEstimatePanel({
           <div
             className={cn(
               "grid gap-4",
-              hasBudget ? "sm:grid-cols-3" : "sm:grid-cols-1 sm:max-w-xs",
+              hasBudget || outstandingBalance > 0
+                ? "sm:grid-cols-2 lg:grid-cols-4"
+                : "sm:grid-cols-1 sm:max-w-xs",
             )}
           >
             <SummaryMetric
@@ -205,12 +211,20 @@ export function ProjectBudgetEstimatePanel({
                   )}
                 />
               </>
-            ) : (
+            ) : null}
+            {outstandingBalance > 0 ? (
+              <SummaryMetric
+                label="Outstanding Invoices"
+                value={formatEstimateCurrency(outstandingBalance, currency)}
+                className="text-destructive"
+              />
+            ) : null}
+            {!hasBudget && outstandingBalance <= 0 ? (
               <p className="text-sm text-muted-foreground sm:col-span-1">
                 No client budget set. Edit the project to add one and compare
                 against the services estimate.
               </p>
-            )}
+            ) : null}
           </div>
         )}
 

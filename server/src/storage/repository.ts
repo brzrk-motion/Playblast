@@ -10,6 +10,12 @@ import {
   projectServiceLineTotal,
 } from "../lib/service-estimate.js"
 import { computeRetainerSummary, getCurrentCycleStart } from "../lib/retainer-cycle.js"
+import {
+  addDaysToIsoDate,
+  computeInvoiceStatus,
+  computeOutstandingBalance,
+  isInvoiceOverdue,
+} from "../lib/invoice.js"
 import type {
   Comment,
   ContactLog,
@@ -19,6 +25,7 @@ import type {
   Client,
   ClientWithProjects,
   CreateClientInput,
+  CreateInvoicePaymentInput,
   CreateLeadInput,
   CreateMilestoneInput,
   CreateProjectInput,
@@ -27,11 +34,14 @@ import type {
   Deliverable,
   DeliverableStatus,
   DeliverableSummary,
+  Invoice,
+  InvoiceLineItem,
+  InvoicePayment,
+  InvoiceSummary,
+  InvoiceWithPayments,
   Lead,
   LeadStatus,
   LeadWithContactLog,
-  Invoice,
-  InvoiceLineItem,
   Milestone,
   Project,
   ProjectBudget,
@@ -44,6 +54,7 @@ import type {
   UpdateClientInput,
   UpdateCommentInput,
   UpdateDeliverableInput,
+  UpdateInvoiceInput,
   UpdateLeadInput,
   UpdateMilestoneInput,
   UpdateProjectInput,
@@ -397,8 +408,13 @@ export function getProjectWithClient(id: string): ProjectDetail | undefined {
   }
 
   const client = project.clientId ? (getClient(project.clientId) ?? null) : null
+  const outstandingBalance = getProjectOutstandingBalance(id)
 
-  return { ...project, client }
+  return {
+    ...project,
+    client,
+    ...(outstandingBalance > 0 ? { outstandingBalance } : {}),
+  }
 }
 
 export function createProject(input: CreateProjectInput): Project {
@@ -1524,11 +1540,13 @@ export function getClientWithProjects(
     return undefined
   }
 
+  const outstandingBalance = getClientOutstandingBalance(id)
   const retainerSummary = buildRetainerSummary(client)
 
   return {
     ...client,
     projects: listProjectsByClientId(id),
+    ...(outstandingBalance > 0 ? { outstandingBalance } : {}),
     ...(retainerSummary ? { retainerSummary } : {}),
   }
 }
@@ -1998,6 +2016,17 @@ interface InvoiceRow {
   grandTotal: number
   lineItems: string
   invoiceDate: string
+  dueDate: string
+  status: string
+  createdAt: string
+}
+
+interface InvoicePaymentRow {
+  id: string
+  invoiceId: string
+  amount: number
+  paidAt: string
+  notes: string | null
   createdAt: string
 }
 
@@ -2208,8 +2237,67 @@ function rowToInvoice(row: InvoiceRow): Invoice {
     grandTotal: row.grandTotal,
     lineItems,
     invoiceDate: row.invoiceDate,
+    dueDate: row.dueDate,
+    status: row.status as Invoice["status"],
     createdAt: row.createdAt,
   }
+}
+
+function rowToInvoicePayment(row: InvoicePaymentRow): InvoicePayment {
+  const payment: InvoicePayment = {
+    id: row.id,
+    invoiceId: row.invoiceId,
+    amount: row.amount,
+    paidAt: row.paidAt,
+    createdAt: row.createdAt,
+  }
+
+  if (row.notes) {
+    payment.notes = row.notes
+  }
+
+  return payment
+}
+
+function getInvoiceAmountPaid(invoiceId: string): number {
+  const row = getDb()
+    .prepare(
+      "SELECT COALESCE(SUM(amount), 0) AS totalPaid FROM invoice_payments WHERE invoiceId = ?",
+    )
+    .get(invoiceId) as { totalPaid: number }
+
+  return row.totalPaid
+}
+
+function enrichInvoiceSummary(invoice: Invoice): InvoiceSummary {
+  const amountPaid = getInvoiceAmountPaid(invoice.id)
+  const outstandingBalance = computeOutstandingBalance(
+    invoice.grandTotal,
+    amountPaid,
+  )
+  const status = computeInvoiceStatus(invoice.grandTotal, amountPaid)
+
+  return {
+    ...invoice,
+    status,
+    amountPaid,
+    outstandingBalance,
+    isOverdue: isInvoiceOverdue(invoice.dueDate, status),
+  }
+}
+
+function syncInvoiceStatus(invoiceId: string): void {
+  const invoice = getInvoice(invoiceId)
+  if (!invoice) {
+    return
+  }
+
+  const amountPaid = getInvoiceAmountPaid(invoiceId)
+  const status = computeInvoiceStatus(invoice.grandTotal, amountPaid)
+
+  getDb()
+    .prepare("UPDATE invoices SET status = ? WHERE id = ?")
+    .run(status, invoiceId)
 }
 
 function nextInvoiceNumber(db: Database): number {
@@ -2219,7 +2307,7 @@ function nextInvoiceNumber(db: Database): number {
   return row.maxNum + 1
 }
 
-export function listInvoicesByProject(projectId: string): Invoice[] {
+export function listInvoicesByProject(projectId: string): InvoiceSummary[] {
   const rows = getDb()
     .prepare(
       `SELECT * FROM invoices
@@ -2228,7 +2316,7 @@ export function listInvoicesByProject(projectId: string): Invoice[] {
     )
     .all(projectId) as InvoiceRow[]
 
-  return rows.map(rowToInvoice)
+  return rows.map((row) => enrichInvoiceSummary(rowToInvoice(row)))
 }
 
 export function getInvoice(id: string): Invoice | undefined {
@@ -2239,8 +2327,50 @@ export function getInvoice(id: string): Invoice | undefined {
   return row ? rowToInvoice(row) : undefined
 }
 
+export function getInvoiceWithPayments(
+  id: string,
+): InvoiceWithPayments | undefined {
+  const invoice = getInvoice(id)
+  if (!invoice) {
+    return undefined
+  }
+
+  const payments = listInvoicePayments(id)
+  const summary = enrichInvoiceSummary(invoice)
+
+  return {
+    ...summary,
+    payments,
+  }
+}
+
+export function listInvoicePayments(invoiceId: string): InvoicePayment[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM invoice_payments
+       WHERE invoiceId = ?
+       ORDER BY paidAt DESC, createdAt DESC`,
+    )
+    .all(invoiceId) as InvoicePaymentRow[]
+
+  return rows.map(rowToInvoicePayment)
+}
+
+export function getProjectOutstandingBalance(projectId: string): number {
+  const invoices = listInvoicesByProject(projectId)
+  return invoices.reduce((sum, invoice) => sum + invoice.outstandingBalance, 0)
+}
+
+export function getClientOutstandingBalance(clientId: string): number {
+  const projects = listProjectsByClientId(clientId)
+  return projects.reduce(
+    (sum, project) => sum + getProjectOutstandingBalance(project.id),
+    0,
+  )
+}
+
 export type CreateInvoiceResult =
-  | Invoice
+  | InvoiceSummary
   | "project_not_found"
   | "no_client"
   | "no_services"
@@ -2271,6 +2401,7 @@ export function createInvoice(projectId: string): CreateInvoiceResult {
   const currency = project.budget?.currency ?? "USD"
   const now = new Date()
   const invoiceDate = now.toISOString().slice(0, 10)
+  const dueDate = addDaysToIsoDate(invoiceDate, 30)
   const createdAt = now.toISOString()
   const client = project.client
 
@@ -2283,8 +2414,8 @@ export function createInvoice(projectId: string): CreateInvoiceResult {
       `INSERT INTO invoices (
         id, invoiceNumber, projectId, clientId, projectName,
         clientName, clientCompany, clientEmail, currency,
-        grandTotal, lineItems, invoiceDate, createdAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        grandTotal, lineItems, invoiceDate, dueDate, status, createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       id,
       invoiceNumber,
@@ -2298,6 +2429,8 @@ export function createInvoice(projectId: string): CreateInvoiceResult {
       grandTotal,
       JSON.stringify(lineItems),
       invoiceDate,
+      dueDate,
+      "unpaid",
       createdAt,
     )
 
@@ -2305,6 +2438,66 @@ export function createInvoice(projectId: string): CreateInvoiceResult {
       .prepare("SELECT * FROM invoices WHERE id = ?")
       .get(id) as InvoiceRow
 
-    return rowToInvoice(row)
+    return enrichInvoiceSummary(rowToInvoice(row))
+  })
+}
+
+export function updateInvoice(
+  id: string,
+  input: UpdateInvoiceInput,
+): InvoiceSummary | undefined {
+  return withTransaction(() => {
+    const invoice = getInvoice(id)
+    if (!invoice) {
+      return undefined
+    }
+
+    if (input.dueDate !== undefined) {
+      getDb()
+        .prepare("UPDATE invoices SET dueDate = ? WHERE id = ?")
+        .run(input.dueDate, id)
+    }
+
+    const updated = getInvoice(id)
+    return updated ? enrichInvoiceSummary(updated) : undefined
+  })
+}
+
+export function createInvoicePayment(
+  input: CreateInvoicePaymentInput,
+): InvoicePayment | "invoice_not_found" {
+  return withTransaction(() => {
+    const invoice = getInvoice(input.invoiceId)
+    if (!invoice) {
+      return "invoice_not_found"
+    }
+
+    const now = new Date().toISOString()
+    const payment: InvoicePayment = {
+      id: randomUUID(),
+      invoiceId: input.invoiceId,
+      amount: input.amount,
+      paidAt: input.paidAt,
+      createdAt: now,
+      ...(input.notes ? { notes: input.notes } : {}),
+    }
+
+    getDb()
+      .prepare(
+        `INSERT INTO invoice_payments (
+          id, invoiceId, amount, paidAt, notes, createdAt
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        payment.id,
+        payment.invoiceId,
+        payment.amount,
+        payment.paidAt,
+        payment.notes ?? null,
+        payment.createdAt,
+      )
+
+    syncInvoiceStatus(input.invoiceId)
+    return payment
   })
 }

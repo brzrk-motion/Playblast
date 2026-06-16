@@ -58,5 +58,6 @@ export interface UpdateClientInput {
 
 export interface ClientWithProjects extends Client {
   projects: Project[]
+  outstandingBalance?: number
   retainerSummary?: RetainerSummary
 }

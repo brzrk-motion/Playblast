@@ -51,6 +51,8 @@ export interface Project {
   /** ISO date string. */
   endDate?: string
   budget?: ProjectBudget
+  /** Sum of unpaid/partially paid invoice balances for this project. */
+  outstandingBalance?: number
 }
 
 /** Project detail with the linked client record populated (or null). */
