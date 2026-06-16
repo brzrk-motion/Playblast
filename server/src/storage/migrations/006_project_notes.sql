@@ -1,0 +1,2 @@
+-- Migration 006: internal free-text notes on projects
+-- Column is added in db.ts when missing on existing databases.

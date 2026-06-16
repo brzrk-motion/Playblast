@@ -9,6 +9,7 @@ import {
   archiveProject,
   createProject,
   deleteProject,
+  duplicateProject,
   getClient,
   getProject,
   getProjectWithClient,
@@ -114,9 +115,27 @@ projectsRouter.post("/", (req, res) => {
       typeof req.body?.startDate === "string" ? req.body.startDate : undefined,
     endDate: typeof req.body?.endDate === "string" ? req.body.endDate : undefined,
     budget,
+    notes:
+      typeof req.body?.notes === "string" ? req.body.notes.trim() : undefined,
   })
   res.status(201).json(project)
 })
+
+projectsRouter.post(
+  "/:projectId/duplicate",
+  validateProjectIdParam,
+  (req, res) => {
+    const projectId = getParam(req.params.projectId)
+    const duplicated = duplicateProject(projectId)
+
+    if (!duplicated) {
+      res.status(404).json({ error: "Project not found." })
+      return
+    }
+
+    res.status(201).json(duplicated)
+  },
+)
 
 projectsRouter.get("/:projectId", (req, res) => {
   const projectId = getParam(req.params.projectId)

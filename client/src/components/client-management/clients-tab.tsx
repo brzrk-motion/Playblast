@@ -6,6 +6,7 @@ import { EditClientModal } from "@/components/client-management/edit-client-moda
 import { ClientDetailSheet } from "@/components/client-management/client-detail-sheet"
 import { ConfirmRevertModal } from "@/components/client-management/confirm-revert-modal"
 import { LinkProjectModal } from "@/components/client-management/link-project-modal"
+import { RetainerClientBadge } from "@/components/client-management/retainer-client-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -295,6 +296,7 @@ export function ClientsTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
@@ -314,6 +316,9 @@ export function ClientsTab() {
                       onClick={() => openClientDetail(client.id)}
                     >
                       <TableCell className="font-medium">{client.name}</TableCell>
+                      <TableCell>
+                        {client.isRetainer ? <RetainerClientBadge /> : "—"}
+                      </TableCell>
                       <TableCell>{client.company ?? "—"}</TableCell>
                       <TableCell>{client.email}</TableCell>
                       <TableCell>{client.phone ?? "—"}</TableCell>

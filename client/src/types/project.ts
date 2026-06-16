@@ -28,7 +28,7 @@ export interface Project {
   name: string
   createdAt: string
   status: ProjectStatus
-  /** Legacy free-text client label; prefer `clientId` when linked to a client record. */
+  /** Legacy free-text client label; prefer `clientId` when linked to a managed client. */
   client?: string
   /** FK → clients.id when the project is linked to a managed client. */
   clientId?: string
@@ -38,6 +38,8 @@ export interface Project {
   budget?: ProjectBudget
   /** ISO datetime when the project was archived; null/undefined when active. */
   archivedAt?: string | null
+  /** Internal free-text notes; only shown on the project overview page. */
+  notes?: string
 }
 
 export function isProjectArchived(project: Pick<Project, "archivedAt">): boolean {
@@ -47,6 +49,7 @@ export function isProjectArchived(project: Pick<Project, "archivedAt">): boolean
 /** Project detail with the linked client record populated (or null). */
 export interface ProjectDetail extends Omit<Project, "client"> {
   client: Client | null
+  outstandingBalance?: number
 }
 
 export interface ProjectSummary extends Project {
@@ -60,4 +63,6 @@ export interface ProjectSummary extends Project {
   clientName?: string
   /** Total services estimate when at least one service is attached. */
   servicesEstimate?: number
+  /** Sum of effective estimated hours from attached services. */
+  servicesEstimatedHours?: number
 }

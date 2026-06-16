@@ -447,6 +447,7 @@ export function DashboardPage() {
                   clientName={project.clientName}
                   budget={project.budget}
                   servicesEstimate={project.servicesEstimate}
+                  servicesEstimatedHours={project.servicesEstimatedHours}
                   deliverableCount={project.deliverableCount}
                   compact
                   onArchive={

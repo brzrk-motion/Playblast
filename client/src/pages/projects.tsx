@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import {
-  Archive,
-  ArchiveRestore,
   ArrowDownUp,
   FolderOpen,
   MessageSquare,
-  MoreHorizontal,
   Plus,
   Search,
 } from "lucide-react"
@@ -22,7 +19,6 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -30,11 +26,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Spinner } from "@/components/ui/spinner"
 import { ArchiveProjectDialog } from "@/components/project/archive-project-dialog"
 import { ProjectArchivedBadge } from "@/components/project/project-archived-badge"
 import { ProjectCardSkeleton } from "@/components/dashboard/project-card-skeleton"
 import { ClientDetailSheet } from "@/components/client-management/client-detail-sheet"
+import { ProjectActionsMenu } from "@/components/project/project-actions-menu"
 import { ProjectClientBadge } from "@/components/project/project-client-badge"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
 import { ProjectFormSheet } from "@/components/project/project-form-sheet"
@@ -57,7 +53,6 @@ import {
   type ProjectSortField,
 } from "@/lib/projects"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
-import { cn } from "@/lib/utils"
 import type { Client } from "@/types/client"
 import type { ProjectSummary } from "@/types/project"
 
@@ -93,65 +88,25 @@ function ProjectCard({
   onUnarchive?: (project: ProjectSummary) => void
   actionPending?: boolean
 }) {
-  const hasMenu = Boolean(onArchive || onUnarchive)
-
   return (
     <Card className="interactive-card relative h-full border-muted">
-      {hasMenu ? (
-        <div className="absolute top-2 right-2 z-10">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8"
-                aria-label={`Actions for ${project.name}`}
-                disabled={actionPending}
-                onClick={(event) => event.stopPropagation()}
-              >
-                {actionPending ? (
-                  <Spinner className="size-4" />
-                ) : (
-                  <MoreHorizontal className="size-4" />
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {onArchive ? (
-                <DropdownMenuItem
-                  onClick={(event) => {
-                    event.preventDefault()
-                    onArchive(project)
-                  }}
-                >
-                  <Archive />
-                  Archive project
-                </DropdownMenuItem>
-              ) : null}
-              {onUnarchive ? (
-                <DropdownMenuItem
-                  onClick={(event) => {
-                    event.preventDefault()
-                    onUnarchive(project)
-                  }}
-                >
-                  <ArchiveRestore />
-                  Unarchive project
-                </DropdownMenuItem>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      ) : null}
+      <div className="absolute top-3 right-3 z-10">
+        <ProjectActionsMenu
+          projectId={project.id}
+          projectName={project.name}
+          onArchive={onArchive ? () => onArchive(project) : undefined}
+          onUnarchive={onUnarchive ? () => onUnarchive(project) : undefined}
+          actionPending={actionPending}
+        />
+      </div>
       <Link
         to={`/projects/${encodeURIComponent(project.id)}`}
         className="block rounded-xl focus-ring"
       >
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 pr-10">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <CardTitle className={cn("text-base leading-snug", hasMenu && "pr-8")}>
+              <CardTitle className="text-base leading-snug">
                 {project.name}
               </CardTitle>
               {linkedClient ? (

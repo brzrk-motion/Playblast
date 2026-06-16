@@ -12,6 +12,8 @@ interface ProjectClientInfoBlockProps {
   onViewClient: (clientId: string) => void
   onProjectUpdated: (project: ProjectDetail) => void
   className?: string
+  linkDialogOpen?: boolean
+  onLinkDialogOpenChange?: (open: boolean) => void
 }
 
 export function ProjectClientInfoBlock({
@@ -20,9 +22,21 @@ export function ProjectClientInfoBlock({
   onViewClient,
   onProjectUpdated,
   className,
+  linkDialogOpen: linkDialogOpenProp,
+  onLinkDialogOpenChange,
 }: ProjectClientInfoBlockProps) {
-  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
+  const [internalLinkDialogOpen, setInternalLinkDialogOpen] = useState(false)
   const [linkMode, setLinkMode] = useState<"add" | "change">("add")
+
+  const linkDialogOpen = linkDialogOpenProp ?? internalLinkDialogOpen
+
+  function setLinkDialogOpen(open: boolean) {
+    if (onLinkDialogOpenChange) {
+      onLinkDialogOpenChange(open)
+    } else {
+      setInternalLinkDialogOpen(open)
+    }
+  }
 
   function openLinkDialog(mode: "add" | "change") {
     setLinkMode(mode)
