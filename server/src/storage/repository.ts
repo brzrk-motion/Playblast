@@ -5,6 +5,7 @@ import type { Database } from "better-sqlite3"
 import { getUploadDir } from "../config/paths.js"
 import {
   calculateProjectServicesEstimate,
+  calculateProjectServicesEstimatedHours,
   effectiveProjectServiceHours,
   projectServiceLineTotal,
 } from "../lib/service-estimate.js"
@@ -339,6 +340,10 @@ export function listProjectSummaries(clientId?: string): ProjectSummary[] {
     const servicesTotal = calculateProjectServicesEstimate(projectServices)
     const servicesEstimate =
       projectServices.length > 0 ? servicesTotal : undefined
+    const servicesEstimatedHours =
+      projectServices.length > 0
+        ? calculateProjectServicesEstimatedHours(projectServices)
+        : undefined
 
     return {
       ...project,
@@ -356,6 +361,9 @@ export function listProjectSummaries(clientId?: string): ProjectSummary[] {
         : null,
       ...(clientName ? { clientName } : {}),
       ...(servicesEstimate !== undefined ? { servicesEstimate } : {}),
+      ...(servicesEstimatedHours !== undefined
+        ? { servicesEstimatedHours }
+        : {}),
     }
   })
 }

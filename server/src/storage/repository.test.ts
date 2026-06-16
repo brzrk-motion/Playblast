@@ -347,12 +347,14 @@ describe("SQLite data store", () => {
     assert.ok(summary)
     assert.equal(summary.clientName, "Acme Co")
     assert.equal(summary.servicesEstimate, 4200)
+    assert.equal(summary.servicesEstimatedHours, 10)
 
     const bare = createProject({ id: "summary-bare", name: "Bare Project" })
     const bareSummary = listProjectSummaries().find((item) => item.id === bare.id)
     assert.ok(bareSummary)
     assert.equal(bareSummary.clientName, undefined)
     assert.equal(bareSummary.servicesEstimate, undefined)
+    assert.equal(bareSummary.servicesEstimatedHours, undefined)
 
     removeProjectService(project.id, service.id)
     deleteProject(project.id)
