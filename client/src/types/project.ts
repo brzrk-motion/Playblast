@@ -29,7 +29,7 @@ export interface Project {
   name: string
   createdAt: string
   status: ProjectStatus
-  /** Legacy free-text client label; prefer `clientId` when linked to a client record. */
+  /** Legacy free-text client label; prefer `clientId` when linked to a managed client. */
   client?: string
   /** FK → clients.id when the project is linked to a managed client. */
   clientId?: string
@@ -42,6 +42,7 @@ export interface Project {
 /** Project detail with the linked client record populated (or null). */
 export interface ProjectDetail extends Omit<Project, "client"> {
   client: Client | null
+  outstandingBalance?: number
 }
 
 export interface ProjectSummary extends Project {

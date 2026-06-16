@@ -65,6 +65,17 @@ export type {
   UpdateServiceInput,
 } from "./service.js"
 export { isServiceType, SERVICE_TYPES } from "./service.js"
+export type {
+  CreateInvoiceInput,
+  CreateInvoicePaymentInput,
+  Invoice,
+  InvoicePayment,
+  InvoiceStatus,
+  InvoiceSummary,
+  InvoiceWithPayments,
+  UpdateInvoiceInput,
+} from "./invoice.js"
+export { INVOICE_STATUSES, isInvoiceStatus } from "./invoice.js"
 export type { DataStore } from "./store.js"
 export type { UploadResponse } from "./upload.js"
 export type {

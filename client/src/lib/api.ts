@@ -9,6 +9,13 @@ import type {
   ContactLog,
   CreateContactLogBody,
 } from "@/types/contact-log"
+import type {
+  CreateInvoiceInput,
+  CreateInvoicePaymentInput,
+  CreateInvoicePaymentResponse,
+  InvoiceSummary,
+  InvoiceWithPayments,
+} from "@/types/invoice"
 import type { CreateLeadInput, Lead, LeadWithContactLog, UpdateLeadInput } from "@/types/lead"
 import type { Milestone } from "@/types/milestone"
 import type {
@@ -709,4 +716,50 @@ export async function updateProjectService(
     },
   )
   return parseJsonResponse<ProjectServiceWithDetails>(response)
+}
+
+// --- Invoices ---------------------------------------------------------------
+
+export async function listProjectInvoices(
+  projectId: string,
+): Promise<InvoiceSummary[]> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/invoices`,
+  )
+  return parseJsonResponse<InvoiceSummary[]>(response)
+}
+
+export async function createInvoice(
+  projectId: string,
+  body: CreateInvoiceInput,
+): Promise<InvoiceSummary> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/invoices`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  )
+  return parseJsonResponse<InvoiceSummary>(response)
+}
+
+export async function getInvoice(id: string): Promise<InvoiceWithPayments> {
+  const response = await fetch(`/api/invoices/${encodeURIComponent(id)}`)
+  return parseJsonResponse<InvoiceWithPayments>(response)
+}
+
+export async function createInvoicePayment(
+  invoiceId: string,
+  body: CreateInvoicePaymentInput,
+): Promise<CreateInvoicePaymentResponse> {
+  const response = await fetch(
+    `/api/invoices/${encodeURIComponent(invoiceId)}/payments`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  )
+  return parseJsonResponse<CreateInvoicePaymentResponse>(response)
 }

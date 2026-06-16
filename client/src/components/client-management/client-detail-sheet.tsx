@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -27,6 +28,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { deleteClient, getClient, updateProject } from "@/lib/api"
+import { formatEstimateCurrency } from "@/lib/budget"
 import { formatDateAdded } from "@/lib/dates"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import type { Client, ClientWithProjects } from "@/types/client"
@@ -348,6 +350,16 @@ export function ClientDetailSheet({
                     {client.company ?? "No company"}
                   </SheetDescription>
                 </div>
+
+                {client.outstandingBalance && client.outstandingBalance > 0 ? (
+                  <Badge
+                    variant="outline"
+                    className="w-fit border-destructive/40 text-destructive"
+                  >
+                    {formatEstimateCurrency(client.outstandingBalance)} outstanding
+                    across projects
+                  </Badge>
+                ) : null}
 
                 <div className="flex flex-wrap gap-2">
                   <Button

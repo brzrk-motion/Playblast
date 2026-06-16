@@ -37,4 +37,6 @@ export interface UpdateClientInput {
 
 export interface ClientWithProjects extends Client {
   projects: Project[]
+  /** Sum of outstanding invoice balances across all linked projects. */
+  outstandingBalance?: number
 }
