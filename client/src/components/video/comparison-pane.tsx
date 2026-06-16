@@ -8,6 +8,7 @@ import {
 } from "@vidstack/react"
 
 import { VersionSelector } from "@/components/project/version-selector"
+import { VersionDownloadButton } from "@/components/video/version-download-button"
 import { VideoControls } from "@/components/video/video-controls"
 import { VideoLoadingOverlay } from "@/components/video/video-loading-overlay"
 import { VideoHotkeys } from "@/components/video/video-hotkeys"
@@ -74,11 +75,14 @@ export function ComparisonPane({
         <p className="text-sm font-medium capitalize text-muted-foreground">
           {pane} pane
         </p>
-        <VersionSelector
-          versions={versions}
-          selectedLabel={selectedLabel}
-          onSelect={onSelect}
-        />
+        <div className="flex items-center gap-1">
+          <VersionDownloadButton versionId={selectedVersion.id} />
+          <VersionSelector
+            versions={versions}
+            selectedLabel={selectedLabel}
+            onSelect={onSelect}
+          />
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
