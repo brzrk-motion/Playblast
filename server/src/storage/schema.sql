@@ -36,9 +36,26 @@ CREATE TABLE IF NOT EXISTS clients (
   website TEXT,
   notes TEXT,
   convertedFromLeadId TEXT REFERENCES leads(id) ON DELETE SET NULL,
+  isRetainer INTEGER NOT NULL DEFAULT 0,
+  retainerHours REAL,
+  retainerRate REAL,
+  retainerCycleDay INTEGER,
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS retainer_cycle_hours (
+  id TEXT PRIMARY KEY,
+  clientId TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  cycleStart TEXT NOT NULL,
+  hoursLogged REAL NOT NULL DEFAULT 0 CHECK (hoursLogged >= 0),
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  UNIQUE (clientId, cycleStart)
+);
+
+CREATE INDEX IF NOT EXISTS idx_retainer_cycle_hours_clientId
+  ON retainer_cycle_hours(clientId);
 
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,

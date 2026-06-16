@@ -52,6 +52,7 @@ export {
   updateProjectService,
   revertClientToLead,
   updateClient,
+  upsertRetainerCycleHours,
   updateComment,
   updateDeliverable,
   updateDeliverableStatus,

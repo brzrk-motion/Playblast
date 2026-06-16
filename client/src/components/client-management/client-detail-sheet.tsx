@@ -29,6 +29,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { deleteClient, getClient, updateProject } from "@/lib/api"
 import { formatDateAdded } from "@/lib/dates"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { RetainerPanel } from "@/components/client-management/retainer-panel"
 import type { Client, ClientWithProjects } from "@/types/client"
 import type { Project } from "@/types/project"
 
@@ -453,6 +454,11 @@ export function ClientDetailSheet({
                   ) : null}
                 </dl>
               </section>
+
+              <RetainerPanel
+                client={client}
+                onUpdated={(updated) => setClient(updated)}
+              />
 
               <section className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">

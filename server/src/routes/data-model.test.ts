@@ -867,6 +867,71 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(converted.id.length > 0, true)
   })
 
+  it("manages retainer clients and cycle hour logging via API routes", async () => {
+    const createResponse = await fetch(`${baseUrl}/api/clients`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Retainer Client",
+        email: "retainer@example.com",
+        company: "Retainer Studio",
+        isRetainer: true,
+        retainerHours: 30,
+        retainerRate: 120,
+        retainerCycleDay: 5,
+      }),
+    })
+    assert.equal(createResponse.status, 201)
+    const created = (await createResponse.json()) as {
+      id: string
+      isRetainer: boolean
+      retainerHours: number
+    }
+    assert.equal(created.isRetainer, true)
+    assert.equal(created.retainerHours, 30)
+
+    const getResponse = await fetch(`${baseUrl}/api/clients/${created.id}`)
+    assert.equal(getResponse.status, 200)
+    const detail = (await getResponse.json()) as {
+      retainerSummary?: {
+        hoursContracted: number
+        hoursLogged: number
+        estimatedValue: number
+      }
+    }
+    assert.ok(detail.retainerSummary)
+    assert.equal(detail.retainerSummary.hoursContracted, 30)
+    assert.equal(detail.retainerSummary.hoursLogged, 0)
+    assert.equal(detail.retainerSummary.estimatedValue, 3600)
+
+    const hoursResponse = await fetch(
+      `${baseUrl}/api/clients/${created.id}/retainer-hours`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hoursLogged: 18.5 }),
+      },
+    )
+    assert.equal(hoursResponse.status, 200)
+    const updated = (await hoursResponse.json()) as {
+      retainerSummary?: { hoursLogged: number; utilizationPercent: number }
+    }
+    assert.equal(updated.retainerSummary?.hoursLogged, 18.5)
+    assert.equal(updated.retainerSummary?.utilizationPercent, 62)
+
+    const invalidRetainerResponse = await fetch(`${baseUrl}/api/clients`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Bad Retainer",
+        email: "bad@example.com",
+        isRetainer: true,
+        retainerHours: 10,
+      }),
+    })
+    assert.equal(invalidRetainerResponse.status, 400)
+  })
+
   it("reverts clients back to leads via API routes", async () => {
     // A converted lead reverts onto its original lead record.
     const leadResponse = await fetch(`${baseUrl}/api/leads`, {

@@ -597,6 +597,21 @@ export async function updateClient(
   return parseJsonResponse<Client>(response)
 }
 
+export async function updateRetainerHours(
+  id: string,
+  hoursLogged: number,
+): Promise<ClientWithProjects> {
+  const response = await fetch(
+    `/api/clients/${encodeURIComponent(id)}/retainer-hours`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hoursLogged }),
+    },
+  )
+  return parseJsonResponse<ClientWithProjects>(response)
+}
+
 export async function deleteClient(id: string): Promise<void> {
   const response = await fetch(`/api/clients/${encodeURIComponent(id)}`, {
     method: "DELETE",
