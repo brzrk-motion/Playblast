@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import {
   ArrowLeft,
+  Archive,
+  ArchiveRestore,
   CalendarDays,
   CheckCircle2,
   Circle,
   Film,
   MessageSquare,
+  MoreHorizontal,
   Pencil,
   Plus,
   Trash2,
@@ -25,7 +28,15 @@ import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ArchiveProjectDialog } from "@/components/project/archive-project-dialog"
+import { ProjectArchivedBadge } from "@/components/project/project-archived-badge"
 import { DeliverableStatusBadge } from "@/components/project/deliverable-status-badge"
 import { ProjectClientInfoBlock } from "@/components/project/project-client-info-block"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
@@ -44,12 +55,14 @@ import {
 import {
   createDeliverable,
   createMilestone,
+  archiveProject,
   deleteDeliverable,
   deleteMilestone,
   listDeliverables,
   listMilestones,
   listProjectServices,
   getProject,
+  unarchiveProject,
   updateDeliverable,
   updateMilestone,
   updateProject,
@@ -62,6 +75,7 @@ import {
   formatCurrency,
 } from "@/lib/budget"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { isProjectArchived } from "@/lib/projects"
 import { cn } from "@/lib/utils"
 import { useProjectPageHeader } from "@/hooks/use-project-page-header"
 import type { DeliverableSummary } from "@/types/deliverable"
@@ -114,6 +128,9 @@ export function ProjectOverviewPage() {
   const [newMilestoneDate, setNewMilestoneDate] = useState("")
   const [addingMilestone, setAddingMilestone] = useState(false)
   const [viewClientId, setViewClientId] = useState<string | null>(null)
+  const [archiveOpen, setArchiveOpen] = useState(false)
+  const [archiving, setArchiving] = useState(false)
+  const [unarchiving, setUnarchiving] = useState(false)
 
   useProjectPageHeader(projectId, project)
 
@@ -219,6 +236,43 @@ export function ProjectOverviewPage() {
       showErrorToast(message)
     } finally {
       setSavingProject(false)
+    }
+  }
+
+  async function handleArchiveConfirm() {
+    if (!project) {
+      return
+    }
+
+    setArchiving(true)
+    try {
+      await archiveProject(project.id)
+      const refreshed = await getProject(project.id)
+      setProject(refreshed)
+      setArchiveOpen(false)
+      showSuccessToast("Project archived")
+    } catch (err) {
+      showErrorToast(humanizeApiError(err, "Failed to archive project"))
+    } finally {
+      setArchiving(false)
+    }
+  }
+
+  async function handleUnarchive() {
+    if (!project) {
+      return
+    }
+
+    setUnarchiving(true)
+    try {
+      await unarchiveProject(project.id)
+      const refreshed = await getProject(project.id)
+      setProject(refreshed)
+      showSuccessToast("Project restored")
+    } catch (err) {
+      showErrorToast(humanizeApiError(err, "Failed to restore project"))
+    } finally {
+      setUnarchiving(false)
     }
   }
 
@@ -386,6 +440,7 @@ export function ProjectOverviewPage() {
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="type-page-title">{project.name}</h2>
+              {isProjectArchived(project) ? <ProjectArchivedBadge /> : null}
               <ProjectStatusBadge status={project.status} />
             </div>
             {project.description ? (
@@ -394,10 +449,35 @@ export function ProjectOverviewPage() {
               </p>
             ) : null}
           </div>
-          <Button variant="outline" onClick={() => setEditOpen(true)}>
-            <Pencil />
-            Edit project
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => setEditOpen(true)}>
+              <Pencil />
+              Edit project
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="Project actions">
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isProjectArchived(project) ? (
+                  <DropdownMenuItem
+                    disabled={unarchiving}
+                    onClick={() => void handleUnarchive()}
+                  >
+                    {unarchiving ? <Spinner className="size-4" /> : <ArchiveRestore />}
+                    Unarchive project
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => setArchiveOpen(true)}>
+                    <Archive />
+                    Archive project
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
         <ProjectClientInfoBlock
           projectId={project.id}
@@ -724,6 +804,14 @@ export function ProjectOverviewPage() {
         submitting={savingProject}
         error={projectError}
         onSubmit={handleSaveProject}
+      />
+
+      <ArchiveProjectDialog
+        projectName={project.name}
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        archiving={archiving}
+        onConfirm={() => void handleArchiveConfirm()}
       />
 
       <DeliverableDialog

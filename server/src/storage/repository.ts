@@ -59,6 +59,7 @@ interface ProjectRow {
   startDate: string | null
   endDate: string | null
   budget: string | null
+  archived_at: string | null
 }
 
 interface DeliverableRow {
@@ -174,6 +175,7 @@ function rowToProject(row: ProjectRow): Project {
   if (row.startDate) project.startDate = row.startDate
   if (row.endDate) project.endDate = row.endDate
   if (row.budget) project.budget = JSON.parse(row.budget) as ProjectBudget
+  if (row.archived_at) project.archivedAt = row.archived_at
 
   return project
 }
@@ -279,17 +281,45 @@ function countOpenComments(db: Database, versionIds: string[]): number {
 
 // --- Projects ---------------------------------------------------------------
 
-export function listProjects(): Project[] {
+export interface ListProjectsOptions {
+  /** When true, include archived projects alongside active ones. */
+  includeArchived?: boolean
+  /** When true, return only archived projects. */
+  archivedOnly?: boolean
+}
+
+function buildProjectArchiveClause(options?: ListProjectsOptions): {
+  clause: string
+  params: unknown[]
+} {
+  if (options?.archivedOnly) {
+    return { clause: "WHERE archived_at IS NOT NULL", params: [] }
+  }
+
+  if (options?.includeArchived) {
+    return { clause: "", params: [] }
+  }
+
+  return { clause: "WHERE archived_at IS NULL", params: [] }
+}
+
+export function listProjects(options?: ListProjectsOptions): Project[] {
+  const { clause, params } = buildProjectArchiveClause(options)
   const rows = getDb()
-    .prepare("SELECT * FROM projects ORDER BY createdAt ASC")
-    .all() as ProjectRow[]
+    .prepare(`SELECT * FROM projects ${clause} ORDER BY createdAt ASC`)
+    .all(...params) as ProjectRow[]
 
   return rows.map(rowToProject)
 }
 
-export function listProjectSummaries(clientId?: string): ProjectSummary[] {
+export function listProjectSummaries(
+  clientId?: string,
+  options?: ListProjectsOptions,
+): ProjectSummary[] {
   const db = getDb()
-  const projects = clientId ? listProjectsByClientId(clientId) : listProjects()
+  const projects = clientId
+    ? listProjectsByClientId(clientId)
+    : listProjects(options)
 
   return projects.map((project) => {
     const deliverables = listDeliverables(project.id)
@@ -392,8 +422,8 @@ export function createProject(input: CreateProjectInput): Project {
     getDb()
       .prepare(
         `INSERT INTO projects (
-          id, name, createdAt, status, client, clientId, description, startDate, endDate, budget
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, name, createdAt, status, client, clientId, description, startDate, endDate, budget, archived_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         project.id,
@@ -406,6 +436,7 @@ export function createProject(input: CreateProjectInput): Project {
         project.startDate ?? null,
         project.endDate ?? null,
         project.budget ? JSON.stringify(project.budget) : null,
+        null,
       )
 
     return project
@@ -441,7 +472,7 @@ export function updateProject(
       .prepare(
         `UPDATE projects
          SET name = ?, status = ?, client = ?, clientId = ?, description = ?,
-             startDate = ?, endDate = ?, budget = ?
+             startDate = ?, endDate = ?, budget = ?, archived_at = ?
          WHERE id = ?`,
       )
       .run(
@@ -453,6 +484,7 @@ export function updateProject(
         project.startDate ?? null,
         project.endDate ?? null,
         project.budget ? JSON.stringify(project.budget) : null,
+        project.archivedAt ?? null,
         id,
       )
 
@@ -478,6 +510,40 @@ export function deleteProject(id: string): boolean {
   return withTransaction(() => {
     const result = getDb().prepare("DELETE FROM projects WHERE id = ?").run(id)
     return result.changes > 0
+  })
+}
+
+export function archiveProject(id: string): Project | undefined {
+  return withTransaction(() => {
+    const project = getProject(id)
+    if (!project || project.archivedAt) {
+      return project
+    }
+
+    project.archivedAt = new Date().toISOString()
+
+    getDb()
+      .prepare("UPDATE projects SET archived_at = ? WHERE id = ?")
+      .run(project.archivedAt, id)
+
+    return project
+  })
+}
+
+export function unarchiveProject(id: string): Project | undefined {
+  return withTransaction(() => {
+    const project = getProject(id)
+    if (!project || !project.archivedAt) {
+      return project
+    }
+
+    delete project.archivedAt
+
+    getDb()
+      .prepare("UPDATE projects SET archived_at = NULL WHERE id = ?")
+      .run(id)
+
+    return project
   })
 }
 
@@ -1418,7 +1484,7 @@ export function countNonArchivedProjectsByClientId(clientId: string): number {
   const row = getDb()
     .prepare(
       `SELECT COUNT(*) AS count FROM projects
-       WHERE clientId = ? AND status != 'archived'`,
+       WHERE clientId = ? AND archived_at IS NULL`,
     )
     .get(clientId) as { count: number }
 

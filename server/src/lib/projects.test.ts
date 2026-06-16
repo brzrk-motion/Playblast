@@ -63,6 +63,7 @@ test("parseDashboardFilter accepts open comments and project status values", () 
     type: "status",
     status: "active",
   })
+  assert.deepEqual(parseDashboardFilter("archived"), { type: "archived" })
   assert.equal(parseDashboardFilter(null), null)
   assert.equal(parseDashboardFilter("invalid"), null)
 })
@@ -73,6 +74,7 @@ test("dashboardFilterToParam round-trips filter values", () => {
     dashboardFilterToParam({ type: "status", status: "on_hold" }),
     "on_hold",
   )
+  assert.equal(dashboardFilterToParam({ type: "archived" }), "archived")
   assert.equal(dashboardFilterToParam(null), null)
 })
 

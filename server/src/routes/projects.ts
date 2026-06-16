@@ -6,6 +6,7 @@ import {
   validateProjectParams,
 } from "../middleware/validateParams.js"
 import {
+  archiveProject,
   createProject,
   deleteProject,
   getClient,
@@ -13,6 +14,7 @@ import {
   getProjectWithClient,
   listProjectSummaries,
   listVersionsByProject,
+  unarchiveProject,
   updateProject,
 } from "../storage/index.js"
 import {
@@ -25,11 +27,31 @@ import { getParam } from "../utils/params.js"
 
 const projectsRouter = Router()
 
+function parseListProjectsOptions(query: Record<string, unknown>) {
+  const archived =
+    typeof query.archived === "string" ? query.archived.trim() : undefined
+  const includeArchived =
+    typeof query.includeArchived === "string"
+      ? query.includeArchived.trim()
+      : undefined
+
+  if (archived === "true") {
+    return { archivedOnly: true as const }
+  }
+
+  if (includeArchived === "true") {
+    return { includeArchived: true as const }
+  }
+
+  return undefined
+}
+
 projectsRouter.get("/", (req, res) => {
   const clientId =
     typeof req.query.clientId === "string" ? req.query.clientId.trim() : undefined
+  const listOptions = parseListProjectsOptions(req.query)
 
-  res.json(listProjectSummaries(clientId || undefined))
+  res.json(listProjectSummaries(clientId || undefined, listOptions))
 })
 
 projectsRouter.post("/", (req, res) => {
@@ -52,7 +74,7 @@ projectsRouter.post("/", (req, res) => {
   const status = req.body?.status
   if (status !== undefined && !isProjectStatus(status)) {
     res.status(400).json({
-      error: "status must be one of: active, on_hold, completed, archived.",
+      error: "status must be one of: active, on_hold, completed.",
     })
     return
   }
@@ -135,6 +157,36 @@ projectsRouter.patch("/:projectId", (req, res) => {
   const updated = updateProject(projectId, parsed.input)
   res.json(updated)
 })
+
+projectsRouter.post("/:projectId/archive", validateProjectIdParam, (req, res) => {
+  const projectId = getParam(req.params.projectId)
+  const project = getProject(projectId)
+
+  if (!project) {
+    res.status(404).json({ error: "Project not found." })
+    return
+  }
+
+  const archived = archiveProject(projectId)
+  res.json(archived)
+})
+
+projectsRouter.post(
+  "/:projectId/unarchive",
+  validateProjectIdParam,
+  (req, res) => {
+    const projectId = getParam(req.params.projectId)
+    const project = getProject(projectId)
+
+    if (!project) {
+      res.status(404).json({ error: "Project not found." })
+      return
+    }
+
+    const restored = unarchiveProject(projectId)
+    res.json(restored)
+  },
+)
 
 projectsRouter.delete(
   "/:projectId",

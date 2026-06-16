@@ -50,7 +50,8 @@ CREATE TABLE IF NOT EXISTS projects (
   description TEXT,
   startDate TEXT,
   endDate TEXT,
-  budget TEXT
+  budget TEXT,
+  archived_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS deliverables (

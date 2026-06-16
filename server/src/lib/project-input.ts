@@ -159,7 +159,7 @@ export function parseProjectPatch(
   if (raw.status !== undefined) {
     if (!isProjectStatus(raw.status)) {
       return {
-        error: "status must be one of: active, on_hold, completed, archived.",
+        error: "status must be one of: active, on_hold, completed.",
       }
     }
     input.status = raw.status

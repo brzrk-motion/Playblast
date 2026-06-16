@@ -1,13 +1,12 @@
 import type { Client } from "./client.js"
 import type { DeliverableStatus } from "./deliverable.js"
 
-export type ProjectStatus = "active" | "on_hold" | "completed" | "archived"
+export type ProjectStatus = "active" | "on_hold" | "completed"
 
 export const PROJECT_STATUSES: ProjectStatus[] = [
   "active",
   "on_hold",
   "completed",
-  "archived",
 ]
 
 export function isProjectStatus(value: unknown): value is ProjectStatus {
@@ -51,6 +50,12 @@ export interface Project {
   /** ISO date string. */
   endDate?: string
   budget?: ProjectBudget
+  /** ISO datetime when the project was archived; null/undefined when active. */
+  archivedAt?: string | null
+}
+
+export function isProjectArchived(project: Pick<Project, "archivedAt">): boolean {
+  return project.archivedAt != null && project.archivedAt !== ""
 }
 
 /** Project detail with the linked client record populated (or null). */

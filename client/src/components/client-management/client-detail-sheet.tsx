@@ -28,6 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { deleteClient, getClient, updateProject } from "@/lib/api"
 import { formatDateAdded } from "@/lib/dates"
+import { isProjectArchived } from "@/lib/projects"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import type { Client, ClientWithProjects } from "@/types/client"
 import type { Project } from "@/types/project"
@@ -149,7 +150,7 @@ export function ClientDetailSheet({
   const [unlinkingAll, setUnlinkingAll] = useState(false)
 
   const hasActiveProjects = useMemo(
-    () => client?.projects.some((project) => project.status !== "archived") ?? false,
+    () => client?.projects.some((project) => !isProjectArchived(project)) ?? false,
     [client?.projects],
   )
 

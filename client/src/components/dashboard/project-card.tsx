@@ -1,11 +1,21 @@
 import { Link } from "react-router-dom"
+import { Archive, ArchiveRestore, MoreHorizontal } from "lucide-react"
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ProjectArchivedBadge } from "@/components/project/project-archived-badge"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
+import { Spinner } from "@/components/ui/spinner"
 import {
   ESTIMATE_BUDGET_STATUS_DOT_STYLES,
   ESTIMATE_BUDGET_STATUS_LABELS,
@@ -80,38 +90,95 @@ interface DashboardProjectCardProps {
   projectId: string
   name: string
   status: Parameters<typeof ProjectStatusBadge>[0]["status"]
+  archived?: boolean
   clientName?: string
   budget?: ProjectBudget
   servicesEstimate?: number
   deliverableCount: number
   compact?: boolean
+  onArchive?: () => void
+  onUnarchive?: () => void
+  actionPending?: boolean
 }
 
 export function DashboardProjectCard({
   projectId,
   name,
   status,
+  archived = false,
   clientName,
   budget,
   servicesEstimate,
   deliverableCount,
   compact = false,
+  onArchive,
+  onUnarchive,
+  actionPending = false,
 }: DashboardProjectCardProps) {
   const financials = (
     <ProjectCardFinancials budget={budget} servicesEstimate={servicesEstimate} />
   )
+  const hasMenu = Boolean(onArchive || onUnarchive)
 
   return (
-    <Link
-      to={`/projects/${encodeURIComponent(projectId)}`}
-      className="block rounded-xl focus-ring"
-    >
-      <Card className="interactive-card h-full border-muted">
+    <Card className="interactive-card relative h-full border-muted">
+      {hasMenu ? (
+        <div className="absolute top-2 right-2 z-10">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8"
+                aria-label={`Actions for ${name}`}
+                disabled={actionPending}
+                onClick={(event) => event.stopPropagation()}
+              >
+                {actionPending ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <MoreHorizontal className="size-4" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {onArchive ? (
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.preventDefault()
+                    onArchive()
+                  }}
+                >
+                  <Archive />
+                  Archive project
+                </DropdownMenuItem>
+              ) : null}
+              {onUnarchive ? (
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.preventDefault()
+                    onUnarchive()
+                  }}
+                >
+                  <ArchiveRestore />
+                  Unarchive project
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ) : null}
+      <Link
+        to={`/projects/${encodeURIComponent(projectId)}`}
+        className="block rounded-xl focus-ring"
+      >
         <CardHeader className={compact ? "gap-2 pb-2" : "pb-3"}>
           <CardTitle
             className={cn(
               "leading-snug",
               compact ? "text-sm" : "text-base",
+              hasMenu && "pr-8",
             )}
           >
             {name}
@@ -119,7 +186,10 @@ export function DashboardProjectCard({
           {clientName ? (
             <p className="truncate text-xs text-muted-foreground">{clientName}</p>
           ) : null}
-          <ProjectStatusBadge status={status} />
+          <div className="flex flex-wrap items-center gap-1.5">
+            {archived ? <ProjectArchivedBadge /> : null}
+            <ProjectStatusBadge status={status} />
+          </div>
         </CardHeader>
         <CardContent
           className={cn(
@@ -133,7 +203,7 @@ export function DashboardProjectCard({
             {deliverableCount === 1 ? "deliverable" : "deliverables"}
           </p>
         </CardContent>
-      </Card>
-    </Link>
+      </Link>
+    </Card>
   )
 }

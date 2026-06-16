@@ -126,6 +126,14 @@ function runMigrations(db: Database.Database): void {
     }
 
     const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf8")
+
+    if (
+      id === "006_project_archived_at" &&
+      !tableHasColumn(db, "projects", "archived_at")
+    ) {
+      db.exec("ALTER TABLE projects ADD COLUMN archived_at TEXT")
+    }
+
     db.exec(sql)
 
     if (id === "001_client_management" && !tableHasColumn(db, "projects", "clientId")) {
