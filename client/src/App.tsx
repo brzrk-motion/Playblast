@@ -10,6 +10,7 @@ import { ProjectOverviewPage } from "@/pages/project-overview"
 import { ProjectsPage } from "@/pages/projects"
 import { ServicesPage } from "@/pages/services"
 import { SettingsPage } from "@/pages/settings"
+import { TimesheetPage } from "@/pages/timesheet"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
@@ -25,6 +26,7 @@ function App() {
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="clients" element={<ClientsPage />} />
               <Route path="services" element={<ServicesPage />} />
+              <Route path="timesheet" element={<TimesheetPage />} />
               <Route path="projects/:projectId" element={<ProjectOverviewPage />} />
               <Route
                 path="projects/:projectId/deliverables/:deliverableId"

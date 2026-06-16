@@ -437,6 +437,146 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(deleteTaskResponse.status, 204)
   })
 
+  it("returns weekly timesheet grouped by project and task", async () => {
+    await createProject("ts-project-a", "Alpha Spot")
+    await createProject("ts-project-b", "Beta Reel")
+
+    async function createTaskWithLog(
+      projectId: string,
+      milestoneName: string,
+      taskName: string,
+      durationHours: number,
+      loggedAt: string,
+    ) {
+      const milestoneResponse = await fetch(
+        `${baseUrl}/api/projects/${projectId}/milestones`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: milestoneName }),
+        },
+      )
+      const milestone = (await milestoneResponse.json()) as { id: string }
+
+      const taskResponse = await fetch(
+        `${baseUrl}/api/milestones/${milestone.id}/tasks`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: taskName }),
+        },
+      )
+      const task = (await taskResponse.json()) as { id: string }
+
+      const logResponse = await fetch(
+        `${baseUrl}/api/tasks/${task.id}/time-logs`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ durationHours, loggedAt }),
+        },
+      )
+      assert.equal(logResponse.status, 201)
+      return task
+    }
+
+    const weekStart = "2026-06-15"
+    const blockingTask = await createTaskWithLog(
+      "ts-project-a",
+      "Animation",
+      "Blocking",
+      2,
+      "2026-06-16T12:00:00.000Z",
+    )
+    const taskB = await createTaskWithLog(
+      "ts-project-a",
+      "Animation",
+      "Polish",
+      1.5,
+      "2026-06-17T12:00:00.000Z",
+    )
+    await createTaskWithLog(
+      "ts-project-b",
+      "Comp",
+      "Grade",
+      3,
+      "2026-06-16T12:00:00.000Z",
+    )
+    const sundayLogResponse = await fetch(
+      `${baseUrl}/api/tasks/${blockingTask.id}/time-logs`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          durationHours: 4,
+          loggedAt: "2026-06-21T12:00:00.000Z",
+        }),
+      },
+    )
+    assert.equal(sundayLogResponse.status, 201)
+
+    const sheetResponse = await fetch(
+      `${baseUrl}/api/timesheet?weekStart=${weekStart}`,
+    )
+    assert.equal(sheetResponse.status, 200)
+    const sheet = (await sheetResponse.json()) as {
+      weekStart: string
+      weekEnd: string
+      grandTotal: number
+      dayTotals: number[]
+      projects: Array<{
+        projectName: string
+        weekTotal: number
+        tasks: Array<{ taskName: string; weekTotal: number; days: number[] }>
+      }>
+    }
+
+    assert.equal(sheet.weekStart, weekStart)
+    assert.equal(sheet.weekEnd, "2026-06-21")
+    assert.equal(sheet.grandTotal, 10.5)
+    assert.equal(sheet.dayTotals[1], 5)
+    assert.equal(sheet.dayTotals[2], 1.5)
+    assert.equal(sheet.dayTotals[6], 4)
+    assert.equal(sheet.projects.length, 2)
+
+    const alpha = sheet.projects.find((p) => p.projectName === "Alpha Spot")
+    assert.ok(alpha)
+    assert.equal(alpha.weekTotal, 7.5)
+    assert.equal(alpha.tasks.length, 2)
+
+    const blocking = alpha.tasks.find((t) => t.taskName === "Blocking")
+    assert.ok(blocking)
+    assert.equal(blocking.weekTotal, 6)
+    assert.equal(blocking.days[1], 2)
+    assert.equal(blocking.days[6], 4)
+
+    const updateResponse = await fetch(
+      `${baseUrl}/api/tasks/${taskB.id}/time-logs`,
+    )
+    const entries = (await updateResponse.json()) as Array<{ id: string }>
+    const patchResponse = await fetch(
+      `${baseUrl}/api/time-logs/${entries[0].id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ durationHours: 2, notes: "Adjusted" }),
+      },
+    )
+    assert.equal(patchResponse.status, 200)
+    const patched = (await patchResponse.json()) as {
+      durationHours: number
+      notes?: string
+    }
+    assert.equal(patched.durationHours, 2)
+    assert.equal(patched.notes, "Adjusted")
+
+    const refreshedResponse = await fetch(
+      `${baseUrl}/api/timesheet?weekStart=${weekStart}`,
+    )
+    const refreshed = (await refreshedResponse.json()) as { grandTotal: number }
+    assert.equal(refreshed.grandTotal, 11)
+  })
+
   it("returns project hours summary with estimates and logged time", async () => {
     await createProject("hours-summary", "Hours Summary Project")
 

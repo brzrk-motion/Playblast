@@ -14,6 +14,7 @@ import projectsRouter from "./projects.js"
 import servicesRouter from "./services.js"
 import tasksRouter, { taskByIdRouter } from "./tasks.js"
 import timeLogsRouter, { timeLogByIdRouter } from "./time-logs.js"
+import timesheetRouter from "./timesheet.js"
 import uploadRouter from "./upload.js"
 import versionsRouter from "./versions.js"
 
@@ -42,6 +43,7 @@ apiRouter.use("/milestones/:milestoneId/tasks", tasksRouter)
 apiRouter.use("/tasks", taskByIdRouter)
 apiRouter.use("/tasks/:taskId/time-logs", timeLogsRouter)
 apiRouter.use("/time-logs", timeLogByIdRouter)
+apiRouter.use("/timesheet", timesheetRouter)
 apiRouter.use("/versions", versionsRouter)
 apiRouter.use("/comments", commentByIdRouter)
 apiRouter.use(

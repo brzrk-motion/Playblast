@@ -19,6 +19,7 @@ import type { CreateLeadInput, Lead, LeadWithContactLog, UpdateLeadInput } from 
 import type { Milestone } from "@/types/milestone"
 import type { Task } from "@/types/task"
 import type { TimeLog } from "@/types/time-log"
+import type { TimesheetWeek } from "@/types/timesheet"
 import type { ProjectHoursSummary } from "@/types/hours-summary"
 import type {
   Project,
@@ -416,6 +417,35 @@ export async function deleteTimeLog(timeLogId: string): Promise<void> {
     { method: "DELETE" },
   )
   await expectOk(response)
+}
+
+export async function updateTimeLog(
+  timeLogId: string,
+  input: {
+    durationHours?: number
+    loggedAt?: string
+    notes?: string | null
+  },
+): Promise<TimeLog> {
+  const response = await fetch(
+    `/api/time-logs/${encodeURIComponent(timeLogId)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  )
+  return parseJsonResponse<TimeLog>(response)
+}
+
+export async function getWeeklyTimesheet(
+  weekStart?: string,
+): Promise<TimesheetWeek> {
+  const query = weekStart
+    ? `?weekStart=${encodeURIComponent(weekStart)}`
+    : ""
+  const response = await fetch(`/api/timesheet${query}`)
+  return parseJsonResponse<TimesheetWeek>(response)
 }
 
 export async function getProjectHoursSummary(

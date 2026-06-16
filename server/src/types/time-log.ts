@@ -14,3 +14,9 @@ export interface CreateTimeLogInput {
   loggedAt?: string
   notes?: string
 }
+
+export interface UpdateTimeLogInput {
+  durationHours?: number
+  loggedAt?: string
+  notes?: string | null
+}
