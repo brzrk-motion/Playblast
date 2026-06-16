@@ -3,6 +3,7 @@ import { Briefcase, Plus, X } from "lucide-react"
 import { AddProjectServicesModal } from "@/components/project/add-project-services-modal"
 import { ProjectServiceHoursControl } from "@/components/project/project-service-hours-control"
 import { ProjectCostEstimatePanel } from "@/components/project/project-cost-estimate-panel"
+import { ProjectHoursSummaryPanel } from "@/components/project/project-hours-summary-panel"
 import { ServiceTypeBadge } from "@/components/services/service-type-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,6 +29,7 @@ interface ProjectServicesSectionProps {
   projectServices?: ProjectServiceWithDetails[]
   onProjectServicesChange?: (services: ProjectServiceWithDetails[]) => void
   servicesLoading?: boolean
+  hoursSummaryRefreshKey?: number
 }
 
 export function ProjectServicesSection({
@@ -36,6 +38,7 @@ export function ProjectServicesSection({
   projectServices: controlledProjectServices,
   onProjectServicesChange,
   servicesLoading: controlledLoading,
+  hoursSummaryRefreshKey = 0,
 }: ProjectServicesSectionProps) {
   const [internalProjectServices, setInternalProjectServices] = useState<
     ProjectServiceWithDetails[]
@@ -266,10 +269,16 @@ export function ProjectServicesSection({
           )}
 
           {!loading && !error && (
-            <ProjectCostEstimatePanel
-              projectServices={projectServices}
-              currency={currency}
-            />
+            <>
+              <ProjectHoursSummaryPanel
+                projectId={projectId}
+                refreshKey={hoursSummaryRefreshKey}
+              />
+              <ProjectCostEstimatePanel
+                projectServices={projectServices}
+                currency={currency}
+              />
+            </>
           )}
         </CardContent>
       </Card>

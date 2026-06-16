@@ -68,6 +68,8 @@ export {
   removeProjectService,
   updateProjectService,
   getTotalLoggedHours,
+  getProjectLoggedHours,
+  getProjectHoursSummary,
   revertClientToLead,
   updateClient,
   upsertRetainerCycleHours,

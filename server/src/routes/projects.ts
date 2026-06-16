@@ -12,6 +12,7 @@ import {
   duplicateProject,
   getClient,
   getProject,
+  getProjectHoursSummary,
   getProjectWithClient,
   listProjectSummaries,
   listTasksByProject,
@@ -258,6 +259,22 @@ projectsRouter.get(
     }
 
     res.json(listTasksByProject(projectId))
+  },
+)
+
+projectsRouter.get(
+  "/:projectId/hours-summary",
+  validateProjectParams,
+  (req, res) => {
+    const projectId = getParam(req.params.projectId)
+    const project = getProject(projectId)
+
+    if (!project) {
+      res.status(404).json({ error: "Project not found." })
+      return
+    }
+
+    res.json(getProjectHoursSummary(projectId))
   },
 )
 

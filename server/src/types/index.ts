@@ -51,6 +51,10 @@ export type {
   TimeLog,
 } from "./time-log.js"
 export type {
+  ProjectHoursSummary,
+  ProjectHoursSummaryLine,
+} from "./hours-summary.js"
+export type {
   BudgetLineItem,
   CreateProjectInput,
   Project,
