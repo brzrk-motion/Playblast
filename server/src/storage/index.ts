@@ -17,6 +17,7 @@ export {
   deleteLead,
   deleteMilestone,
   deleteProject,
+  duplicateProject,
   deleteService,
   ensureProject,
   getClient,

@@ -163,6 +163,14 @@ export async function deleteProject(id: string): Promise<void> {
   await expectOk(response)
 }
 
+export async function duplicateProject(id: string): Promise<Project> {
+  const response = await fetch(
+    `/api/projects/${encodeURIComponent(id)}/duplicate`,
+    { method: "POST" },
+  )
+  return parseJsonResponse<Project>(response)
+}
+
 // --- Deliverables -----------------------------------------------------------
 
 export async function listDeliverables(

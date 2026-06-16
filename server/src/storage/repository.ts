@@ -412,6 +412,101 @@ export function createProject(input: CreateProjectInput): Project {
   })
 }
 
+export function duplicateProject(sourceProjectId: string): Project | undefined {
+  return withTransaction(() => {
+    const source = getProject(sourceProjectId)
+    if (!source) {
+      return undefined
+    }
+
+    const now = new Date().toISOString()
+    const newProject: Project = {
+      id: randomUUID(),
+      name: `${source.name} (Copy)`,
+      createdAt: now,
+      status: "active",
+      ...(source.description ? { description: source.description } : {}),
+    }
+
+    getDb()
+      .prepare(
+        `INSERT INTO projects (
+          id, name, createdAt, status, client, clientId, description, startDate, endDate, budget
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        newProject.id,
+        newProject.name,
+        newProject.createdAt,
+        newProject.status,
+        null,
+        null,
+        newProject.description ?? null,
+        null,
+        null,
+        null,
+      )
+
+    const sourceServices = getDb()
+      .prepare(
+        `SELECT serviceId, quantity, overrideHours
+         FROM project_services
+         WHERE projectId = ?`,
+      )
+      .all(sourceProjectId) as Array<{
+      serviceId: string
+      quantity: number
+      overrideHours: number | null
+    }>
+
+    const insertService = getDb().prepare(
+      `INSERT INTO project_services (
+        id, projectId, serviceId, quantity, overrideHours, createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+
+    for (const service of sourceServices) {
+      insertService.run(
+        randomUUID(),
+        newProject.id,
+        service.serviceId,
+        service.quantity,
+        service.overrideHours,
+        now,
+      )
+    }
+
+    const sourceMilestones = getDb()
+      .prepare(
+        `SELECT name, "order"
+         FROM milestones
+         WHERE projectId = ?
+         ORDER BY "order" ASC`,
+      )
+      .all(sourceProjectId) as Array<{ name: string; order: number }>
+
+    const insertMilestone = getDb().prepare(
+      `INSERT INTO milestones (
+        id, projectId, name, dueDate, done, "order", createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+
+    for (const milestone of sourceMilestones) {
+      insertMilestone.run(
+        randomUUID(),
+        newProject.id,
+        milestone.name,
+        null,
+        0,
+        milestone.order,
+        now,
+      )
+    }
+
+    return newProject
+  })
+}
+
 export function updateProject(
   id: string,
   input: UpdateProjectInput,
