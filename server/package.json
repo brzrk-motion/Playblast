@@ -9,7 +9,7 @@
     "start": "node dist/index.js",
     "migrate": "tsx src/scripts/migrate.ts",
     "migrate:prod": "node dist/scripts/migrate.js",
-    "test": "tsx --test src/**/*.test.ts"
+    "test": "tsx --test --test-concurrency=1 src/**/*.test.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",

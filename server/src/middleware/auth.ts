@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto"
+import { createHash, timingSafeEqual } from "node:crypto"
 import type { NextFunction, Request, Response } from "express"
 import { isProduction } from "../config/env.js"
 
@@ -24,20 +24,17 @@ function readCredentials(): Credentials | null {
   return { username, password }
 }
 
-function safelyEqual(left: string, right: string): boolean {
-  const leftBuffer = Buffer.from(left)
-  const rightBuffer = Buffer.from(right)
-
-  if (leftBuffer.length !== rightBuffer.length) {
-    return false
-  }
-
-  return timingSafeEqual(leftBuffer, rightBuffer)
+function credentialDigest(username: string, password: string): Buffer {
+  return createHash("sha256")
+    .update(username)
+    .update("\0")
+    .update(password)
+    .digest()
 }
 
 function hasValidCredentials(request: Request, expected: Credentials): boolean {
   const header = request.header("authorization")
-  if (!header?.startsWith("Basic ")) {
+  if (!header || !/^Basic /i.test(header)) {
     return false
   }
 
@@ -55,10 +52,11 @@ function hasValidCredentials(request: Request, expected: Credentials): boolean {
     return false
   }
 
-  return (
-    safelyEqual(decoded.slice(0, separator), expected.username) &&
-    safelyEqual(decoded.slice(separator + 1), expected.password)
+  const supplied = credentialDigest(
+    decoded.slice(0, separator),
+    decoded.slice(separator + 1),
   )
+  return timingSafeEqual(supplied, credentialDigest(expected.username, expected.password))
 }
 
 export function createAuthMiddleware() {

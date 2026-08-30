@@ -38,4 +38,9 @@ describe("runtime config", () => {
     assert.equal(config.nodeEnv, "production")
     assert.equal(getMaxUploadSizeBytes(), 1024 * 1024 * 1024)
   })
+
+  it("rejects invalid runtime environments", () => {
+    process.env.NODE_ENV = "Production"
+    assert.throws(() => config.nodeEnv, /Invalid NODE_ENV value/)
+  })
 })

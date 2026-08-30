@@ -4,6 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises"
 import type { Server } from "node:http"
 import path from "node:path"
 import { createApp } from "../app.js"
+import { closeDatabase } from "../storage/db.js"
 
 let server: Server
 let baseUrl: string
@@ -37,6 +38,7 @@ after(async () => {
   await new Promise<void>((resolve, reject) => {
     server.close((err) => (err ? reject(err) : resolve()))
   })
+  closeDatabase()
   await rm(tempDir, { recursive: true, force: true })
 
   if (previousNodeEnv === undefined) delete process.env.NODE_ENV
@@ -59,6 +61,24 @@ describe("production authentication", () => {
     const response = await fetch(`${baseUrl}/api/projects`)
     assert.equal(response.status, 401)
     assert.equal(response.headers.get("www-authenticate"), 'Basic realm="Playblast pilot"')
+  })
+
+  it("rejects incorrect credentials", async () => {
+    const credentials = Buffer.from("pilot:wrong password").toString("base64")
+    const response = await fetch(`${baseUrl}/api/projects`, {
+      headers: { Authorization: `Basic ${credentials}` },
+    })
+    assert.equal(response.status, 401)
+  })
+
+  it("accepts the case-insensitive Basic scheme", async () => {
+    const credentials = Buffer.from(
+      "pilot:correct horse battery staple",
+    ).toString("base64")
+    const response = await fetch(`${baseUrl}/api/projects`, {
+      headers: { Authorization: `basic ${credentials}` },
+    })
+    assert.equal(response.status, 200)
   })
 
   it("accepts valid credentials", async () => {

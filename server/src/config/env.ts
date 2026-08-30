@@ -39,11 +39,15 @@ function parseMaxUploadSizeMb(value: string | undefined, fallback: number): numb
 }
 
 function parseNodeEnv(value: string | undefined): "production" | "development" {
+  if (value === undefined || value === "") {
+    return "development"
+  }
+
   if (value === "production" || value === "development") {
     return value
   }
 
-  return "development"
+  throw new Error(`Invalid NODE_ENV value: ${value}`)
 }
 
 export const config = {

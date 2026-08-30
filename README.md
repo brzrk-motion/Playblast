@@ -142,8 +142,9 @@ services:
       DB_PATH: /app/data/playblast.db
       # Max upload size in MB (default 5000 = ~5 GB)
       MAX_UPLOAD_SIZE: "5000"
-      PLAYBLAST_AUTH_USER: pilot
-      PLAYBLAST_AUTH_PASSWORD: "replace-with-a-long-random-password"
+      # Set these in an external .env file; do not commit credentials.
+      PLAYBLAST_AUTH_USER: ${PLAYBLAST_AUTH_USER:?Set PLAYBLAST_AUTH_USER}
+      PLAYBLAST_AUTH_PASSWORD: ${PLAYBLAST_AUTH_PASSWORD:?Set PLAYBLAST_AUTH_PASSWORD}
     volumes:
       - /volume1/docker/playblast/uploads:/app/uploads
       - /volume1/docker/playblast/data:/app/data
