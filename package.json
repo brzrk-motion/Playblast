@@ -12,6 +12,7 @@
     "lint": "npm run lint -w client",
     "test": "npm run test -w server && npm run test -w client",
     "build:deploy": "bash scripts/build-deploy.sh",
+    "verify:backup-restore": "bash scripts/validate-backup-restore.sh",
     "migrate": "npm run migrate -w server"
   },
   "devDependencies": {

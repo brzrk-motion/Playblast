@@ -186,6 +186,14 @@ Finally, in **Container Manager → Project → playblast**, **Stop** then **Sta
 
 Back up `/volume1/docker/playblast/data` (the SQLite database) and `/volume1/docker/playblast/uploads` (the videos) with **Hyper Backup** or a scheduled copy. Those two folders contain all application state.
 
+Before relying on that layout for a private pilot, run the filesystem backup/restore gate from a machine with Node dependencies installed:
+
+```bash
+npm run verify:backup-restore
+```
+
+This seeds a temporary `data/` + `uploads/` pair, archives them with `tar`, wipes the live dirs, restores the archive, then checks SQLite `integrity_check` and the restored upload bytes. It does **not** require Docker and does not read auth credentials. Container-volume or Synology Hyper Backup end-to-end checks remain a manual NAS step.
+
 ### Troubleshooting
 
 | Symptom | Likely cause / fix |
