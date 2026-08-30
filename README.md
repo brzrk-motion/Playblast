@@ -54,7 +54,7 @@ npm run dev -w server
 
 Playblast ships as a single Docker image that serves the API and the built client on one port, with two persistent volumes (`/app/uploads` for video files and `/app/data` for the SQLite database). That maps cleanly onto Synology's **Container Manager** (the renamed Docker package in DSM 7.2+).
 
-> **Security note:** Playblast has **no authentication** — anyone who can reach the port can view and comment. Keep it on your LAN or behind a VPN/reverse proxy with access control. Do **not** port-forward it to the public internet as-is.
+> **Security note:** Production containers require HTTP Basic Auth. Set `PLAYBLAST_AUTH_USER` and `PLAYBLAST_AUTH_PASSWORD` in the deployment environment; never commit them. Keep the service on a private network or behind HTTPS/VPN access. Basic Auth credentials must not be sent over plain public HTTP.
 
 ### Prerequisites
 
@@ -142,6 +142,8 @@ services:
       DB_PATH: /app/data/playblast.db
       # Max upload size in MB (default 5000 = ~5 GB)
       MAX_UPLOAD_SIZE: "5000"
+      PLAYBLAST_AUTH_USER: pilot
+      PLAYBLAST_AUTH_PASSWORD: "replace-with-a-long-random-password"
     volumes:
       - /volume1/docker/playblast/uploads:/app/uploads
       - /volume1/docker/playblast/data:/app/data
