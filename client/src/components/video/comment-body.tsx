@@ -5,17 +5,19 @@ export interface CommentBodyProps {
   body: string
   mentionNames?: string[]
   className?: string
+  id?: string
 }
 
 export function CommentBody({
   body,
   mentionNames = [],
   className,
+  id,
 }: CommentBodyProps) {
   const segments = parseCommentBodyWithMentions(body, mentionNames)
 
   return (
-    <p className={className}>
+    <p id={id} className={className}>
       {segments.map((segment, index) => {
         if (segment.type === "mention") {
           return (
