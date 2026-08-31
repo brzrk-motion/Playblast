@@ -3,6 +3,7 @@ import cors from "cors"
 import express, { type NextFunction, type Request, type Response } from "express"
 import path from "node:path"
 import { CLIENT_DIST } from "./config/paths.js"
+import { createAuthMiddleware } from "./middleware/auth.js"
 import { validateVideoParams } from "./middleware/validateParams.js"
 import apiRouter from "./routes/index.js"
 import videoRouter from "./routes/video.js"
@@ -18,6 +19,9 @@ export function createApp() {
     })
   })
 
+  // Keep health checks public, but protect every application route and the
+  // static UI when production credentials are configured.
+  app.use(createAuthMiddleware())
   app.use(cors())
   app.use(express.json())
   app.use("/api", apiRouter)
