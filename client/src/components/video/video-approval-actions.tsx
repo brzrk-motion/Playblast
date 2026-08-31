@@ -46,7 +46,15 @@ export function VideoApprovalActions({
   }
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
+    <div
+      className={cn("flex flex-wrap items-center gap-2", className)}
+      aria-busy={statusUpdating || undefined}
+    >
+      {statusUpdating ? (
+        <span className="sr-only" aria-live="polite">
+          Updating version status…
+        </span>
+      ) : null}
       {onMarkNeedsRevision ? (
         <Button
           type="button"
@@ -55,6 +63,7 @@ export function VideoApprovalActions({
           disabled={statusUpdating}
           onClick={onMarkNeedsRevision}
           title="Keyboard shortcut: R"
+          aria-label="Mark needs revision"
         >
           {statusUpdating ? <Spinner className="size-3.5" /> : <RotateCcw />}
           Needs revision
@@ -72,6 +81,9 @@ export function VideoApprovalActions({
               size="sm"
               disabled={statusUpdating}
               title="Keyboard shortcut: A"
+              aria-label="Approve version"
+              aria-haspopup="dialog"
+              aria-expanded={isApproveConfirmOpen}
             >
               {statusUpdating ? (
                 <Spinner className="size-3.5" />

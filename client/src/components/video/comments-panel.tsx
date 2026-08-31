@@ -489,8 +489,11 @@ export function CommentsPanel({
             <CommentsPanelSkeleton />
           </ScrollArea>
         ) : filteredComments.length === 0 ? (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center text-muted-foreground">
-            <MessageSquare className="size-7 opacity-50" />
+          <div
+            className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center text-muted-foreground"
+            role="status"
+          >
+            <MessageSquare className="size-7 opacity-50" aria-hidden="true" />
             <p className="text-sm">{emptyMessage}</p>
             {filter === "all" ? (
               <p className="text-xs">

@@ -56,6 +56,7 @@ export function ComparisonPane({
           "flex aspect-video items-center justify-center rounded-xl border border-dashed border-border bg-muted/30",
           className,
         )}
+        role="status"
       >
         <p className="text-sm text-muted-foreground">Select a version</p>
       </div>

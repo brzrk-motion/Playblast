@@ -2,9 +2,12 @@ import { useCallback, useEffect, useState } from "react"
 import { useEscapeKey } from "@/hooks/use-escape-key"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ActionErrorBanner } from "@/components/feedback/action-error-banner"
+import { EmptyState } from "@/components/feedback/empty-state"
+import { PageError } from "@/components/feedback/page-error"
+import { PageLoading } from "@/components/feedback/page-loading"
 import { VersionCard } from "@/components/project/version-card"
 import { VersionSelector } from "@/components/project/version-selector"
 import { VersionStatusBadge } from "@/components/project/version-status-badge"
@@ -23,6 +26,11 @@ import {
   updateDeliverable,
   updateVersionStatus,
 } from "@/lib/api"
+import {
+  resolveAsyncViewState,
+  reviewEmptyCopy,
+  reviewErrorTitle,
+} from "@/lib/review-feedback"
 import {
   humanizeApiError,
   showErrorToast,
@@ -325,61 +333,50 @@ export function DeliverablePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col gap-3">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="min-h-0 flex-1 rounded-xl" />
-      </div>
+      <PageLoading
+        className="flex min-h-0 flex-1 flex-col gap-3"
+        label="Loading deliverable…"
+      >
+        <Skeleton className="h-10 w-full" aria-hidden />
+        <Skeleton className="min-h-0 flex-1 rounded-xl" aria-hidden />
+      </PageLoading>
     )
   }
 
   if (error || !project || !deliverable) {
+    const viewState = resolveAsyncViewState({
+      loading: false,
+      error,
+      missing: !project || !deliverable,
+      surface: "deliverable",
+    })
+    const message =
+      viewState.status === "error" ? viewState.message : "Deliverable not found."
+
     return (
-      <div className="space-y-4">
-        <Button variant="ghost" asChild>
-          <Link to={`/projects/${projectId}`}>
-            <ArrowLeft />
-            Back to project
-          </Link>
-        </Button>
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardHeader>
-            <CardTitle>Deliverable unavailable</CardTitle>
-            <CardDescription className="text-destructive">
-              {error ?? "Deliverable not found."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setLoading(true)
-                setError(null)
-                void loadData()
-              }}
-            >
-              Try again
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <PageError
+        title={reviewErrorTitle("deliverable")}
+        message={message}
+        backLink={{ to: `/projects/${projectId}`, label: "Back to project" }}
+        onRetry={() => {
+          setLoading(true)
+          setError(null)
+          void loadData()
+        }}
+      />
     )
   }
+
+  const emptyVersions = reviewEmptyCopy("no_versions")
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col">
       {actionError && !focusMode ? (
-        <Card className="mb-2 shrink-0 border-destructive/30 bg-destructive/5">
-          <CardContent className="flex items-center justify-between gap-4 py-2">
-            <p className="text-sm text-destructive">{actionError}</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setActionError(null)}
-            >
-              Dismiss
-            </Button>
-          </CardContent>
-        </Card>
+        <ActionErrorBanner
+          className="mb-2"
+          message={actionError}
+          onDismiss={() => setActionError(null)}
+        />
       ) : null}
 
       {!focusMode ? (
@@ -557,15 +554,12 @@ export function DeliverablePage() {
             onFocusModeChange={setFocusMode}
           />
         ) : (
-          <Card className="flex flex-1 items-center justify-center border-dashed">
-            <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-              <Film className="size-10 text-muted-foreground" />
-              <div>
-                <p className="font-medium">No versions yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Upload your first video to start reviewing this deliverable.
-                </p>
-              </div>
+          <EmptyState
+            className="flex flex-1 justify-center"
+            icon={<Film className="size-10" />}
+            title={emptyVersions.title}
+            description={emptyVersions.description}
+            action={
               <Button
                 variant="outline"
                 size="sm"
@@ -574,8 +568,8 @@ export function DeliverablePage() {
                 <Upload />
                 Upload video
               </Button>
-            </CardContent>
-          </Card>
+            }
+          />
         )}
       </div>
     </div>

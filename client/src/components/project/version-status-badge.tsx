@@ -19,6 +19,7 @@ export function VersionStatusBadge({ status, className }: VersionStatusBadgeProp
     <Badge
       variant="outline"
       className={cn(STATUS_STYLES[status], className)}
+      aria-label={`Status: ${VERSION_STATUS_LABELS[status]}`}
     >
       {VERSION_STATUS_LABELS[status]}
     </Badge>
