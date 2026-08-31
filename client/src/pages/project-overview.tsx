@@ -26,6 +26,9 @@ import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { EmptyState } from "@/components/feedback/empty-state"
+import { PageError } from "@/components/feedback/page-error"
+import { PageLoading } from "@/components/feedback/page-loading"
 import { MilestoneTasksSection } from "@/components/milestone/milestone-tasks-section"
 import { ArchiveProjectDialog } from "@/components/project/archive-project-dialog"
 import { ProjectArchivedBadge } from "@/components/project/project-archived-badge"
@@ -74,6 +77,11 @@ import {
 } from "@/lib/budget"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import { isProjectArchived } from "@/lib/projects"
+import {
+  resolveAsyncViewState,
+  reviewEmptyCopy,
+  reviewErrorTitle,
+} from "@/lib/review-feedback"
 import { cn } from "@/lib/utils"
 import { useProjectPageHeader } from "@/hooks/use-project-page-header"
 import type { DeliverableSummary } from "@/types/deliverable"
@@ -419,48 +427,39 @@ export function ProjectOverviewPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-64" />
+      <PageLoading className="space-y-6" label="Loading project…">
+        <Skeleton className="h-8 w-64" aria-hidden />
         <div className="grid gap-4 md:grid-cols-3">
-          <Skeleton className="h-32 rounded-xl" />
-          <Skeleton className="h-32 rounded-xl" />
-          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" aria-hidden />
+          <Skeleton className="h-32 rounded-xl" aria-hidden />
+          <Skeleton className="h-32 rounded-xl" aria-hidden />
         </div>
-        <Skeleton className="h-48 rounded-xl" />
-      </div>
+        <Skeleton className="h-48 rounded-xl" aria-hidden />
+      </PageLoading>
     )
   }
 
   if (error || !project) {
+    const viewState = resolveAsyncViewState({
+      loading: false,
+      error,
+      missing: !project,
+      surface: "project",
+    })
+    const message =
+      viewState.status === "error" ? viewState.message : "Project not found."
+
     return (
-      <div className="space-y-4">
-        <Button variant="ghost" asChild>
-          <Link to="/projects">
-            <ArrowLeft />
-            Back to projects
-          </Link>
-        </Button>
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardHeader>
-            <CardTitle>Project unavailable</CardTitle>
-            <CardDescription className="text-destructive">
-              {error ?? "Project not found."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setLoading(true)
-                setError(null)
-                void loadData()
-              }}
-            >
-              Try again
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <PageError
+        title={reviewErrorTitle("project")}
+        message={message}
+        backLink={{ to: "/projects", label: "Back to projects" }}
+        onRetry={() => {
+          setLoading(true)
+          setError(null)
+          void loadData()
+        }}
+      />
     )
   }
 
@@ -775,24 +774,22 @@ export function ProjectOverviewPage() {
             </CardHeader>
             <CardContent>
               {deliverables.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-8 text-center">
-                  <Film className="size-8 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">No deliverables yet</p>
-                    <p className="text-sm text-muted-foreground">
-                      Create a deliverable to start uploading and reviewing videos.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => {
-                      setEditingDeliverable(null)
-                      setDeliverableDialogOpen(true)
-                    }}
-                  >
-                    <Plus />
-                    New Deliverable
-                  </Button>
-                </div>
+                <EmptyState
+                  compact
+                  icon={<Film className="size-8" />}
+                  {...reviewEmptyCopy("no_deliverables")}
+                  action={
+                    <Button
+                      onClick={() => {
+                        setEditingDeliverable(null)
+                        setDeliverableDialogOpen(true)
+                      }}
+                    >
+                      <Plus />
+                      New Deliverable
+                    </Button>
+                  }
+                />
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {deliverables.map((deliverable) => (

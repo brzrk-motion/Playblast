@@ -44,7 +44,7 @@ export function VersionSelector({
 
   if (versions.length === 0) {
     return (
-      <Button variant="outline" disabled>
+      <Button variant="outline" disabled aria-label="No versions available">
         <GitBranch />
         No versions
       </Button>
@@ -59,6 +59,7 @@ export function VersionSelector({
           size={compact ? "sm" : "default"}
           disabled={disabled}
           className={cn(compact && "h-8 gap-1.5 px-2.5")}
+          aria-label={`Selected version: ${selectedVersion?.label ?? "none"}`}
         >
           <GitBranch className={cn(compact && "size-3.5")} />
           <span className="max-w-[8rem] truncate sm:max-w-[12rem]">

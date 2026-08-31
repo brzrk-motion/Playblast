@@ -22,6 +22,9 @@ import {
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { EmptyState } from "@/components/feedback/empty-state"
+import { PageError } from "@/components/feedback/page-error"
+import { PageLoading } from "@/components/feedback/page-loading"
 import { ArchiveProjectDialog } from "@/components/project/archive-project-dialog"
 import { DashboardProjectCard } from "@/components/dashboard/project-card"
 import { MonthlyRevenueChart } from "@/components/dashboard/monthly-revenue-chart"
@@ -37,6 +40,11 @@ import {
   totalOpenComments,
 } from "@/lib/projects"
 import { getTimeOfDayGreeting } from "@/lib/greeting"
+import {
+  resolveAsyncViewState,
+  reviewEmptyCopy,
+  reviewErrorTitle,
+} from "@/lib/review-feedback"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import type { ProjectSummary } from "@/types/project"
 
@@ -194,6 +202,22 @@ export function DashboardPage() {
     }
   }
 
+  async function handleRetry() {
+    setLoading(true)
+    setError(null)
+    try {
+      await loadActiveProjects()
+    } catch (err) {
+      const message = humanizeApiError(err, "Failed to load projects")
+      setError(message)
+      showErrorToast(message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const viewState = resolveAsyncViewState({ loading, error, surface: "dashboard" })
+
   const statusCounts = useMemo(
     () => countProjectsByStatus(activeProjects),
     [activeProjects],
@@ -250,28 +274,32 @@ export function DashboardPage() {
       .slice(0, 5)
   }, [activeProjects])
 
-  if (loading) {
+  if (viewState.status === "loading") {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-64" />
+      <PageLoading className="space-y-6" label="Loading dashboard…">
+        <Skeleton className="h-10 w-64" aria-hidden />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <Skeleton key={index} className="h-28 rounded-xl" aria-hidden />
           ))}
         </div>
-        <Skeleton className="h-48 rounded-xl" />
-      </div>
+        <Skeleton className="h-48 rounded-xl" aria-hidden />
+      </PageLoading>
     )
   }
 
-  if (error) {
+  if (viewState.status === "error") {
     return (
-      <div className="flex flex-col items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-        <p className="text-sm text-destructive">{error}</p>
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/projects">Go to projects</Link>
-        </Button>
-      </div>
+      <PageError
+        title={reviewErrorTitle("dashboard")}
+        message={viewState.message}
+        onRetry={() => void handleRetry()}
+        secondaryAction={
+          <Button variant="outline" asChild>
+            <Link to="/projects">Go to projects</Link>
+          </Button>
+        }
+      />
     )
   }
 
@@ -461,11 +489,14 @@ export function DashboardPage() {
         </CardHeader>
         <CardContent>
           {view === "archived" && archivedLoading ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <PageLoading
+              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+              label="Loading archived projects…"
+            >
               {Array.from({ length: 3 }).map((_, index) => (
                 <Skeleton key={index} className="h-28 rounded-xl" aria-hidden />
               ))}
-            </div>
+            </PageLoading>
           ) : recentProjects.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {recentProjects.map((project) => (
@@ -497,24 +528,20 @@ export function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-8 text-center">
-              <FolderKanban className="size-8 text-muted-foreground" />
-              <div>
-                <p className="font-medium">
-                  {view === "archived" ? "No archived projects" : "No projects yet"}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {view === "archived"
-                    ? "Archived projects will appear here."
-                    : "Create your first project to start planning work."}
-                </p>
-              </div>
-              {view === "active" ? (
-                <Button asChild>
-                  <Link to="/projects">Go to projects</Link>
-                </Button>
-              ) : null}
-            </div>
+            <EmptyState
+              compact
+              icon={<FolderKanban className="size-8" />}
+              {...reviewEmptyCopy(
+                view === "archived" ? "no_archived_projects" : "no_projects",
+              )}
+              action={
+                view === "active" ? (
+                  <Button asChild>
+                    <Link to="/projects">Go to projects</Link>
+                  </Button>
+                ) : null
+              }
+            />
           )}
         </CardContent>
       </Card>

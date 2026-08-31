@@ -391,11 +391,23 @@ export function VersionUpload({
           Drag and drop a video or browse your files. Labels auto-increment by default.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4" aria-busy={uploading || undefined}>
         <div
           role="button"
-          tabIndex={0}
+          tabIndex={uploading ? -1 : 0}
+          aria-label={
+            uploading
+              ? "Upload in progress"
+              : dragActive
+                ? "Drop video to select it for upload"
+                : "Choose a video file to upload"
+          }
+          aria-describedby="version-upload-dropzone-hint"
+          aria-disabled={uploading || undefined}
           onKeyDown={(event) => {
+            if (uploading) {
+              return
+            }
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault()
               fileInputRef.current?.click()
@@ -404,13 +416,18 @@ export function VersionUpload({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => {
+            if (uploading) {
+              return
+            }
+            fileInputRef.current?.click()
+          }}
           className={cn(
             "focus-ring flex min-h-48 cursor-pointer flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed p-10 text-center transition-interactive sm:min-h-56",
             dragActive
               ? "scale-[1.01] border-primary bg-primary/10 ring-4 ring-primary/20"
               : "border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/30 active:bg-muted/40",
-            uploading && "pointer-events-none opacity-60",
+            uploading && "pointer-events-none cursor-not-allowed opacity-60",
           )}
         >
           <div
@@ -418,6 +435,7 @@ export function VersionUpload({
               "flex size-14 items-center justify-center rounded-full transition-colors",
               dragActive ? "bg-primary/15" : "bg-muted",
             )}
+            aria-hidden="true"
           >
             <Upload
               className={cn(
@@ -430,25 +448,46 @@ export function VersionUpload({
             <p className="text-base font-medium">
               {dragActive ? "Release to upload" : "Drop your video here"}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              or click to browse — MP4, MOV, and other video formats
+            <p
+              id="version-upload-dropzone-hint"
+              className="mt-1 text-sm text-muted-foreground"
+            >
+              or click or press Enter to browse — MP4, MOV, and other video formats
             </p>
           </div>
           <input
             ref={fileInputRef}
+            id="version-upload-file"
             type="file"
             accept="video/*"
             className="hidden"
             disabled={uploading}
+            aria-label="Video file"
+            tabIndex={-1}
             onChange={(event) => void handleFile(event.target.files?.[0] ?? null)}
           />
         </div>
 
+        <p className="sr-only" aria-live="polite">
+          {uploading
+            ? `Uploading ${versionLabel}…`
+            : dragActive
+              ? "Release to select the video file."
+              : selectedFile
+                ? probingFile
+                  ? `Selected ${selectedFile.name}. Reading metadata.`
+                  : `Selected ${selectedFile.name}.`
+                : null}
+        </p>
+
         {selectedFile ? (
-          <div className="space-y-3">
+          <div className="space-y-3" aria-label="Selected video file">
             <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
               <div className="flex min-w-0 items-center gap-2">
-                <FileVideo className="size-4 shrink-0 text-muted-foreground" />
+                <FileVideo
+                  className="size-4 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
+                />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{selectedFile.name}</p>
                   <p className="text-xs text-muted-foreground">
@@ -468,7 +507,7 @@ export function VersionUpload({
                   resetSelection()
                 }}
               >
-                <X />
+                <X aria-hidden="true" />
               </Button>
             </div>
 
@@ -531,27 +570,48 @@ export function VersionUpload({
         </div>
 
         {uploading ? (
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            role="group"
+            aria-labelledby="version-upload-progress-label"
+          >
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Uploading…</span>
-              <span className="font-medium">
+              <span
+                id="version-upload-progress-label"
+                className="text-muted-foreground"
+              >
+                Uploading…
+              </span>
+              <span className="font-medium" aria-hidden="true">
                 {uploadProgress ? `${uploadProgress.percent}%` : "Starting…"}
               </span>
             </div>
-            <Progress value={uploadProgress?.percent ?? 0} />
-            {uploadProgress ? (
-              <p className="text-xs text-muted-foreground">
-                {formatProgressDetail(uploadProgress)}
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">Preparing upload…</p>
-            )}
+            <Progress
+              value={uploadProgress?.percent ?? 0}
+              aria-label="Upload progress"
+              aria-valuetext={
+                uploadProgress
+                  ? `${uploadProgress.percent} percent, ${formatProgressDetail(uploadProgress)}`
+                  : "Starting upload"
+              }
+              aria-describedby="version-upload-progress-detail"
+            />
+            <p
+              id="version-upload-progress-detail"
+              className="text-xs text-muted-foreground"
+            >
+              {uploadProgress
+                ? formatProgressDetail(uploadProgress)
+                : "Preparing upload…"}
+            </p>
           </div>
         ) : null}
 
         {error ? (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-destructive">{error}</p>
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
             {selectedFile ? (
               <Button
                 type="button"
@@ -559,7 +619,7 @@ export function VersionUpload({
                 size="sm"
                 onClick={() => void handleUpload()}
               >
-                <RefreshCw className="size-4" />
+                <RefreshCw className="size-4" aria-hidden="true" />
                 Retry upload
               </Button>
             ) : null}
@@ -569,12 +629,13 @@ export function VersionUpload({
         <Button
           type="button"
           disabled={!selectedFile || uploading || !versionLabel}
+          aria-busy={uploading || undefined}
           onClick={() => void handleUpload()}
           className="w-full sm:w-auto"
         >
           {uploading ? (
             <>
-              <Spinner className="size-4" />
+              <Spinner className="size-4" aria-hidden="true" />
               Uploading…
             </>
           ) : (

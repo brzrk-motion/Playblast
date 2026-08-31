@@ -45,6 +45,11 @@ export function SyncedVideoComparison({
             size="sm"
             onClick={() => setSyncLocked((current) => !current)}
             aria-pressed={syncLocked}
+            aria-label={
+              syncLocked
+                ? "Unlock synced playback"
+                : "Lock synced playback"
+            }
           >
             {syncLocked ? <Link2 /> : <Unlink />}
             {syncLocked ? "Sync locked" : "Sync unlocked"}

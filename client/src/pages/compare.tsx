@@ -2,10 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { EmptyState } from "@/components/feedback/empty-state"
+import { PageError } from "@/components/feedback/page-error"
+import { PageLoading } from "@/components/feedback/page-loading"
 import { SyncedVideoComparison } from "@/components/video/synced-video-comparison"
 import { getDeliverable, getProject, listVersions } from "@/lib/api"
+import {
+  resolveAsyncViewState,
+  reviewEmptyCopy,
+  reviewErrorTitle,
+} from "@/lib/review-feedback"
 import { humanizeApiError, showErrorToast } from "@/lib/toast"
 import { pickCompareVersionLabels, sortVersionsByDate } from "@/lib/versions"
 import type { Deliverable } from "@/types/deliverable"
@@ -144,48 +151,40 @@ export function ComparePage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="aspect-video w-full rounded-xl" />
-        <Skeleton className="aspect-video w-full rounded-xl" />
-      </div>
+      <PageLoading className="space-y-6" label="Loading comparison…">
+        <Skeleton className="h-8 w-48" aria-hidden />
+        <Skeleton className="aspect-video w-full rounded-xl" aria-hidden />
+        <Skeleton className="aspect-video w-full rounded-xl" aria-hidden />
+      </PageLoading>
     )
   }
 
   if (error || !project || !deliverable) {
+    const viewState = resolveAsyncViewState({
+      loading: false,
+      error,
+      missing: !project || !deliverable,
+      surface: "compare",
+    })
+    const message =
+      viewState.status === "error" ? viewState.message : "Deliverable not found."
+
     return (
-      <div className="space-y-4">
-        <Button variant="ghost" asChild>
-          <Link to={`/projects/${projectId}`}>
-            <ArrowLeft />
-            Back to project
-          </Link>
-        </Button>
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardHeader>
-            <CardTitle>Comparison unavailable</CardTitle>
-            <CardDescription className="text-destructive">
-              {error ?? "Deliverable not found."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setLoading(true)
-                setError(null)
-                void loadProjectData()
-              }}
-            >
-              Try again
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <PageError
+        title={reviewErrorTitle("compare")}
+        message={message}
+        backLink={{ to: `/projects/${projectId}`, label: "Back to project" }}
+        onRetry={() => {
+          setLoading(true)
+          setError(null)
+          void loadProjectData()
+        }}
+      />
     )
   }
 
   const deliverableHref = `/projects/${project.id}/deliverables/${deliverable.id}`
+  const emptyCompare = reviewEmptyCopy("need_two_versions")
 
   if (versions.length < 2) {
     return (
@@ -196,20 +195,16 @@ export function ComparePage() {
             Back to deliverable
           </Link>
         </Button>
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <GitCompare className="size-10 text-muted-foreground" />
-            <div>
-              <p className="font-medium">Need at least two versions</p>
-              <p className="text-sm text-muted-foreground">
-                Upload another render to compare versions side by side.
-              </p>
-            </div>
+        <EmptyState
+          icon={<GitCompare className="size-10" />}
+          title={emptyCompare.title}
+          description={emptyCompare.description}
+          action={
             <Button asChild>
               <Link to={deliverableHref}>Go to deliverable</Link>
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
       </div>
     )
   }

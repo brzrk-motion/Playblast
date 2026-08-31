@@ -130,6 +130,12 @@ interface CommentRowProps {
   rowRef?: (element: HTMLLIElement | null) => void
 }
 
+function commentRowLabel(comment: Comment): string {
+  const kind = comment.annotation ? "Annotated comment" : "Comment"
+  const status = comment.resolved ? ", resolved" : ""
+  return `Seek to ${kind.toLowerCase()} at ${formatCommentTimestamp(comment.timestamp)} by ${comment.author}${status}`
+}
+
 function CommentRow({
   comment,
   mentionNames,
@@ -148,6 +154,7 @@ function CommentRow({
   const { seek } = useVideoPlayer()
   const [bodyExpanded, setBodyExpanded] = useState(false)
   const showExpandToggle = isMultilineBody(comment.body) && !bodyExpanded
+  const bodyId = `comment-body-${comment.id}`
 
   function handleRowActivate() {
     seek(comment.timestamp)
@@ -165,6 +172,9 @@ function CommentRow({
       <div
         role="button"
         tabIndex={0}
+        aria-label={commentRowLabel(comment)}
+        aria-describedby={bodyId}
+        aria-current={isActive ? "true" : undefined}
         className={cn(
           "interactive-row flex cursor-pointer items-start gap-2.5 px-3 py-2.5 text-left",
           isActive && "bg-transparent hover:bg-primary/10",
@@ -177,7 +187,7 @@ function CommentRow({
           }
         }}
       >
-        <Avatar size="sm" className="mt-0.5">
+        <Avatar size="sm" className="mt-0.5" aria-hidden="true">
           <AvatarFallback className="text-[10px] font-medium">
             {getAuthorInitial(comment.author)}
           </AvatarFallback>
@@ -190,28 +200,32 @@ function CommentRow({
                 "group/pill type-timestamp inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-primary transition-colors hover:bg-primary/15",
                 isActive && "bg-primary/15",
               )}
+              aria-hidden="true"
             >
               <Play className="size-3 shrink-0 opacity-0 transition-opacity group-hover/pill:opacity-100" />
               {formatCommentTimestamp(comment.timestamp)}
             </span>
 
-            <span className="text-xs font-medium text-foreground">{comment.author}</span>
+            <span className="text-xs font-medium text-foreground" aria-hidden="true">
+              {comment.author}
+            </span>
 
             {comment.annotation ? (
-              <Badge variant="outline" className="type-micro gap-1">
+              <Badge variant="outline" className="type-micro gap-1" aria-hidden="true">
                 <Pencil className="size-2.5" />
                 Frame
               </Badge>
             ) : null}
 
             {comment.resolved ? (
-              <Badge variant="outline" className="type-micro ml-auto">
+              <Badge variant="outline" className="type-micro ml-auto" aria-hidden="true">
                 Resolved
               </Badge>
             ) : null}
           </div>
 
           <CommentBody
+            id={bodyId}
             body={comment.body}
             mentionNames={mentionNames}
             className={cn(
@@ -224,6 +238,8 @@ function CommentRow({
             <button
               type="button"
               className="mt-0.5 text-xs font-medium text-primary hover:underline"
+              aria-expanded={false}
+              aria-controls={bodyId}
               onClick={(event) => {
                 event.stopPropagation()
                 setBodyExpanded(true)
@@ -235,6 +251,8 @@ function CommentRow({
             <button
               type="button"
               className="mt-0.5 text-xs font-medium text-primary hover:underline"
+              aria-expanded={true}
+              aria-controls={bodyId}
               onClick={(event) => {
                 event.stopPropagation()
                 setBodyExpanded(false)
@@ -251,21 +269,23 @@ function CommentRow({
           onKeyDown={(event) => event.stopPropagation()}
         >
           {confirmingDelete ? (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1" role="group" aria-label="Confirm delete">
               <Button
                 type="button"
                 variant="destructive"
                 size="xs"
                 disabled={deleting}
+                aria-label={`Confirm delete comment by ${comment.author}`}
                 onClick={onConfirmDelete}
               >
-                {deleting ? <Spinner className="size-3" /> : "Delete"}
+                {deleting ? <Spinner className="size-3" aria-hidden="true" /> : "Delete"}
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 size="xs"
                 disabled={deleting}
+                aria-label="Cancel delete"
                 onClick={onCancelDelete}
               >
                 Cancel
@@ -283,7 +303,7 @@ function CommentRow({
                   title="Reply"
                   onClick={() => onReply(comment)}
                 >
-                  <MessageSquareReply />
+                  <MessageSquareReply aria-hidden="true" />
                 </Button>
               ) : null}
 
@@ -293,16 +313,20 @@ function CommentRow({
                   variant="ghost"
                   size="icon-xs"
                   disabled={resolving || deleting}
-                  aria-label={comment.resolved ? "Unresolve comment" : "Resolve comment"}
+                  aria-label={
+                    comment.resolved
+                      ? `Unresolve comment by ${comment.author}`
+                      : `Resolve comment by ${comment.author}`
+                  }
                   title={comment.resolved ? "Unresolve" : "Resolve"}
                   onClick={() => onResolveComment(comment.id, !comment.resolved)}
                 >
                   {resolving ? (
-                    <Spinner className="size-3" />
+                    <Spinner className="size-3" aria-hidden="true" />
                   ) : comment.resolved ? (
-                    <RotateCcw />
+                    <RotateCcw aria-hidden="true" />
                   ) : (
-                    <Check />
+                    <Check aria-hidden="true" />
                   )}
                 </Button>
               ) : null}
@@ -313,11 +337,11 @@ function CommentRow({
                   variant="ghost"
                   size="icon-xs"
                   disabled={resolving || deleting}
-                  aria-label="Delete comment"
+                  aria-label={`Delete comment by ${comment.author}`}
                   title="Delete"
                   onClick={onRequestDelete}
                 >
-                  <Trash2 />
+                  <Trash2 aria-hidden="true" />
                 </Button>
               ) : null}
             </>
@@ -454,11 +478,17 @@ export function CommentsPanel({
   }
 
   return (
-    <Card className={cn("flex h-full min-h-0 flex-col overflow-hidden", className)}>
+    <Card
+      role="region"
+      aria-labelledby="comments-panel-title"
+      className={cn("flex h-full min-h-0 flex-col overflow-hidden", className)}
+    >
       <CardHeader className="shrink-0 space-y-2 border-b px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-sm">Comments</CardTitle>
-          <Badge variant="secondary" className="type-micro">
+          <CardTitle id="comments-panel-title" className="text-sm">
+            Comments
+          </CardTitle>
+          <Badge variant="secondary" className="type-micro" aria-label={`${openComments.length} open`}>
             {openComments.length} open
           </Badge>
         </div>
@@ -489,8 +519,11 @@ export function CommentsPanel({
             <CommentsPanelSkeleton />
           </ScrollArea>
         ) : filteredComments.length === 0 ? (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center text-muted-foreground">
-            <MessageSquare className="size-7 opacity-50" />
+          <div
+            className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center text-muted-foreground"
+            role="status"
+          >
+            <MessageSquare className="size-7 opacity-50" aria-hidden="true" />
             <p className="text-sm">{emptyMessage}</p>
             {filter === "all" ? (
               <p className="text-xs">
@@ -502,13 +535,13 @@ export function CommentsPanel({
         ) : (
           <ScrollArea className="min-h-0 flex-1">
             {showOpenList && (filter === "open" || filter === "all") ? (
-              <ul className="divide-y">
+              <ul className="divide-y" aria-label="Open comments">
                 {openComments.map(renderCommentRow)}
               </ul>
             ) : null}
 
             {filter === "resolved" ? (
-              <ul className="divide-y">
+              <ul className="divide-y" aria-label="Resolved comments">
                 {resolvedComments.map(renderCommentRow)}
               </ul>
             ) : null}
@@ -519,21 +552,24 @@ export function CommentsPanel({
                   <button
                     type="button"
                     className="focus-ring flex w-full items-center gap-2 border-t bg-muted/30 px-3 py-2 text-left text-xs text-muted-foreground transition-interactive hover:bg-muted/50 active:bg-muted/70"
+                    aria-label={`${resolvedExpanded ? "Hide" : "Show"} ${resolvedComments.length} resolved comments`}
                   >
                     {resolvedExpanded ? (
-                      <ChevronDown className="size-3.5 shrink-0" />
+                      <ChevronDown className="size-3.5 shrink-0" aria-hidden="true" />
                     ) : (
-                      <ChevronRight className="size-3.5 shrink-0" />
+                      <ChevronRight className="size-3.5 shrink-0" aria-hidden="true" />
                     )}
-                    <span>
+                    <span aria-hidden="true">
                       {resolvedComments.length} resolved
                     </span>
-                    <span className="ml-auto">{resolvedExpanded ? "Hide" : "Show"}</span>
+                    <span className="ml-auto" aria-hidden="true">
+                      {resolvedExpanded ? "Hide" : "Show"}
+                    </span>
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   {showResolvedList ? (
-                    <ul className="divide-y border-t">
+                    <ul className="divide-y border-t" aria-label="Resolved comments">
                       {resolvedComments.map(renderCommentRow)}
                     </ul>
                   ) : null}
