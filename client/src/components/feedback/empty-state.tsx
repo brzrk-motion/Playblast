@@ -1,3 +1,5 @@
+import { useId } from "react"
+
 import { cn } from "@/lib/utils"
 
 interface EmptyStateProps {
@@ -18,6 +20,9 @@ export function EmptyState({
   className,
   compact = false,
 }: EmptyStateProps) {
+  const titleId = useId()
+  const descriptionId = useId()
+
   return (
     <div
       className={cn(
@@ -25,7 +30,9 @@ export function EmptyState({
         compact ? "p-8" : "py-16",
         className,
       )}
-      role="status"
+      role="group"
+      aria-labelledby={titleId}
+      aria-describedby={description ? descriptionId : undefined}
     >
       {icon ? (
         <div className="text-muted-foreground" aria-hidden="true">
@@ -33,9 +40,13 @@ export function EmptyState({
         </div>
       ) : null}
       <div>
-        <p className="font-medium">{title}</p>
+        <p id={titleId} className="font-medium">
+          {title}
+        </p>
         {description ? (
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p id={descriptionId} className="text-sm text-muted-foreground">
+            {description}
+          </p>
         ) : null}
       </div>
       {action}
