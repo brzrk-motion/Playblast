@@ -45,12 +45,23 @@ curl -sS -u '<user>:<password>' "http://<host>:<port>/api/projects"             
 From the repository root:
 
 ```bash
-npm run test          # includes pilot authenticated E2E smoke (API parity)
+npm run test                 # includes pilot authenticated E2E smoke (API parity)
 npm run verify:backup-restore
+npm run verify:pilot-browser # auth-boundary curl smoke (local stub; no prod URL/creds)
+```
+
+Live pilot (optional; credentials never printed):
+
+```bash
+PLAYBLAST_PILOT_URL="http://<host>:<port>" \
+PLAYBLAST_AUTH_USER="<user>" \
+PLAYBLAST_AUTH_PASSWORD="<password>" \
+npm run verify:pilot-browser
 ```
 
 - [ ] `npm run test` — all server tests pass, including **pilot authenticated E2E smoke** (project → deliverable → upload → playback → comment + annotation → approval).
 - [ ] `npm run verify:backup-restore` — prints `Backup/restore verification passed.` (filesystem `data/` + `uploads/` archive/restore; no Docker, no auth secrets).
+- [ ] `npm run verify:pilot-browser` — prints `Pilot browser auth-boundary verification passed (self-check).` Default mode uses an ephemeral local stub; does **not** require a live URL or real credentials. Remaining UI steps stay in the checklist below.
 
 ---
 
@@ -159,6 +170,7 @@ URL: http://<host>:<port>
 Automated gates
   [ ] npm run test — pass (pilot E2E smoke included)
   [ ] npm run verify:backup-restore — pass
+  [ ] npm run verify:pilot-browser — pass (self-check or live auth-boundary)
 
 Auth boundary
   [ ] /health public 200
