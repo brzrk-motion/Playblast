@@ -391,14 +391,16 @@ export function VersionUpload({
           Drag and drop a video or browse your files. Labels auto-increment by default.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4" aria-busy={uploading || undefined}>
         <div
           role="button"
           tabIndex={uploading ? -1 : 0}
           aria-label={
-            dragActive
-              ? "Drop video to select it for upload"
-              : "Choose a video file to upload"
+            uploading
+              ? "Upload in progress"
+              : dragActive
+                ? "Drop video to select it for upload"
+                : "Choose a video file to upload"
           }
           aria-describedby="version-upload-dropzone-hint"
           aria-disabled={uploading || undefined}
@@ -425,7 +427,7 @@ export function VersionUpload({
             dragActive
               ? "scale-[1.01] border-primary bg-primary/10 ring-4 ring-primary/20"
               : "border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/30 active:bg-muted/40",
-            uploading && "pointer-events-none opacity-60",
+            uploading && "pointer-events-none cursor-not-allowed opacity-60",
           )}
         >
           <div
@@ -467,13 +469,15 @@ export function VersionUpload({
         </div>
 
         <p className="sr-only" aria-live="polite">
-          {dragActive
-            ? "Release to select the video file."
-            : selectedFile
-              ? probingFile
-                ? `Selected ${selectedFile.name}. Reading metadata.`
-                : `Selected ${selectedFile.name}.`
-              : null}
+          {uploading
+            ? `Uploading ${versionLabel}…`
+            : dragActive
+              ? "Release to select the video file."
+              : selectedFile
+                ? probingFile
+                  ? `Selected ${selectedFile.name}. Reading metadata.`
+                  : `Selected ${selectedFile.name}.`
+                : null}
         </p>
 
         {selectedFile ? (
@@ -568,27 +572,38 @@ export function VersionUpload({
         {uploading ? (
           <div
             className="space-y-2"
-            role="status"
-            aria-live="polite"
-            aria-busy="true"
+            role="group"
+            aria-labelledby="version-upload-progress-label"
           >
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Uploading…</span>
-              <span className="font-medium">
+              <span
+                id="version-upload-progress-label"
+                className="text-muted-foreground"
+              >
+                Uploading…
+              </span>
+              <span className="font-medium" aria-hidden="true">
                 {uploadProgress ? `${uploadProgress.percent}%` : "Starting…"}
               </span>
             </div>
             <Progress
               value={uploadProgress?.percent ?? 0}
               aria-label="Upload progress"
+              aria-valuetext={
+                uploadProgress
+                  ? `${uploadProgress.percent} percent, ${formatProgressDetail(uploadProgress)}`
+                  : "Starting upload"
+              }
+              aria-describedby="version-upload-progress-detail"
             />
-            {uploadProgress ? (
-              <p className="text-xs text-muted-foreground">
-                {formatProgressDetail(uploadProgress)}
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">Preparing upload…</p>
-            )}
+            <p
+              id="version-upload-progress-detail"
+              className="text-xs text-muted-foreground"
+            >
+              {uploadProgress
+                ? formatProgressDetail(uploadProgress)
+                : "Preparing upload…"}
+            </p>
           </div>
         ) : null}
 
@@ -614,12 +629,13 @@ export function VersionUpload({
         <Button
           type="button"
           disabled={!selectedFile || uploading || !versionLabel}
+          aria-busy={uploading || undefined}
           onClick={() => void handleUpload()}
           className="w-full sm:w-auto"
         >
           {uploading ? (
             <>
-              <Spinner className="size-4" />
+              <Spinner className="size-4" aria-hidden="true" />
               Uploading…
             </>
           ) : (
