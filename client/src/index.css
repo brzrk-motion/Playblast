@@ -341,4 +341,21 @@
       transition: none;
     }
   }
+
+  /* MVP role badges — see docs/phase-0/visual-language.md */
+  .role-badge {
+    @apply inline-flex items-center rounded-full border px-2 py-0.5 text-caption font-medium;
+  }
+
+  .role-badge-admin {
+    @apply inline-flex items-center rounded-full border px-2 py-0.5 text-caption font-medium bg-primary/15 text-primary border-primary/30;
+  }
+
+  .role-badge-creative {
+    @apply inline-flex items-center rounded-full border px-2 py-0.5 text-caption font-medium bg-status-pending-muted text-status-pending-foreground border-status-pending-border;
+  }
+
+  .role-badge-proofing {
+    @apply inline-flex items-center rounded-full border px-2 py-0.5 text-caption font-medium bg-status-success-muted text-status-success-foreground border-status-success-border;
+  }
 }
