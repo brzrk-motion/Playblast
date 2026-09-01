@@ -4,16 +4,39 @@
 
 Playblast is an internal video proofing tool for BRZRK — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work.
 
+## MVP north star and source of truth
+
+`docs/Playblast-MVP-Audit.md` is the authoritative product and implementation brief for the studio-facing MVP. Treat it as the project Bible and north star when planning, implementing, reviewing, or sequencing work.
+
+- Follow the synchronized phased task list in that document, which separates **Server/API**, **Client/UI**, and **Integration/verification** work.
+- Keep the three tracks synchronized: client work must consume the server contract, and a phase is not complete until its integration gate passes.
+- The MVP is one free, open-source, self-hosted Playblast instance per studio; do not introduce hosted SaaS, founder-installed deployments, paid support commitments, or billing unless the audit is explicitly revised.
+- The required roles are `admin`, `creative`, and `proofing`. Enforce permissions server-side; hidden or disabled UI controls are not authorization.
+- The near-term database direction is Drizzle over the existing `better-sqlite3` driver. Do not migrate to `node:sqlite` as part of MVP work; that is a later gated decision documented in the audit.
+
+### Task completion protocol
+
+When completing implementation work:
+
+1. Select a bounded task from the appropriate phase and track in `docs/Playblast-MVP-Audit.md`.
+2. Read the surrounding phase exit criteria and any dependent Server/API or Client/UI tasks before coding.
+3. Implement the task and run the relevant focused checks, followed by the phase-required integration checks where applicable.
+4. Check off the exact task in `docs/Playblast-MVP-Audit.md` only after the acceptance behavior is actually implemented and verified. Do not check off planning tasks based on intent, partial code, or a passing unrelated test.
+5. If the implementation reveals a missing requirement, add or revise the task in the audit rather than silently working around it.
+6. Report the task, files changed, commands run, real results, and any remaining blockers.
+
+Do not mark a phase exit complete until all required Server/API, Client/UI, and Integration/verification tasks for that phase are complete and the exit gate has been exercised.
+
 The repo is an **npm workspaces monorepo** with two packages:
 
 | Package | Path | Stack |
 |---------|------|-------|
 | `@playblast/client` | `client/` | React 19, Vite 8, TypeScript, shadcn/ui, Tailwind CSS, Vidstack |
-| `@playblast/server` | `server/` | Express 5, TypeScript, local filesystem + JSON file store |
+| `@playblast/server` | `server/` | Express 5, TypeScript, local filesystem + SQLite via `better-sqlite3` (Drizzle migration planned) |
 
 In development, the Vite dev server (port `5173`) proxies `/api` and `/video` to the Express server (port `3000`). In production, Express serves the built client from `client/dist` alongside the API.
 
-There is **no authentication** — comment authors are supplied by the client at post time.
+Application authentication and the Admin/Creative/Proofing role model are part of the MVP target, but are not implemented yet on the current branch. The current branch only has deployment-wide HTTP Basic Auth in production; do not treat that as application authentication or as a reason to skip the audit’s identity, session, invitation, and authorization tasks.
 
 ### Data & storage
 
@@ -43,7 +66,7 @@ Run from the repository root:
 | `npm run dev` | Start client and server concurrently |
 | `npm run build` | Build client (`tsc -b` + Vite) and server (`tsc`) |
 | `npm run lint` | Lint the client (`eslint`) |
-| `npm run test` | Run server tests (`tsx --test`) |
+| `npm run test` | Run server and client tests |
 
 Workspace-specific scripts:
 
