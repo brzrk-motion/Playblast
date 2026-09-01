@@ -424,7 +424,7 @@ describe("Phase 2 first-run negative access", () => {
     assert.equal(studio.status, 401)
 
     const projects = await fetch(`${freshBaseUrl}/api/projects`)
-    assert.equal(projects.status, 200)
+    assert.equal(projects.status, 401)
 
     await new Promise<void>((resolve, reject) => {
       freshServer.close((err) => (err ? reject(err) : resolve()))

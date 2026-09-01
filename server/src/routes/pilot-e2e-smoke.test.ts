@@ -6,12 +6,20 @@ import assert from "node:assert/strict"
 import type { Server } from "node:http"
 import { createApp } from "../app.js"
 import { closeDatabase, initDatabase } from "../storage/db.js"
+import {
+  authHeaders,
+  completeStudioSetup,
+  cookieHeader,
+  setupAdminAccount,
+} from "../test/auth-helpers.js"
 
 let tempDir = ""
 let dbPath = ""
 let uploadRoot = ""
 let server: Server
 let baseUrl = ""
+let adminCookies: string[] = []
+let adminCsrf = ""
 
 const previousNodeEnv = process.env.NODE_ENV
 const previousDbPath = process.env.DB_PATH
@@ -43,6 +51,11 @@ before(async () => {
   }
 
   baseUrl = `http://127.0.0.1:${address.port}`
+
+  const admin = await setupAdminAccount(baseUrl)
+  adminCookies = admin.cookies
+  adminCsrf = admin.csrfToken
+  await completeStudioSetup(baseUrl, adminCookies, adminCsrf)
 })
 
 after(async () => {
@@ -70,14 +83,14 @@ describe("pilot authenticated E2E smoke", () => {
     assert.equal(healthBody.status, "ok")
 
     const projects = await fetch(`${baseUrl}/api/projects`)
-    assert.equal(projects.status, 200)
+    assert.equal(projects.status, 401)
     assert.equal(projects.headers.get("www-authenticate"), null)
   })
 
   it("covers project → deliverable → upload → playback → download → comment → approval", async () => {
     const projectResponse = await fetch(`${baseUrl}/api/projects`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         id: "pilot-smoke",
         name: "Pilot Smoke Spot",
@@ -92,7 +105,7 @@ describe("pilot authenticated E2E smoke", () => {
       `${baseUrl}/api/projects/${project.id}/deliverables`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ name: "Hero Cut" }),
       },
     )
@@ -119,7 +132,7 @@ describe("pilot authenticated E2E smoke", () => {
       `${baseUrl}/api/deliverables/${deliverable.id}/versions/${versionLabel}/upload`,
       {
         method: "POST",
-        headers: {},
+        headers: authHeaders(adminCookies, adminCsrf, false),
         body: formData,
       },
     )
@@ -135,7 +148,12 @@ describe("pilot authenticated E2E smoke", () => {
 
     const playbackResponse = await fetch(
       `${baseUrl}/video/${project.id}/${deliverable.id}/${versionLabel}/${videoFilename}`,
-      { headers: { Range: "bytes=0-15" } },
+      {
+        headers: {
+          Range: "bytes=0-15",
+          Cookie: cookieHeader(adminCookies),
+        },
+      },
     )
     assert.equal(playbackResponse.status, 206)
     assert.equal(playbackResponse.headers.get("content-type"), "video/mp4")
@@ -145,6 +163,7 @@ describe("pilot authenticated E2E smoke", () => {
 
     const downloadResponse = await fetch(
       `${baseUrl}/api/versions/${upload.versionId}/download`,
+      { headers: authHeaders(adminCookies, adminCsrf, false) },
     )
     assert.equal(downloadResponse.status, 200)
     assert.equal(downloadResponse.headers.get("content-type"), "video/mp4")
@@ -172,12 +191,11 @@ describe("pilot authenticated E2E smoke", () => {
 
     const commentResponse = await fetch(`${baseUrl}/api/comments`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         versionId: upload.versionId,
         timestamp: 2.5,
         body: "Soften the highlight on the logo lockup",
-        author: "Reviewer",
         annotation,
       }),
     })
@@ -192,6 +210,7 @@ describe("pilot authenticated E2E smoke", () => {
 
     const commentsListResponse = await fetch(
       `${baseUrl}/api/comments?versionId=${encodeURIComponent(upload.versionId)}`,
+      { headers: authHeaders(adminCookies, adminCsrf, false) },
     )
     assert.equal(commentsListResponse.status, 200)
     const comments = (await commentsListResponse.json()) as Array<{ id: string }>
@@ -202,7 +221,7 @@ describe("pilot authenticated E2E smoke", () => {
       `${baseUrl}/api/versions/${upload.versionId}/status`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ status: "approved" }),
       },
     )
@@ -210,7 +229,9 @@ describe("pilot authenticated E2E smoke", () => {
     const approvedVersion = (await approveResponse.json()) as { status: string }
     assert.equal(approvedVersion.status, "approved")
 
-    const projectsListResponse = await fetch(`${baseUrl}/api/projects`)
+    const projectsListResponse = await fetch(`${baseUrl}/api/projects`, {
+      headers: authHeaders(adminCookies, adminCsrf, false),
+    })
     assert.equal(projectsListResponse.status, 200)
     const projects = (await projectsListResponse.json()) as Array<{
       id: string
@@ -224,6 +245,7 @@ describe("pilot authenticated E2E smoke", () => {
 
     const deliverablesResponse = await fetch(
       `${baseUrl}/api/projects/${project.id}/deliverables`,
+      { headers: authHeaders(adminCookies, adminCsrf, false) },
     )
     assert.equal(deliverablesResponse.status, 200)
     const deliverables = (await deliverablesResponse.json()) as Array<{
@@ -238,6 +260,7 @@ describe("pilot authenticated E2E smoke", () => {
 
     const versionsResponse = await fetch(
       `${baseUrl}/api/deliverables/${deliverable.id}/versions`,
+      { headers: authHeaders(adminCookies, adminCsrf, false) },
     )
     assert.equal(versionsResponse.status, 200)
     const versions = (await versionsResponse.json()) as Array<{

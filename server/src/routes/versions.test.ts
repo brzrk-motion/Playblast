@@ -7,13 +7,25 @@ import type { Server } from "node:http"
 import { createApp } from "../app.js"
 import { getUploadDir } from "../config/paths.js"
 import { closeDatabase, initDatabase } from "../storage/db.js"
-import { createProject, createDeliverable, createVersion } from "../storage/repository.js"
+import {
+  createProject,
+  createDeliverable,
+  createVersion,
+} from "../storage/repository.js"
+import {
+  authHeaders,
+  completeStudioSetup,
+  setupAdminAccount,
+} from "../test/auth-helpers.js"
 
 let tempDir = ""
 let dbPath = ""
 let uploadRoot = ""
 let server: Server
 let baseUrl = ""
+let adminCookies: string[] = []
+let adminCsrf = ""
+let studioId = ""
 
 before(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "playblast-download-"))
@@ -21,6 +33,7 @@ before(async () => {
   uploadRoot = path.join(tempDir, "uploads")
   process.env.DB_PATH = dbPath
   process.env.UPLOAD_DIR = uploadRoot
+  process.env.SESSION_SECRET = "versions-test-session-secret-32chars"
   initDatabase(dbPath)
 
   const app = createApp()
@@ -34,6 +47,12 @@ before(async () => {
   }
 
   baseUrl = `http://127.0.0.1:${address.port}`
+
+  const admin = await setupAdminAccount(baseUrl)
+  adminCookies = admin.cookies
+  adminCsrf = admin.csrfToken
+  studioId = admin.session.studio.id
+  await completeStudioSetup(baseUrl, adminCookies, adminCsrf)
 })
 
 after(async () => {
@@ -49,7 +68,11 @@ after(async () => {
 
 describe("GET /api/versions/:versionId/download", () => {
   it("streams the file with Content-Disposition attachment", async () => {
-    const project = createProject({ id: "brand-video", name: "Brand Video" })
+    const project = createProject({
+      studioId: studioId,
+      id: "brand-video",
+      name: "Brand Video",
+    })
     const deliverable = createDeliverable({
       projectId: project.id,
       name: "Hero Spot",
@@ -67,6 +90,7 @@ describe("GET /api/versions/:versionId/download", () => {
 
     const response = await fetch(
       `${baseUrl}/api/versions/${version.id}/download`,
+      { headers: authHeaders(adminCookies, adminCsrf, false) },
     )
 
     assert.equal(response.status, 200)
@@ -83,12 +107,18 @@ describe("GET /api/versions/:versionId/download", () => {
   })
 
   it("returns 404 when the version does not exist", async () => {
-    const response = await fetch(`${baseUrl}/api/versions/missing-id/download`)
+    const response = await fetch(`${baseUrl}/api/versions/missing-id/download`, {
+      headers: authHeaders(adminCookies, adminCsrf, false),
+    })
     assert.equal(response.status, 404)
   })
 
   it("returns 404 when the video file is missing", async () => {
-    const project = createProject({ id: "missing-file", name: "Missing File" })
+    const project = createProject({
+      studioId: studioId,
+      id: "missing-file",
+      name: "Missing File",
+    })
     const deliverable = createDeliverable({
       projectId: project.id,
       name: "Spot",
@@ -102,6 +132,7 @@ describe("GET /api/versions/:versionId/download", () => {
 
     const response = await fetch(
       `${baseUrl}/api/versions/${version.id}/download`,
+      { headers: authHeaders(adminCookies, adminCsrf, false) },
     )
     assert.equal(response.status, 404)
   })

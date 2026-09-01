@@ -85,7 +85,14 @@ describe("emergency bootstrap Basic Auth", () => {
     const response = await fetch(`${baseUrl}/api/projects`, {
       headers: { Authorization: `Basic ${credentials}` },
     })
-    assert.equal(response.status, 200)
+    // Emergency Basic Auth passes; secured routes still require a session.
+    assert.notEqual(
+      response.headers.get("www-authenticate"),
+      'Basic realm="Playblast emergency bootstrap"',
+    )
+    assert.equal(response.status, 401)
+    const body = (await response.json()) as { code: string }
+    assert.equal(body.code, "UNAUTHENTICATED")
   })
 })
 
@@ -104,8 +111,10 @@ describe("normal production access without emergency Basic Auth", () => {
     const localBaseUrl = `http://127.0.0.1:${address.port}`
 
     const response = await fetch(`${localBaseUrl}/api/projects`)
-    assert.equal(response.status, 200)
+    assert.equal(response.status, 401)
     assert.equal(response.headers.get("www-authenticate"), null)
+    const body = (await response.json()) as { code: string }
+    assert.equal(body.code, "UNAUTHENTICATED")
 
     await new Promise<void>((resolve, reject) => {
       localServer.close((err) => (err ? reject(err) : resolve()))

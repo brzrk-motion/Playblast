@@ -28,6 +28,8 @@ CREATE TABLE projects (
 );
 `
 
+const STUDIO_ID = "schema-test-studio"
+
 let tempDir = ""
 
 before(() => {
@@ -50,6 +52,14 @@ function createLegacyDatabase(): string {
 
 function randomSuffix(): string {
   return Math.random().toString(36).slice(2, 10)
+}
+
+function insertStudio(db: Database.Database): void {
+  const now = new Date().toISOString()
+  db.prepare(
+    `INSERT INTO studios (id, name, avatar_path, setup_status, created_at, updated_at)
+     VALUES (?, 'Test Studio', NULL, 'complete', ?, ?)`,
+  ).run(STUDIO_ID, now, now)
 }
 
 describe("client management schema", () => {
@@ -142,12 +152,15 @@ describe("client management schema", () => {
     db.pragma("foreign_keys = ON")
     const now = new Date().toISOString()
 
+    insertStudio(db)
+
     db.prepare(
-      `INSERT INTO clients (id, name, email, createdAt, updatedAt)
-       VALUES ('client-1', 'Test Client', 'test@example.com', ?, ?)`,
-    ).run(now, now)
+      `INSERT INTO clients (id, name, email, createdAt, updatedAt, studioId)
+       VALUES ('client-1', 'Test Client', 'test@example.com', ?, ?, ?)`,
+    ).run(now, now, STUDIO_ID)
 
     const project = createProject({
+      studioId: STUDIO_ID,
       id: "proj-1",
       name: "Linked Project",
       clientId: "client-1",
@@ -173,12 +186,15 @@ describe("client management schema", () => {
     db.pragma("foreign_keys = ON")
     const now = new Date().toISOString()
 
+    insertStudio(db)
+
     db.prepare(
-      `INSERT INTO clients (id, name, email, createdAt, updatedAt)
-       VALUES ('client-del', 'Delete Me', 'del@example.com', ?, ?)`,
-    ).run(now, now)
+      `INSERT INTO clients (id, name, email, createdAt, updatedAt, studioId)
+       VALUES ('client-del', 'Delete Me', 'del@example.com', ?, ?, ?)`,
+    ).run(now, now, STUDIO_ID)
 
     createProject({
+      studioId: STUDIO_ID,
       id: "proj-del",
       name: "Cascade Project",
       clientId: "client-del",
