@@ -1,4 +1,6 @@
 import { Router } from "express"
+import fs from "node:fs"
+import path from "node:path"
 import {
   getCapabilitiesForRole,
   type ChangePasswordRequest,
@@ -6,6 +8,7 @@ import {
   type LoginRequest,
   type RecoverAdminRequest,
   type RoleCapabilitiesResponse,
+  type UpdateStudioRequest,
 } from "@playblast/shared"
 import { sendApiError } from "../lib/api-response.js"
 import {
@@ -22,9 +25,19 @@ import {
   listInvitations,
   listUsers,
 } from "../identity/repository.js"
+import {
+  StudioServiceError,
+  completeStudioSetup,
+  deleteStudioAvatar,
+  getStudioAvatarAbsolutePath,
+  updateStudioProfile,
+  uploadStudioAvatar,
+} from "../identity/studio-service.js"
+import { getAvatarContentType } from "../identity/studio-validation.js"
 import { AUDIT_EVENT_TYPES, recordAuditEvent } from "../auth/audit.js"
 import { getSessionTokenFromRequest } from "../auth/cookies.js"
 import { AUTH_RATE_LIMITS, checkRateLimit } from "../auth/rate-limit.js"
+import { createAvatarUploadMiddleware } from "../middleware/avatar-upload.js"
 import {
   requireAdminRole,
   requireAuthenticatedSession,
@@ -38,6 +51,18 @@ function handleAuthServiceError(
   response: Parameters<typeof sendApiError>[0],
 ): boolean {
   if (!(error instanceof AuthServiceError)) {
+    return false
+  }
+
+  sendApiError(response, error.code, error.message, error.details)
+  return true
+}
+
+function handleStudioServiceError(
+  error: unknown,
+  response: Parameters<typeof sendApiError>[0],
+): boolean {
+  if (!(error instanceof StudioServiceError)) {
     return false
   }
 
@@ -164,12 +189,6 @@ identityRouter.get("/session", (req, res) => {
 })
 
 identityRouter.get("/studio", requireAuthenticatedSession(), (_req, res) => {
-  const setup = getSetupStatusResponse()
-  if (!setup.setupComplete) {
-    sendApiError(res, "SETUP_NOT_COMPLETE")
-    return
-  }
-
   const studio = getStudioProfile()
   if (!studio) {
     sendApiError(res, "NOT_FOUND")
@@ -178,6 +197,117 @@ identityRouter.get("/studio", requireAuthenticatedSession(), (_req, res) => {
 
   res.json(studio)
 })
+
+identityRouter.patch(
+  "/studio",
+  requireCsrfProtection(),
+  requireAuthenticatedSession(),
+  requireAdminRole(),
+  (req, res) => {
+    try {
+      const studio = updateStudioProfile(
+        req.currentSession!.studio.id,
+        req.currentSession!.user.role,
+        req.body as UpdateStudioRequest,
+      )
+      res.json(studio)
+    } catch (error) {
+      if (!handleStudioServiceError(error, res)) {
+        throw error
+      }
+    }
+  },
+)
+
+identityRouter.post(
+  "/studio/avatar",
+  requireCsrfProtection(),
+  requireAuthenticatedSession(),
+  requireAdminRole(),
+  createAvatarUploadMiddleware(),
+  (req, res) => {
+    if (!req.file) {
+      sendApiError(res, "VALIDATION_FAILED", "Validation failed.", {
+        avatar: ["Avatar file is required."],
+      })
+      return
+    }
+
+    try {
+      const studio = uploadStudioAvatar(
+        req.currentSession!.studio.id,
+        req.currentSession!.user.role,
+        {
+          buffer: req.file.buffer,
+          mimeType: req.file.mimetype,
+          size: req.file.size,
+        },
+      )
+      res.json(studio)
+    } catch (error) {
+      if (!handleStudioServiceError(error, res)) {
+        throw error
+      }
+    }
+  },
+)
+
+identityRouter.delete(
+  "/studio/avatar",
+  requireCsrfProtection(),
+  requireAuthenticatedSession(),
+  requireAdminRole(),
+  (req, res) => {
+    try {
+      const studio = deleteStudioAvatar(
+        req.currentSession!.studio.id,
+        req.currentSession!.user.role,
+      )
+      res.json(studio)
+    } catch (error) {
+      if (!handleStudioServiceError(error, res)) {
+        throw error
+      }
+    }
+  },
+)
+
+identityRouter.get(
+  "/studio/avatar",
+  requireAuthenticatedSession(),
+  (req, res) => {
+    const absolutePath = getStudioAvatarAbsolutePath(req.currentSession!.studio.id)
+    if (!absolutePath) {
+      sendApiError(res, "NOT_FOUND")
+      return
+    }
+
+    const extension = path.extname(absolutePath).slice(1)
+    res.setHeader("Content-Type", getAvatarContentType(extension))
+    res.setHeader("Cache-Control", "private, no-cache")
+    fs.createReadStream(absolutePath).pipe(res)
+  },
+)
+
+identityRouter.post(
+  "/setup/complete",
+  requireCsrfProtection(),
+  requireAuthenticatedSession(),
+  requireAdminRole(),
+  (req, res) => {
+    try {
+      const studio = completeStudioSetup(
+        req.currentSession!.studio.id,
+        req.currentSession!.user.role,
+      )
+      res.json(studio)
+    } catch (error) {
+      if (!handleStudioServiceError(error, res)) {
+        throw error
+      }
+    }
+  },
+)
 
 identityRouter.get("/users", requireAuthenticatedSession(), requireAdminRole(), (_req, res) => {
   const setup = getSetupStatusResponse()

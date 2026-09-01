@@ -12,6 +12,7 @@ import {
   type RoleCapabilitiesResponse,
   type SetupStatusResponse,
   type StudioProfileResponse,
+  type UpdateStudioRequest,
   type UserSummary,
 } from "@playblast/shared"
 
@@ -97,6 +98,89 @@ export async function fetchCurrentSession(): Promise<CurrentSessionResponse> {
 
 export async function fetchStudioProfile(): Promise<StudioProfileResponse> {
   return identityFetch<StudioProfileResponse>("/api/studio")
+}
+
+export async function updateStudioProfile(
+  input: UpdateStudioRequest,
+): Promise<StudioProfileResponse> {
+  return identityFetch<StudioProfileResponse>("/api/studio", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  })
+}
+
+export async function completeStudioSetup(): Promise<StudioProfileResponse> {
+  return identityFetch<StudioProfileResponse>("/api/setup/complete", {
+    method: "POST",
+  })
+}
+
+export interface AvatarUploadProgress {
+  loaded: number
+  total: number
+  percent: number
+}
+
+export async function uploadStudioAvatar(
+  file: File,
+  onProgress?: (progress: AvatarUploadProgress) => void,
+): Promise<StudioProfileResponse> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    const formData = new FormData()
+    formData.append("avatar", file)
+
+    xhr.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable && onProgress) {
+        onProgress({
+          loaded: event.loaded,
+          total: event.total,
+          percent: Math.round((event.loaded / event.total) * 100),
+        })
+      }
+    })
+
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText) as StudioProfileResponse)
+        return
+      }
+
+      try {
+        const body = JSON.parse(xhr.responseText) as ApiErrorEnvelope
+        if (isApiErrorEnvelope(body)) {
+          reject(new IdentityApiError(xhr.status, body))
+          return
+        }
+      } catch {
+        // Fall through to generic error.
+      }
+
+      reject(new Error("Avatar upload failed."))
+    })
+
+    xhr.addEventListener("error", () => {
+      reject(new Error("Avatar upload failed."))
+    })
+
+    xhr.addEventListener("abort", () => {
+      reject(new Error("Avatar upload cancelled."))
+    })
+
+    xhr.open("POST", "/api/studio/avatar")
+    const headers = buildIdentityHeaders(false) as Record<string, string>
+    for (const [key, value] of Object.entries(headers)) {
+      xhr.setRequestHeader(key, value)
+    }
+    xhr.withCredentials = true
+    xhr.send(formData)
+  })
+}
+
+export async function deleteStudioAvatar(): Promise<StudioProfileResponse> {
+  return identityFetch<StudioProfileResponse>("/api/studio/avatar", {
+    method: "DELETE",
+  })
 }
 
 export async function fetchUsers(): Promise<UserSummary[]> {

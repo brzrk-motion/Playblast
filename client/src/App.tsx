@@ -7,14 +7,12 @@ import { ForbiddenPage } from "@/pages/auth/forbidden"
 import { LoginShellPage } from "@/pages/auth/login-shell"
 import { RecoverAdminPage } from "@/pages/auth/recover-admin"
 import { SessionExpiredPage } from "@/pages/auth/session-expired"
+import { SetupCompletePage } from "@/pages/auth/setup-complete"
 import { SetupShellPage } from "@/pages/auth/setup-shell"
-import {
-  SetupCompletePlaceholderPage,
-  SetupStudioPlaceholderPage,
-} from "@/pages/auth/setup-placeholders"
+import { SetupStudioPage } from "@/pages/auth/setup-studio"
 import { CapacityPage } from "@/pages/capacity"
 import { ComparePage } from "@/pages/compare"
-import { ComingSoonPage } from "@/pages/coming-soon"
+import { ProfilePage } from "@/pages/profile"
 import { ClientsPage } from "@/pages/clients"
 import { DashboardPage } from "@/pages/dashboard"
 import { DeliverablePage } from "@/pages/deliverable"
@@ -39,8 +37,8 @@ function App() {
                 <Route path="/login" element={<LoginShellPage />} />
                 <Route path="/recover-admin" element={<RecoverAdminPage />} />
                 <Route path="/setup" element={<SetupShellPage />} />
-                <Route path="/setup/studio" element={<SetupStudioPlaceholderPage />} />
-                <Route path="/setup/complete" element={<SetupCompletePlaceholderPage />} />
+                <Route path="/setup/studio" element={<SetupStudioPage />} />
+                <Route path="/setup/complete" element={<SetupCompletePage />} />
                 <Route path="/forbidden" element={<ForbiddenPage />} />
                 <Route path="/session-expired" element={<SessionExpiredPage />} />
                 <Route element={<AppLayout />}>
@@ -61,7 +59,7 @@ function App() {
                     element={<ComparePage />}
                   />
                   <Route path="settings" element={<SettingsPage />} />
-                  <Route path="profile" element={<ComingSoonPage />} />
+                  <Route path="profile" element={<ProfilePage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
               </Route>

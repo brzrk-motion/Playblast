@@ -23,6 +23,8 @@ export interface SessionStudio {
   id: string
   name: string
   setupStatus: SetupStatus
+  /** Authorized avatar URL when a studio image exists; null otherwise. */
+  avatarUrl: string | null
 }
 
 /** Current session contract (GET /api/session). Phase 2 implements auth. */

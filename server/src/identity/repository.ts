@@ -95,6 +95,41 @@ function getStudioRow() {
   return db.select().from(studios).limit(1).get()
 }
 
+export function getStudioRowById(id: string) {
+  const db = getDrizzle()
+  return db.select().from(studios).where(eq(studios.id, id)).get()
+}
+
+export function updateStudioById(
+  id: string,
+  patch: {
+    name?: string
+    avatarPath?: string | null
+    setupStatus?: SetupStatus
+  },
+) {
+  const db = getDrizzle()
+  const now = new Date().toISOString()
+  const values: Partial<typeof studios.$inferInsert> = {
+    updatedAt: now,
+  }
+
+  if (patch.name !== undefined) {
+    values.name = patch.name
+  }
+
+  if (patch.avatarPath !== undefined) {
+    values.avatarPath = patch.avatarPath
+  }
+
+  if (patch.setupStatus !== undefined) {
+    values.setupStatus = patch.setupStatus
+  }
+
+  db.update(studios).set(values).where(eq(studios.id, id)).run()
+  return getStudioRowById(id)
+}
+
 /** @internal Test helper to read setup status from a specific studio row. */
 export function __testOnly_getStudioById(id: string) {
   const db = getDrizzle()

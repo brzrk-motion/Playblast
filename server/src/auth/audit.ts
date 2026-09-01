@@ -11,6 +11,10 @@ export const AUDIT_EVENT_TYPES = {
   passwordChanged: "auth.password_changed",
   adminRecovered: "auth.admin_recovered",
   rateLimited: "auth.rate_limited",
+  studioProfileUpdated: "studio.profile_updated",
+  studioAvatarUploaded: "studio.avatar_uploaded",
+  studioAvatarDeleted: "studio.avatar_deleted",
+  studioSetupCompleted: "studio.setup_completed",
 } as const
 
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[keyof typeof AUDIT_EVENT_TYPES]

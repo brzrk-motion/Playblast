@@ -502,24 +502,24 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Server/API
 
-- [ ] Implement authenticated studio read/update APIs and safe avatar upload/replace/delete behavior.
-- [ ] Validate studio names, image MIME/type/size, generated filenames, path boundaries, and file-serving authorization.
-- [ ] Return current studio, user, role, and avatar metadata through the authenticated session contract.
-- [ ] Add tests for Admin access and Creative/Proofing denial of studio administration.
+- [x] Implement authenticated studio read/update APIs and safe avatar upload/replace/delete behavior.
+- [x] Validate studio names, image MIME/type/size, generated filenames, path boundaries, and file-serving authorization.
+- [x] Return current studio, user, role, and avatar metadata through the authenticated session contract.
+- [x] Add tests for Admin access and Creative/Proofing denial of studio administration.
 
 #### Client/UI
 
-- [ ] Build the first-run studio name and avatar setup screen.
-- [ ] Build studio profile/settings screens with upload progress, validation, preview, replacement, deletion, and retry states.
-- [ ] Replace hard-coded `BRZRK Studio` and `admin@brzrk.com` values in the shell.
-- [ ] Display studio identity, current user, and role in the header/sidebar/account menu.
-- [ ] Ensure Creative and Proofing users see safe read-only identity surfaces and no Admin controls.
+- [x] Build the first-run studio name and avatar setup screen.
+- [x] Build studio profile/settings screens with upload progress, validation, preview, replacement, deletion, and retry states.
+- [x] Replace hard-coded `BRZRK Studio` and `admin@brzrk.com` values in the shell.
+- [x] Display studio identity, current user, and role in the header/sidebar/account menu.
+- [x] Ensure Creative and Proofing users see safe read-only identity surfaces and no Admin controls.
 
 #### Integration/verification
 
 - [ ] Complete Admin creation → login → studio name/avatar → application shell through the browser.
-- [ ] Verify avatar files cannot be read or replaced across studios or by unauthorized roles.
-- [ ] Verify a reload and restart preserve studio identity without exposing secrets or stale client identity.
+- [x] Verify avatar files cannot be read or replaced across studios or by unauthorized roles.
+- [x] Verify a reload and restart preserve studio identity without exposing secrets or stale client identity.
 
 **Phase exit:** the Admin can complete studio setup and every role sees the correct server-derived studio/user identity.
 
