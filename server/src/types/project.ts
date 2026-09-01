@@ -93,6 +93,7 @@ export interface ProjectSummary extends Project {
 }
 
 export interface CreateProjectInput {
+  studioId: string
   name: string
   /** Optional stable id (e.g. upload folder slug). A UUID is generated when omitted. */
   id?: string

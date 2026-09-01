@@ -1,14 +1,15 @@
 import { Router } from "express"
+import { requireAdminOnly } from "../middleware/authorization.js"
 import {
   createTask,
   deleteTask,
-  getMilestone,
   getTask,
   listTasks,
   updateTask,
 } from "../storage/index.js"
 import type { UpdateTaskInput } from "../types/index.js"
 import { getParam } from "../utils/params.js"
+import { requireMilestoneStudio, requireTaskStudio } from "./route-helpers.js"
 
 function getMilestoneIdParam(req: {
   params: { milestoneId?: string | string[] }
@@ -18,11 +19,12 @@ function getMilestoneIdParam(req: {
 
 const tasksRouter = Router({ mergeParams: true })
 
+tasksRouter.use(requireAdminOnly())
+
 tasksRouter.get("/", (req, res) => {
   const milestoneId = getMilestoneIdParam(req)
-
-  if (!getMilestone(milestoneId)) {
-    res.status(404).json({ error: "Milestone not found." })
+  const context = requireMilestoneStudio(req, res, milestoneId)
+  if (!context) {
     return
   }
 
@@ -31,9 +33,8 @@ tasksRouter.get("/", (req, res) => {
 
 tasksRouter.post("/", (req, res) => {
   const milestoneId = getMilestoneIdParam(req)
-
-  if (!getMilestone(milestoneId)) {
-    res.status(404).json({ error: "Milestone not found." })
+  const context = requireMilestoneStudio(req, res, milestoneId)
+  if (!context) {
     return
   }
 
@@ -59,8 +60,15 @@ tasksRouter.post("/", (req, res) => {
 
 const taskByIdRouter = Router()
 
+taskByIdRouter.use(requireAdminOnly())
+
 taskByIdRouter.patch("/:taskId", (req, res) => {
   const taskId = getParam(req.params.taskId)
+  const context = requireTaskStudio(req, res, taskId)
+  if (!context) {
+    return
+  }
+
   const existing = getTask(taskId)
 
   if (!existing) {
@@ -97,6 +105,11 @@ taskByIdRouter.patch("/:taskId", (req, res) => {
 
 taskByIdRouter.delete("/:taskId", (req, res) => {
   const taskId = getParam(req.params.taskId)
+  const context = requireTaskStudio(req, res, taskId)
+  if (!context) {
+    return
+  }
+
   const deleted = deleteTask(taskId)
 
   if (!deleted) {

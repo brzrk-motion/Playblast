@@ -39,6 +39,7 @@ export interface Lead {
 }
 
 export interface CreateLeadInput {
+  studioId: string
   name: string
   email: string
   company?: string

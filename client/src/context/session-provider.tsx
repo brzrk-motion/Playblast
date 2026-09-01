@@ -126,6 +126,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         refresh,
         role: null,
         setupComplete: false,
+        capabilities: [],
       }
     }
 
@@ -134,6 +135,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       refresh,
       role: state.session?.user.role ?? null,
       setupComplete: state.setup.setupComplete,
+      capabilities: state.capabilities,
     }
   }, [refresh, state])
 

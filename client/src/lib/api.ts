@@ -489,7 +489,7 @@ export async function createComment(input: {
   versionId: string
   timestamp: number
   body: string
-  author: string
+  author?: string
   annotation?: FrameAnnotation
 }): Promise<Comment> {
   const response = await fetch("/api/comments", {
@@ -529,7 +529,7 @@ export async function createCommentForVersion(
   input: {
     timestamp: number
     body: string
-    author: string
+    author?: string
     annotation?: FrameAnnotation
   },
 ): Promise<Comment> {

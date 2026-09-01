@@ -3,6 +3,7 @@ import {
   validateDeliverableParams,
   validateProjectParams,
 } from "../middleware/validateParams.js"
+import { protectedApiMiddleware } from "../middleware/authorization.js"
 import commentsRouter, { commentByIdRouter } from "./comments.js"
 import clientsRouter from "./clients.js"
 import deliverablesRouter, { deliverableByIdRouter } from "./deliverables.js"
@@ -24,41 +25,46 @@ const apiRouter = Router()
 
 apiRouter.use(identityRouter)
 apiRouter.use(teamRouter)
-apiRouter.use("/leads", leadsRouter)
-apiRouter.use("/clients", clientsRouter)
-apiRouter.use("/services", servicesRouter)
-apiRouter.use("/projects", projectsRouter)
-apiRouter.use(
+
+const securedRouter = Router()
+securedRouter.use(...protectedApiMiddleware)
+securedRouter.use("/leads", leadsRouter)
+securedRouter.use("/clients", clientsRouter)
+securedRouter.use("/services", servicesRouter)
+securedRouter.use("/projects", projectsRouter)
+securedRouter.use(
   "/projects/:projectId/deliverables",
   validateProjectParams,
   deliverablesRouter,
 )
-apiRouter.use("/projects/:projectId/milestones", milestonesRouter)
-apiRouter.use("/projects/:projectId/services", projectServicesRouter)
-apiRouter.use(
+securedRouter.use("/projects/:projectId/milestones", milestonesRouter)
+securedRouter.use("/projects/:projectId/services", projectServicesRouter)
+securedRouter.use(
   "/projects/:projectId/invoices",
   validateProjectParams,
   projectInvoicesRouter,
 )
-apiRouter.use("/invoices", invoiceByIdRouter)
-apiRouter.use("/deliverables", deliverableByIdRouter)
-apiRouter.use("/milestones", milestoneByIdRouter)
-apiRouter.use("/milestones/:milestoneId/tasks", tasksRouter)
-apiRouter.use("/tasks", taskByIdRouter)
-apiRouter.use("/tasks/:taskId/time-logs", timeLogsRouter)
-apiRouter.use("/time-logs", timeLogByIdRouter)
-apiRouter.use("/timesheet", timesheetRouter)
-apiRouter.use("/versions", versionsRouter)
-apiRouter.use("/comments", commentByIdRouter)
-apiRouter.use(
+securedRouter.use("/invoices", invoiceByIdRouter)
+securedRouter.use("/deliverables", deliverableByIdRouter)
+securedRouter.use("/milestones", milestoneByIdRouter)
+securedRouter.use("/milestones/:milestoneId/tasks", tasksRouter)
+securedRouter.use("/tasks", taskByIdRouter)
+securedRouter.use("/tasks/:taskId/time-logs", timeLogsRouter)
+securedRouter.use("/time-logs", timeLogByIdRouter)
+securedRouter.use("/timesheet", timesheetRouter)
+securedRouter.use("/versions", versionsRouter)
+securedRouter.use("/comments", commentByIdRouter)
+securedRouter.use(
   "/deliverables/:deliverableId/versions/:version/comments",
   validateDeliverableParams,
   commentsRouter,
 )
-apiRouter.use(
+securedRouter.use(
   "/deliverables/:deliverableId/versions/:version/upload",
   validateDeliverableParams,
   uploadRouter,
 )
+
+apiRouter.use(securedRouter)
 
 export default apiRouter

@@ -1,10 +1,16 @@
 import { Router } from "express"
+import { sendApiError } from "../lib/api-response.js"
+import {
+  canCreateComment,
+  canDeleteComment,
+  canUpdateComment,
+} from "../auth/comment-policy.js"
 import { parseFrameAnnotation } from "../lib/annotation.js"
+import { requireCapability } from "../middleware/authorization.js"
 import {
   createComment,
   deleteComment,
   getComment,
-  getDeliverable,
   getVersion,
   getVersionByLabel,
   listComments,
@@ -12,21 +18,22 @@ import {
 } from "../storage/index.js"
 import type { FrameAnnotation } from "../types/annotation.js"
 import { getParam, getVersionRouteParams } from "../utils/params.js"
+import {
+  requireCommentStudio,
+  requireDeliverableStudio,
+  requireVersionStudio,
+  requireStudioSession,
+} from "./route-helpers.js"
 
 function parseCreateCommentBody(body: unknown): {
   timestamp: number
   text: string
-  author: string
   annotation?: FrameAnnotation
 } | { error: string } {
   const timestamp = (body as { timestamp?: unknown })?.timestamp
   const text =
     typeof (body as { body?: unknown })?.body === "string"
       ? (body as { body: string }).body.trim()
-      : ""
-  const author =
-    typeof (body as { author?: unknown })?.author === "string"
-      ? (body as { author: string }).author.trim()
       : ""
 
   if (typeof timestamp !== "number" || Number.isNaN(timestamp) || timestamp < 0) {
@@ -37,14 +44,10 @@ function parseCreateCommentBody(body: unknown): {
     return { error: "Comment body is required." }
   }
 
-  if (!author) {
-    return { error: "Comment author is required." }
-  }
-
   const annotationInput = (body as { annotation?: unknown })?.annotation
 
   if (annotationInput === undefined) {
-    return { timestamp, text, author }
+    return { timestamp, text }
   }
 
   const parsedAnnotation = parseFrameAnnotation(annotationInput)
@@ -56,17 +59,15 @@ function parseCreateCommentBody(body: unknown): {
     return { error: "Annotation timestamp must match the comment timestamp." }
   }
 
-  return { timestamp, text, author, annotation: parsedAnnotation }
+  return { timestamp, text, annotation: parsedAnnotation }
 }
 
 const commentsRouter = Router({ mergeParams: true })
 
-commentsRouter.get("/", (req, res) => {
+commentsRouter.get("/", requireCapability("review.play"), (req, res) => {
   const { deliverableId, version: versionLabel } = getVersionRouteParams(req)
-
-  const deliverable = getDeliverable(deliverableId)
-  if (!deliverable) {
-    res.status(404).json({ error: "Deliverable not found." })
+  const context = requireDeliverableStudio(req, res, deliverableId)
+  if (!context) {
     return
   }
 
@@ -79,18 +80,22 @@ commentsRouter.get("/", (req, res) => {
   res.json(listComments(version.id))
 })
 
-commentsRouter.post("/", (req, res) => {
+commentsRouter.post("/", requireCapability("comments.create"), (req, res) => {
   const { deliverableId, version: versionLabel } = getVersionRouteParams(req)
-
-  const deliverable = getDeliverable(deliverableId)
-  if (!deliverable) {
-    res.status(404).json({ error: "Deliverable not found." })
+  const context = requireDeliverableStudio(req, res, deliverableId)
+  if (!context) {
     return
   }
 
   const version = getVersionByLabel(deliverableId, versionLabel)
   if (!version) {
     res.status(404).json({ error: "Version not found." })
+    return
+  }
+
+  const policy = canCreateComment(context.role)
+  if (!policy.allowed) {
+    sendApiError(res, "FORBIDDEN")
     return
   }
 
@@ -104,7 +109,8 @@ commentsRouter.post("/", (req, res) => {
     versionId: version.id,
     timestamp: parsed.timestamp,
     body: parsed.text,
-    author: parsed.author,
+    author: context.userName,
+    authorUserId: context.userId,
     annotation: parsed.annotation,
   })
 
@@ -113,7 +119,7 @@ commentsRouter.post("/", (req, res) => {
 
 const commentByIdRouter = Router()
 
-commentByIdRouter.get("/", (req, res) => {
+commentByIdRouter.get("/", requireCapability("review.play"), (req, res) => {
   const versionId =
     typeof req.query.versionId === "string" ? req.query.versionId.trim() : ""
 
@@ -122,16 +128,20 @@ commentByIdRouter.get("/", (req, res) => {
     return
   }
 
-  const version = getVersion(versionId)
-  if (!version) {
-    res.status(404).json({ error: "Version not found." })
+  const context = requireVersionStudio(req, res, versionId)
+  if (!context) {
     return
   }
 
   res.json(listComments(versionId))
 })
 
-commentByIdRouter.post("/", (req, res) => {
+commentByIdRouter.post("/", requireCapability("comments.create"), (req, res) => {
+  const context = requireStudioSession(req, res)
+  if (!context) {
+    return
+  }
+
   const versionId =
     typeof req.body?.versionId === "string" ? req.body.versionId.trim() : ""
 
@@ -140,9 +150,14 @@ commentByIdRouter.post("/", (req, res) => {
     return
   }
 
-  const version = getVersion(versionId)
-  if (!version) {
-    res.status(404).json({ error: "Version not found." })
+  const versionContext = requireVersionStudio(req, res, versionId)
+  if (!versionContext) {
+    return
+  }
+
+  const policy = canCreateComment(versionContext.role)
+  if (!policy.allowed) {
+    sendApiError(res, "FORBIDDEN")
     return
   }
 
@@ -156,7 +171,8 @@ commentByIdRouter.post("/", (req, res) => {
     versionId,
     timestamp: parsed.timestamp,
     body: parsed.text,
-    author: parsed.author,
+    author: versionContext.userName,
+    authorUserId: versionContext.userId,
     annotation: parsed.annotation,
   })
 
@@ -165,8 +181,12 @@ commentByIdRouter.post("/", (req, res) => {
 
 commentByIdRouter.patch("/:commentId/resolve", (req, res) => {
   const commentId = getParam(req.params.commentId)
-  const existing = getComment(commentId)
+  const context = requireCommentStudio(req, res, commentId)
+  if (!context) {
+    return
+  }
 
+  const existing = getComment(commentId)
   if (!existing) {
     res.status(404).json({ error: "Comment not found." })
     return
@@ -177,14 +197,28 @@ commentByIdRouter.patch("/:commentId/resolve", (req, res) => {
     return
   }
 
+  const policy = canUpdateComment(
+    existing,
+    { userId: context.userId, role: context.role },
+    { resolved: req.body.resolved },
+  )
+  if (!policy.allowed) {
+    sendApiError(res, "FORBIDDEN")
+    return
+  }
+
   const comment = updateComment(commentId, { resolved: req.body.resolved })
   res.json(comment)
 })
 
 commentByIdRouter.patch("/:commentId", (req, res) => {
   const commentId = getParam(req.params.commentId)
-  const existing = getComment(commentId)
+  const context = requireCommentStudio(req, res, commentId)
+  if (!context) {
+    return
+  }
 
+  const existing = getComment(commentId)
   if (!existing) {
     res.status(404).json({ error: "Comment not found." })
     return
@@ -215,12 +249,42 @@ commentByIdRouter.patch("/:commentId", (req, res) => {
     return
   }
 
+  const policy = canUpdateComment(
+    existing,
+    { userId: context.userId, role: context.role },
+    input,
+  )
+  if (!policy.allowed) {
+    sendApiError(res, "FORBIDDEN")
+    return
+  }
+
   const comment = updateComment(commentId, input)
   res.json(comment)
 })
 
 commentByIdRouter.delete("/:commentId", (req, res) => {
   const commentId = getParam(req.params.commentId)
+  const context = requireCommentStudio(req, res, commentId)
+  if (!context) {
+    return
+  }
+
+  const existing = getComment(commentId)
+  if (!existing) {
+    res.status(404).json({ error: "Comment not found." })
+    return
+  }
+
+  const policy = canDeleteComment(existing, {
+    userId: context.userId,
+    role: context.role,
+  })
+  if (!policy.allowed) {
+    sendApiError(res, "FORBIDDEN")
+    return
+  }
+
   const deleted = deleteComment(commentId)
 
   if (!deleted) {

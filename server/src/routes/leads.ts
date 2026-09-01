@@ -1,4 +1,5 @@
 import { Router } from "express"
+import { requireAdminOnly } from "../middleware/authorization.js"
 import {
   createContactLog,
   createLead,
@@ -19,6 +20,7 @@ import {
   isLeadStatus,
 } from "../types/index.js"
 import { getParam } from "../utils/params.js"
+import { requireLeadStudio, requireStudioSession } from "./route-helpers.js"
 
 function getLeadIdParam(req: { params: { id?: string | string[] } }): string {
   return getParam(req.params.id ?? "")
@@ -44,7 +46,14 @@ function parseRepliedFilter(
 
 const leadsRouter = Router()
 
+leadsRouter.use(requireAdminOnly())
+
 leadsRouter.get("/", (req, res) => {
+  const context = requireStudioSession(req, res)
+  if (!context) {
+    return
+  }
+
   const filters: { status?: LeadStatus; replied?: boolean } = {}
 
   if (req.query.status !== undefined) {
@@ -67,10 +76,15 @@ leadsRouter.get("/", (req, res) => {
     filters.replied = repliedFilter.replied
   }
 
-  res.json(listLeads(filters))
+  res.json(listLeads(context.studioId, filters))
 })
 
 leadsRouter.post("/", (req, res) => {
+  const context = requireStudioSession(req, res)
+  if (!context) {
+    return
+  }
+
   const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""
   if (!name) {
     res.status(400).json({ error: "Lead name is required." })
@@ -97,6 +111,7 @@ leadsRouter.post("/", (req, res) => {
   }
 
   const lead = createLead({
+    studioId: context.studioId,
     name,
     email,
     status: req.body?.status,
@@ -118,9 +133,8 @@ leadsRouter.post("/", (req, res) => {
 
 leadsRouter.get("/:id/log", (req, res) => {
   const leadId = getLeadIdParam(req)
-
-  if (!getLead(leadId)) {
-    res.status(404).json({ error: "Lead not found." })
+  const context = requireLeadStudio(req, res, leadId)
+  if (!context) {
     return
   }
 
@@ -129,9 +143,8 @@ leadsRouter.get("/:id/log", (req, res) => {
 
 leadsRouter.post("/:id/log", (req, res) => {
   const leadId = getLeadIdParam(req)
-
-  if (!getLead(leadId)) {
-    res.status(404).json({ error: "Lead not found." })
+  const context = requireLeadStudio(req, res, leadId)
+  if (!context) {
     return
   }
 
@@ -174,9 +187,8 @@ leadsRouter.post("/:id/log", (req, res) => {
 leadsRouter.delete("/:id/log/:logId", (req, res) => {
   const leadId = getLeadIdParam(req)
   const logId = getParam(req.params.logId)
-
-  if (!getLead(leadId)) {
-    res.status(404).json({ error: "Lead not found." })
+  const context = requireLeadStudio(req, res, leadId)
+  if (!context) {
     return
   }
 
@@ -192,6 +204,11 @@ leadsRouter.delete("/:id/log/:logId", (req, res) => {
 
 leadsRouter.post("/:id/convert", (req, res) => {
   const leadId = getLeadIdParam(req)
+  const context = requireLeadStudio(req, res, leadId)
+  if (!context) {
+    return
+  }
+
   const body = req.body as { notes?: unknown } | undefined
   const notes =
     typeof body?.notes === "string" ? body.notes.trim() || undefined : undefined
@@ -212,6 +229,11 @@ leadsRouter.post("/:id/convert", (req, res) => {
 
 leadsRouter.get("/:id", (req, res) => {
   const leadId = getLeadIdParam(req)
+  const context = requireLeadStudio(req, res, leadId)
+  if (!context) {
+    return
+  }
+
   const lead = getLeadWithContactLog(leadId)
 
   if (!lead) {
@@ -224,6 +246,11 @@ leadsRouter.get("/:id", (req, res) => {
 
 leadsRouter.patch("/:id", (req, res) => {
   const leadId = getLeadIdParam(req)
+  const context = requireLeadStudio(req, res, leadId)
+  if (!context) {
+    return
+  }
+
   const existing = getLead(leadId)
 
   if (!existing) {
@@ -306,6 +333,11 @@ leadsRouter.patch("/:id", (req, res) => {
 
 leadsRouter.delete("/:id", (req, res) => {
   const leadId = getLeadIdParam(req)
+  const context = requireLeadStudio(req, res, leadId)
+  if (!context) {
+    return
+  }
+
   const deleted = deleteLead(leadId)
 
   if (!deleted) {

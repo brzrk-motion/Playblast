@@ -16,6 +16,7 @@ export interface SessionContextValue {
   refresh: () => Promise<void>
   role: UserRole | null
   setupComplete: boolean
+  capabilities: Capability[]
 }
 
 export const SessionContext = createContext<SessionContextValue | null>(null)

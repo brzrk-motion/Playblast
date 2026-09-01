@@ -1,4 +1,5 @@
 import { Router } from "express"
+import { requireAdminOnly } from "../middleware/authorization.js"
 import {
   clampRetainerCycleDay,
   getCurrentCycleStart,
@@ -16,6 +17,7 @@ import {
 } from "../storage/index.js"
 import type { UpdateClientInput } from "../types/index.js"
 import { getParam } from "../utils/params.js"
+import { requireClientStudio, requireStudioSession } from "./route-helpers.js"
 
 function getClientIdParam(req: { params: { id?: string | string[] } }): string {
   return getParam(req.params.id ?? "")
@@ -126,11 +128,23 @@ function applyRetainerInput(
 
 const clientsRouter = Router()
 
-clientsRouter.get("/", (_req, res) => {
-  res.json(listClients())
+clientsRouter.use(requireAdminOnly())
+
+clientsRouter.get("/", (req, res) => {
+  const context = requireStudioSession(req, res)
+  if (!context) {
+    return
+  }
+
+  res.json(listClients(context.studioId))
 })
 
 clientsRouter.post("/", (req, res) => {
+  const context = requireStudioSession(req, res)
+  if (!context) {
+    return
+  }
+
   const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""
   if (!name) {
     res.status(400).json({ error: "Client name is required." })
@@ -161,6 +175,7 @@ clientsRouter.post("/", (req, res) => {
   }
 
   const client = createClient({
+    studioId: context.studioId,
     name,
     email,
     company:
@@ -185,7 +200,12 @@ clientsRouter.post("/", (req, res) => {
 
 clientsRouter.get("/:id", (req, res) => {
   const clientId = getClientIdParam(req)
-  const client = getClientWithProjects(clientId)
+  const context = requireClientStudio(req, res, clientId)
+  if (!context) {
+    return
+  }
+
+  const client = getClientWithProjects(clientId, context.studioId)
 
   if (!client) {
     res.status(404).json({ error: "Client not found." })
@@ -197,6 +217,11 @@ clientsRouter.get("/:id", (req, res) => {
 
 clientsRouter.patch("/:id", (req, res) => {
   const clientId = getClientIdParam(req)
+  const context = requireClientStudio(req, res, clientId)
+  if (!context) {
+    return
+  }
+
   const existing = getClient(clientId)
 
   if (!existing) {
@@ -273,6 +298,11 @@ clientsRouter.patch("/:id", (req, res) => {
 
 clientsRouter.patch("/:id/retainer-hours", (req, res) => {
   const clientId = getClientIdParam(req)
+  const context = requireClientStudio(req, res, clientId)
+  if (!context) {
+    return
+  }
+
   const existing = getClient(clientId)
 
   if (!existing) {
@@ -299,12 +329,17 @@ clientsRouter.patch("/:id/retainer-hours", (req, res) => {
   const cycleStart = getCurrentCycleStart(existing.retainerCycleDay)
   upsertRetainerCycleHours(clientId, cycleStart, hoursLogged)
 
-  const client = getClientWithProjects(clientId)
+  const client = getClientWithProjects(clientId, context.studioId)
   res.json(client)
 })
 
 clientsRouter.post("/:id/revert-to-lead", (req, res) => {
   const clientId = getClientIdParam(req)
+  const context = requireClientStudio(req, res, clientId)
+  if (!context) {
+    return
+  }
+
   const result = revertClientToLead(clientId)
 
   if (result === "not_found") {
@@ -325,6 +360,11 @@ clientsRouter.post("/:id/revert-to-lead", (req, res) => {
 
 clientsRouter.delete("/:id", (req, res) => {
   const clientId = getClientIdParam(req)
+  const context = requireClientStudio(req, res, clientId)
+  if (!context) {
+    return
+  }
+
   const result = deleteClient(clientId)
 
   if (result === "not_found") {

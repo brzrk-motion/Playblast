@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import { Router } from "express"
 import { getProjectUploadDir } from "../config/paths.js"
+import { requireCapability } from "../middleware/authorization.js"
 import {
   validateProjectIdParam,
   validateProjectParams,
@@ -27,6 +28,7 @@ import {
 } from "../lib/project-input.js"
 import { isProjectStatus } from "../types/index.js"
 import { getParam } from "../utils/params.js"
+import { requireProjectStudio, requireStudioSession } from "./route-helpers.js"
 
 const projectsRouter = Router()
 
@@ -49,15 +51,25 @@ function parseListProjectsOptions(query: Record<string, unknown>) {
   return undefined
 }
 
-projectsRouter.get("/", (req, res) => {
+projectsRouter.get("/", requireCapability("projects.view"), (req, res) => {
+  const context = requireStudioSession(req, res)
+  if (!context) {
+    return
+  }
+
   const clientId =
     typeof req.query.clientId === "string" ? req.query.clientId.trim() : undefined
   const listOptions = parseListProjectsOptions(req.query)
 
-  res.json(listProjectSummaries(clientId || undefined, listOptions))
+  res.json(listProjectSummaries(context.studioId, clientId || undefined, listOptions))
 })
 
-projectsRouter.post("/", (req, res) => {
+projectsRouter.post("/", requireCapability("projects.mutate"), (req, res) => {
+  const context = requireStudioSession(req, res)
+  if (!context) {
+    return
+  }
+
   const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""
   const id =
     typeof req.body?.id === "string" && req.body.id.trim()
@@ -104,6 +116,7 @@ projectsRouter.post("/", (req, res) => {
   }
 
   const project = createProject({
+    studioId: context.studioId,
     name,
     id,
     status,
@@ -125,9 +138,15 @@ projectsRouter.post("/", (req, res) => {
 
 projectsRouter.post(
   "/:projectId/duplicate",
+  requireCapability("projects.mutate"),
   validateProjectIdParam,
   (req, res) => {
     const projectId = getParam(req.params.projectId)
+    const context = requireProjectStudio(req, res, projectId)
+    if (!context) {
+      return
+    }
+
     const duplicated = duplicateProject(projectId)
 
     if (!duplicated) {
@@ -139,8 +158,13 @@ projectsRouter.post(
   },
 )
 
-projectsRouter.get("/:projectId", (req, res) => {
+projectsRouter.get("/:projectId", requireCapability("projects.view"), (req, res) => {
   const projectId = getParam(req.params.projectId)
+  const context = requireProjectStudio(req, res, projectId)
+  if (!context) {
+    return
+  }
+
   const project = getProjectWithClient(projectId)
 
   if (!project) {
@@ -151,52 +175,77 @@ projectsRouter.get("/:projectId", (req, res) => {
   res.json(project)
 })
 
-projectsRouter.patch("/:projectId", (req, res) => {
-  const projectId = getParam(req.params.projectId)
-  const project = getProject(projectId)
+projectsRouter.patch(
+  "/:projectId",
+  requireCapability("projects.mutate"),
+  (req, res) => {
+    const projectId = getParam(req.params.projectId)
+    const context = requireProjectStudio(req, res, projectId)
+    if (!context) {
+      return
+    }
 
-  if (!project) {
-    res.status(404).json({ error: "Project not found." })
-    return
-  }
+    const project = getProject(projectId)
 
-  const parsed = parseProjectPatch(req.body)
-  if ("error" in parsed) {
-    res.status(400).json({ error: parsed.error })
-    return
-  }
+    if (!project) {
+      res.status(404).json({ error: "Project not found." })
+      return
+    }
 
-  if (
-    parsed.input.clientId !== undefined &&
-    parsed.input.clientId !== null &&
-    !getClient(parsed.input.clientId)
-  ) {
-    res.status(400).json({ error: "clientId does not match a client." })
-    return
-  }
+    const parsed = parseProjectPatch(req.body)
+    if ("error" in parsed) {
+      res.status(400).json({ error: parsed.error })
+      return
+    }
 
-  const updated = updateProject(projectId, parsed.input)
-  res.json(updated)
-})
+    if (
+      parsed.input.clientId !== undefined &&
+      parsed.input.clientId !== null &&
+      !getClient(parsed.input.clientId)
+    ) {
+      res.status(400).json({ error: "clientId does not match a client." })
+      return
+    }
 
-projectsRouter.post("/:projectId/archive", validateProjectIdParam, (req, res) => {
-  const projectId = getParam(req.params.projectId)
-  const project = getProject(projectId)
-
-  if (!project) {
-    res.status(404).json({ error: "Project not found." })
-    return
-  }
-
-  const archived = archiveProject(projectId)
-  res.json(archived)
-})
+    const updated = updateProject(projectId, parsed.input)
+    res.json(updated)
+  },
+)
 
 projectsRouter.post(
-  "/:projectId/unarchive",
+  "/:projectId/archive",
+  requireCapability("data.delete"),
   validateProjectIdParam,
   (req, res) => {
     const projectId = getParam(req.params.projectId)
+    const context = requireProjectStudio(req, res, projectId)
+    if (!context) {
+      return
+    }
+
+    const project = getProject(projectId)
+
+    if (!project) {
+      res.status(404).json({ error: "Project not found." })
+      return
+    }
+
+    const archived = archiveProject(projectId)
+    res.json(archived)
+  },
+)
+
+projectsRouter.post(
+  "/:projectId/unarchive",
+  requireCapability("data.delete"),
+  validateProjectIdParam,
+  (req, res) => {
+    const projectId = getParam(req.params.projectId)
+    const context = requireProjectStudio(req, res, projectId)
+    if (!context) {
+      return
+    }
+
     const project = getProject(projectId)
 
     if (!project) {
@@ -211,9 +260,15 @@ projectsRouter.post(
 
 projectsRouter.delete(
   "/:projectId",
+  requireCapability("data.delete"),
   validateProjectIdParam,
   (req, res) => {
     const projectId = getParam(req.params.projectId)
+    const context = requireProjectStudio(req, res, projectId)
+    if (!context) {
+      return
+    }
+
     const deleted = deleteProject(projectId)
 
     if (!deleted) {
@@ -232,9 +287,15 @@ projectsRouter.delete(
 
 projectsRouter.get(
   "/:projectId/versions",
+  requireCapability("projects.view"),
   validateProjectParams,
   (req, res) => {
     const projectId = getParam(req.params.projectId)
+    const context = requireProjectStudio(req, res, projectId)
+    if (!context) {
+      return
+    }
+
     const project = getProject(projectId)
 
     if (!project) {
@@ -248,9 +309,15 @@ projectsRouter.get(
 
 projectsRouter.get(
   "/:projectId/tasks",
+  requireCapability("projects.view"),
   validateProjectParams,
   (req, res) => {
     const projectId = getParam(req.params.projectId)
+    const context = requireProjectStudio(req, res, projectId)
+    if (!context) {
+      return
+    }
+
     const project = getProject(projectId)
 
     if (!project) {
@@ -264,9 +331,15 @@ projectsRouter.get(
 
 projectsRouter.get(
   "/:projectId/hours-summary",
+  requireCapability("projects.view"),
   validateProjectParams,
   (req, res) => {
     const projectId = getParam(req.params.projectId)
+    const context = requireProjectStudio(req, res, projectId)
+    if (!context) {
+      return
+    }
+
     const project = getProject(projectId)
 
     if (!project) {

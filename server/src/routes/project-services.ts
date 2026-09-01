@@ -1,12 +1,13 @@
 import { Router } from "express"
+import { requireAdminOnly } from "../middleware/authorization.js"
 import {
   addProjectService,
-  getProject,
   listProjectServices,
   removeProjectService,
   updateProjectService,
 } from "../storage/index.js"
 import { getParam, getProjectIdParam } from "../utils/params.js"
+import { requireProjectStudio } from "./route-helpers.js"
 
 const projectServicesRouter = Router({ mergeParams: true })
 
@@ -48,11 +49,12 @@ function parseOverrideHours(
   return { value: parsed.value }
 }
 
+projectServicesRouter.use(requireAdminOnly())
+
 projectServicesRouter.get("/", (req, res) => {
   const projectId = getProjectIdParam(req)
-
-  if (!getProject(projectId)) {
-    res.status(404).json({ error: "Project not found." })
+  const context = requireProjectStudio(req, res, projectId)
+  if (!context) {
     return
   }
 
@@ -61,9 +63,8 @@ projectServicesRouter.get("/", (req, res) => {
 
 projectServicesRouter.post("/", (req, res) => {
   const projectId = getProjectIdParam(req)
-
-  if (!getProject(projectId)) {
-    res.status(404).json({ error: "Project not found." })
+  const context = requireProjectStudio(req, res, projectId)
+  if (!context) {
     return
   }
 
@@ -110,9 +111,8 @@ projectServicesRouter.post("/", (req, res) => {
 projectServicesRouter.patch("/:serviceId", (req, res) => {
   const projectId = getProjectIdParam(req)
   const serviceId = getParam(req.params.serviceId)
-
-  if (!getProject(projectId)) {
-    res.status(404).json({ error: "Project not found." })
+  const context = requireProjectStudio(req, res, projectId)
+  if (!context) {
     return
   }
 
@@ -137,9 +137,8 @@ projectServicesRouter.patch("/:serviceId", (req, res) => {
 projectServicesRouter.delete("/:serviceId", (req, res) => {
   const projectId = getProjectIdParam(req)
   const serviceId = getParam(req.params.serviceId)
-
-  if (!getProject(projectId)) {
-    res.status(404).json({ error: "Project not found." })
+  const context = requireProjectStudio(req, res, projectId)
+  if (!context) {
     return
   }
 

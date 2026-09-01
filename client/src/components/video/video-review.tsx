@@ -32,7 +32,7 @@ export interface VideoReviewProps {
   title?: string
   comments: Comment[]
   commentsLoading?: boolean
-  onCreateComment: (input: {
+  onCreateComment?: (input: {
     timestamp: number
     body: string
     author: string
