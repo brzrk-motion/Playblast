@@ -420,25 +420,25 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Server/API
 
-- [ ] Convert the role matrix into a server capability contract for Admin, Creative, and Proofing.
-- [ ] Define API conventions for `401`, `403`, `404`, `409`, `413`, validation failures, expired sessions, expired invites, and delivery failures.
-- [ ] Define the single-studio invariant and the bootstrap Admin lifecycle.
-- [ ] Define the supported Node LTS, Docker, NAS/Linux, browser, media, storage, and SMTP boundaries.
-- [ ] Define the data ownership, deletion, recovery, no-support, and backup/restore contracts.
+- [x] Convert the role matrix into a server capability contract for Admin, Creative, and Proofing.
+- [x] Define API conventions for `401`, `403`, `404`, `409`, `413`, validation failures, expired sessions, expired invites, and delivery failures.
+- [x] Define the single-studio invariant and the bootstrap Admin lifecycle.
+- [x] Define the supported Node LTS, Docker, NAS/Linux, browser, media, storage, and SMTP boundaries.
+- [x] Define the data ownership, deletion, recovery, no-support, and backup/restore contracts.
 
 #### Client/UI
 
-- [ ] Map the application route tree to public, setup, authenticated, Admin-only, Creative, and Proofing surfaces.
-- [ ] Define navigation visibility and disabled/hidden behavior for each role without treating hidden controls as authorization.
-- [ ] Define shared UI states for loading, empty, unauthorized, forbidden, expired session, expired invite, validation error, delivery failure, and offline/unavailable server.
-- [ ] Define the visual language for role badges, studio identity, account menu, destructive actions, and setup progress.
-- [ ] Define the responsive desktop/tablet behavior for setup, review, Team, profile, and login screens.
+- [x] Map the application route tree to public, setup, authenticated, Admin-only, Creative, and Proofing surfaces.
+- [x] Define navigation visibility and disabled/hidden behavior for each role without treating hidden controls as authorization.
+- [x] Define shared UI states for loading, empty, unauthorized, forbidden, expired session, expired invite, validation error, delivery failure, and offline/unavailable server.
+- [x] Define the visual language for role badges, studio identity, account menu, destructive actions, and setup progress.
+- [x] Define the responsive desktop/tablet behavior for setup, review, Team, profile, and login screens.
 
 #### Integration/verification
 
-- [ ] Review the server capability contract and route map against the client route map before implementation.
-- [ ] Create representative Admin, Creative, and Proofing fixtures and an API/UI test matrix.
-- [ ] Confirm that deferred SaaS, guest, billing, and support features have no required client or server surface.
+- [x] Review the server capability contract and route map against the client route map before implementation.
+- [x] Create representative Admin, Creative, and Proofing fixtures and an API/UI test matrix.
+- [x] Confirm that deferred SaaS, guest, billing, and support features have no required client or server surface.
 
 **Phase exit:** the server contract, client route/state map, role matrix, and acceptance fixtures agree before feature implementation begins.
 
