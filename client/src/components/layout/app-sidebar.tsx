@@ -7,6 +7,10 @@ import {
   User,
 } from "lucide-react"
 import {
+  ROLE_BADGE_TOKENS,
+  type NavItemDefinition,
+} from "@playblast/shared"
+import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -37,11 +41,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { useSession } from "@/hooks/use-session"
+import { getMvpNavItemsForRole } from "@/lib/mvp-contracts"
 import {
   isNavGroupActive,
   isNavItemActive,
   navMain,
   navSecondary,
+  type NavItem,
 } from "@/lib/nav"
 
 function ComingSoonBadge() {
@@ -57,6 +64,22 @@ function ComingSoonBadge() {
 
 export function AppSidebar() {
   const location = useLocation()
+  const { state, role } = useSession()
+
+  const sessionUser = state.status === "ready" ? state.session?.user : null
+  const sessionStudio = state.status === "ready" ? state.session?.studio : null
+
+  const visibleMainNav = role
+    ? filterNavByContract(navMain, getMvpNavItemsForRole(role, "main"))
+    : navMain
+  const visibleSecondaryNav = role
+    ? filterNavByContract(navSecondary, getMvpNavItemsForRole(role, "secondary"))
+    : navSecondary
+
+  const studioName = sessionStudio?.name || "Playblast Studio"
+  const userEmail = sessionUser?.email || "Not signed in"
+  const userInitials = getInitials(sessionUser?.name || studioName)
+  const roleBadge = role ? ROLE_BADGE_TOKENS[role] : null
 
   return (
     <Sidebar collapsible="icon">
@@ -82,7 +105,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Application</SidebarGroupLabel>
           <SidebarMenu>
-            {navMain.map((item) =>
+            {visibleMainNav.map((item) =>
               item.items ? (
                 <Collapsible
                   key={item.title}
@@ -146,7 +169,7 @@ export function AppSidebar() {
         <SidebarGroup className="mt-auto">
           <SidebarGroupLabel>System</SidebarGroupLabel>
           <SidebarMenu>
-            {navSecondary.map((item) => (
+            {visibleSecondaryNav.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
                   asChild
@@ -178,11 +201,11 @@ export function AppSidebar() {
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="size-8 rounded-lg">
-                    <AvatarFallback className="rounded-lg">BR</AvatarFallback>
+                    <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">BRZRK Studio</span>
-                    <span className="truncate text-xs text-muted-foreground">admin@brzrk.com</span>
+                    <span className="truncate font-semibold">{studioName}</span>
+                    <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4" />
                 </SidebarMenuButton>
@@ -196,12 +219,17 @@ export function AppSidebar() {
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                     <Avatar className="size-8 rounded-lg">
-                      <AvatarFallback className="rounded-lg">BR</AvatarFallback>
+                      <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">BRZRK Studio</span>
-                      <span className="truncate text-xs text-muted-foreground">admin@brzrk.com</span>
+                      <span className="truncate font-semibold">{studioName}</span>
+                      <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
                     </div>
+                    {roleBadge ? (
+                      <Badge variant="outline" className={cn("ml-2", roleBadge.className)}>
+                        {roleBadge.label}
+                      </Badge>
+                    ) : null}
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -214,7 +242,7 @@ export function AppSidebar() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem disabled>
                   <LogOut className="mr-2 size-4" />
-                  Log out
+                  Log out (Phase 2)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -225,4 +253,24 @@ export function AppSidebar() {
       <SidebarRail />
     </Sidebar>
   )
+}
+
+function getInitials(value: string): string {
+  const parts = value.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) {
+    return "PB"
+  }
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
+}
+
+function filterNavByContract(
+  items: NavItem[],
+  contractItems: NavItemDefinition[],
+): NavItem[] {
+  const visibleUrls = new Set(contractItems.map((item) => item.url))
+  return items.filter((item) => visibleUrls.has(item.url))
 }
