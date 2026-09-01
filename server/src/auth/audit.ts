@@ -15,6 +15,17 @@ export const AUDIT_EVENT_TYPES = {
   studioAvatarUploaded: "studio.avatar_uploaded",
   studioAvatarDeleted: "studio.avatar_deleted",
   studioSetupCompleted: "studio.setup_completed",
+  inviteCreated: "team.invite_created",
+  inviteResent: "team.invite_resent",
+  inviteRevoked: "team.invite_revoked",
+  inviteAccepted: "team.invite_accepted",
+  inviteDeliveryFailed: "team.invite_delivery_failed",
+  userRoleChanged: "team.user_role_changed",
+  userDisabled: "team.user_disabled",
+  userReactivated: "team.user_reactivated",
+  smtpConfigured: "smtp.configured",
+  smtpTestSucceeded: "smtp.test_succeeded",
+  smtpTestFailed: "smtp.test_failed",
 } as const
 
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[keyof typeof AUDIT_EVENT_TYPES]

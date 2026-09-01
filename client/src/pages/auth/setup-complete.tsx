@@ -50,7 +50,7 @@ export function SetupCompletePage() {
             <div>
               <CardTitle>Studio profile saved</CardTitle>
               <CardDescription>
-                Team invitations and SMTP configuration arrive in later phases.
+                Team invitations and SMTP configuration are available on the Team page.
               </CardDescription>
             </div>
           </div>

@@ -8,6 +8,13 @@
       "when": 1788279510708,
       "tag": "0000_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788280000000,
+      "tag": "0001_studio_smtp",
+      "breakpoints": true
     }
   ]
 }

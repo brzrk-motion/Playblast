@@ -7,6 +7,7 @@ import commentsRouter, { commentByIdRouter } from "./comments.js"
 import clientsRouter from "./clients.js"
 import deliverablesRouter, { deliverableByIdRouter } from "./deliverables.js"
 import identityRouter from "./identity.js"
+import teamRouter from "./team.js"
 import projectInvoicesRouter, { invoiceByIdRouter } from "./invoices.js"
 import leadsRouter from "./leads.js"
 import milestonesRouter, { milestoneByIdRouter } from "./milestones.js"
@@ -22,6 +23,7 @@ import versionsRouter from "./versions.js"
 const apiRouter = Router()
 
 apiRouter.use(identityRouter)
+apiRouter.use(teamRouter)
 apiRouter.use("/leads", leadsRouter)
 apiRouter.use("/clients", clientsRouter)
 apiRouter.use("/services", servicesRouter)

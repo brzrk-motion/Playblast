@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/layout/app-layout"
 import { RouteGuard } from "@/components/routing/route-guard"
 import { SessionProvider } from "@/context/session-provider"
 import { ForbiddenPage } from "@/pages/auth/forbidden"
+import { InviteAcceptPage } from "@/pages/auth/invite-accept"
 import { LoginShellPage } from "@/pages/auth/login-shell"
 import { RecoverAdminPage } from "@/pages/auth/recover-admin"
 import { SessionExpiredPage } from "@/pages/auth/session-expired"
@@ -20,6 +21,7 @@ import { ProjectOverviewPage } from "@/pages/project-overview"
 import { ProjectsPage } from "@/pages/projects"
 import { ServicesPage } from "@/pages/services"
 import { SettingsPage } from "@/pages/settings"
+import { TeamPage } from "@/pages/team"
 import { TimesheetPage } from "@/pages/timesheet"
 import { PipelinePage } from "@/pages/pipeline"
 import { Toaster } from "@/components/ui/sonner"
@@ -39,6 +41,7 @@ function App() {
                 <Route path="/setup" element={<SetupShellPage />} />
                 <Route path="/setup/studio" element={<SetupStudioPage />} />
                 <Route path="/setup/complete" element={<SetupCompletePage />} />
+                <Route path="/invite/:token" element={<InviteAcceptPage />} />
                 <Route path="/forbidden" element={<ForbiddenPage />} />
                 <Route path="/session-expired" element={<SessionExpiredPage />} />
                 <Route element={<AppLayout />}>
@@ -59,6 +62,7 @@ function App() {
                     element={<ComparePage />}
                   />
                   <Route path="settings" element={<SettingsPage />} />
+                  <Route path="team" element={<TeamPage />} />
                   <Route path="profile" element={<ProfilePage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>

@@ -20,6 +20,10 @@ export const INVITATION_STATUS_VALUES = [
   "delivery_failed",
 ] as const
 
+export const SMTP_TLS_MODE_VALUES = ["none", "starttls", "tls"] as const
+
+export const SMTP_TEST_STATUS_VALUES = ["never", "success", "failed"] as const
+
 export const studios = sqliteTable(
   "studios",
   {
@@ -127,6 +131,40 @@ export const invitations = sqliteTable(
   ],
 )
 
+export const studioSmtpSettings = sqliteTable(
+  "studio_smtp_settings",
+  {
+    studioId: text("studio_id")
+      .primaryKey()
+      .references(() => studios.id, { onDelete: "cascade" }),
+    host: text("host").notNull(),
+    port: integer("port").notNull(),
+    username: text("username"),
+    passwordEncrypted: text("password_encrypted").notNull(),
+    fromEmail: text("from_email").notNull(),
+    tlsMode: text("tls_mode", { enum: SMTP_TLS_MODE_VALUES }).notNull(),
+    instanceUrl: text("instance_url").notNull(),
+    testVerifiedAt: text("test_verified_at"),
+    lastTestStatus: text("last_test_status", { enum: SMTP_TEST_STATUS_VALUES })
+      .notNull()
+      .default("never"),
+    lastTestAt: text("last_test_at"),
+    lastTestError: text("last_test_error"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    check(
+      "studio_smtp_tls_mode_check",
+      sql`${table.tlsMode} IN ('none', 'starttls', 'tls')`,
+    ),
+    check(
+      "studio_smtp_last_test_status_check",
+      sql`${table.lastTestStatus} IN ('never', 'success', 'failed')`,
+    ),
+  ],
+)
+
 export const auditEvents = sqliteTable(
   "audit_events",
   {
@@ -152,5 +190,6 @@ export const identitySchema = {
   users,
   sessions,
   invitations,
+  studioSmtpSettings,
   auditEvents,
 }

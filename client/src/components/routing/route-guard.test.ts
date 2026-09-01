@@ -12,7 +12,7 @@ describe("role-restricted route guard contract", () => {
   )
 
   for (const role of ["creative", "proofing"] as const satisfies UserRole[]) {
-    it(`denies ${role} users from admin-only CRM routes`, () => {
+    it(`denies ${role} users from admin-only routes including Team`, () => {
       const adminRoutes = implementedRoutes.filter((route) => route.access === "admin")
       for (const route of adminRoutes) {
         assert.equal(
@@ -23,6 +23,12 @@ describe("role-restricted route guard contract", () => {
       }
     })
   }
+
+  it("allows admin users to reach the Team route", () => {
+    const teamRoute = implementedRoutes.find((route) => route.path === "/team")
+    assert.ok(teamRoute)
+    assert.equal(canRoleAccessRoute("admin", teamRoute!), true)
+  })
 
   it("allows proofing users to reach review routes", () => {
     const reviewRoutes = implementedRoutes.filter((route) =>

@@ -11,9 +11,19 @@ import {
   type RecoverAdminRequest,
   type RoleCapabilitiesResponse,
   type SetupStatusResponse,
+  type SmtpSettingsResponse,
+  type SmtpTlsMode,
   type StudioProfileResponse,
+  type TestSmtpRequest,
+  type TestSmtpResponse,
+  type UpdateSmtpSettingsRequest,
   type UpdateStudioRequest,
+  type UpdateUserRequest,
   type UserSummary,
+  type CreateInvitationRequest,
+  type InvitationCreatedResponse,
+  type InvitePreviewResponse,
+  type AcceptInvitationRequest,
 } from "@playblast/shared"
 
 export class IdentityApiError extends Error {
@@ -230,6 +240,78 @@ export async function recoverAdminPassword(
     body: JSON.stringify(input),
   })
 }
+
+export async function fetchSmtpSettings(): Promise<SmtpSettingsResponse> {
+  return identityFetch<SmtpSettingsResponse>("/api/smtp")
+}
+
+export async function updateSmtpSettings(
+  input: UpdateSmtpSettingsRequest,
+): Promise<SmtpSettingsResponse> {
+  return identityFetch<SmtpSettingsResponse>("/api/smtp", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  })
+}
+
+export async function testSmtpSettings(
+  input: TestSmtpRequest = {},
+): Promise<TestSmtpResponse> {
+  return identityFetch<TestSmtpResponse>("/api/smtp/test", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })
+}
+
+export async function createInvitation(
+  input: CreateInvitationRequest,
+): Promise<InvitationCreatedResponse> {
+  return identityFetch<InvitationCreatedResponse>("/api/invitations", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })
+}
+
+export async function resendInvitation(invitationId: string): Promise<InvitationSummary> {
+  return identityFetch<InvitationSummary>(`/api/invitations/${invitationId}/resend`, {
+    method: "POST",
+  })
+}
+
+export async function revokeInvitation(invitationId: string): Promise<InvitationSummary> {
+  return identityFetch<InvitationSummary>(`/api/invitations/${invitationId}/revoke`, {
+    method: "POST",
+  })
+}
+
+export async function updateUser(
+  userId: string,
+  input: UpdateUserRequest,
+): Promise<UserSummary> {
+  return identityFetch<UserSummary>(`/api/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  })
+}
+
+export async function fetchInvitePreview(token: string): Promise<InvitePreviewResponse> {
+  return identityFetch<InvitePreviewResponse>(`/api/invites/${encodeURIComponent(token)}`)
+}
+
+export async function acceptInvitation(
+  token: string,
+  input: AcceptInvitationRequest,
+): Promise<AuthSuccessResponse> {
+  return identityFetch<AuthSuccessResponse>(
+    `/api/invites/${encodeURIComponent(token)}/accept`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  )
+}
+
+export type { SmtpTlsMode }
 
 export function isIdentityApiError(error: unknown): error is IdentityApiError {
   return error instanceof IdentityApiError
