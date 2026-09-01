@@ -474,27 +474,27 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Server/API
 
-- [ ] Implement setup status and race-safe first Admin creation.
-- [ ] Implement password hashing, login, secure sessions, current-user, logout, expiry, cleanup, and password change.
-- [ ] Implement the documented Admin recovery path, including SMTP-unavailable recovery and session invalidation.
-- [ ] Decide and implement Basic Auth removal or its explicitly limited emergency/bootstrap role.
-- [ ] Add rate limiting, CSRF protection, generic auth errors, and security/audit events.
-- [ ] Add first-run negative tests for public routes, media, downloads, repeated setup, concurrent setup, and setup after completion.
+- [x] Implement setup status and race-safe first Admin creation.
+- [x] Implement password hashing, login, secure sessions, current-user, logout, expiry, cleanup, and password change.
+- [x] Implement the documented Admin recovery path, including SMTP-unavailable recovery and session invalidation.
+- [x] Decide and implement Basic Auth removal or its explicitly limited emergency/bootstrap role.
+- [x] Add rate limiting, CSRF protection, generic auth errors, and security/audit events.
+- [x] Add first-run negative tests for public routes, media, downloads, repeated setup, concurrent setup, and setup after completion.
 
 #### Client/UI
 
-- [ ] Build the login screen with email/password validation, generic failure handling, rate-limit messaging, and retry behavior.
-- [ ] Build the first-run Admin account screen with password requirements and setup conflict handling.
-- [ ] Build session-expiry handling, logout, unauthorized/forbidden screens, and recovery entry points.
-- [ ] Ensure the client never stores or displays plaintext passwords, session tokens, invite tokens, or SMTP credentials.
-- [ ] Remove the Basic Auth-dependent UI flow from normal application navigation.
+- [x] Build the login screen with email/password validation, generic failure handling, rate-limit messaging, and retry behavior.
+- [x] Build the first-run Admin account screen with password requirements and setup conflict handling.
+- [x] Build session-expiry handling, logout, unauthorized/forbidden screens, and recovery entry points.
+- [x] Ensure the client never stores or displays plaintext passwords, session tokens, invite tokens, or SMTP credentials.
+- [x] Remove the Basic Auth-dependent UI flow from normal application navigation.
 
 #### Integration/verification
 
 - [ ] Complete fresh deployment → setup → login → logout → login again through the real browser UI.
-- [ ] Verify Admin recovery works with and without SMTP and invalidates affected sessions.
-- [ ] Verify concurrent setup attempts produce exactly one Admin and one successful setup state.
-- [ ] Verify all role-restricted screens redirect or render safe forbidden states without leaking data.
+- [x] Verify Admin recovery works with and without SMTP and invalidates affected sessions.
+- [x] Verify concurrent setup attempts produce exactly one Admin and one successful setup state.
+- [x] Verify all role-restricted screens redirect or render safe forbidden states without leaking data.
 
 **Phase exit:** a fresh instance can be claimed by exactly one bootstrap Admin and the complete authentication lifecycle works through the UI and API.
 

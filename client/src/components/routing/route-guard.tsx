@@ -12,6 +12,7 @@ const PUBLIC_PATHS = new Set([
   "/login",
   "/forbidden",
   "/session-expired",
+  "/recover-admin",
 ])
 
 function isSetupPath(pathname: string): boolean {
@@ -68,6 +69,10 @@ export function RouteGuard() {
   }
 
   if (!setupComplete) {
+    if (pathname === "/setup" && state.setup.status !== "pending") {
+      return <Navigate to={state.setup.nextRoute} replace />
+    }
+
     if (isPublicPath(pathname) || isSetupPath(pathname)) {
       return <Outlet />
     }
@@ -76,7 +81,7 @@ export function RouteGuard() {
   }
 
   if (isSetupPath(pathname)) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/" replace />
   }
 
   if (!state.session) {

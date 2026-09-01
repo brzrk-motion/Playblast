@@ -1,5 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto"
 import type { NextFunction, Request, Response } from "express"
+import { authConfig } from "../auth/config.js"
+import { getSetupStatusResponse } from "../identity/repository.js"
 import { isProduction } from "../config/env.js"
 
 type Credentials = {
@@ -7,18 +9,21 @@ type Credentials = {
   password: string
 }
 
-function readCredentials(): Credentials | null {
-  const username = process.env.PLAYBLAST_AUTH_USER
-  const password = process.env.PLAYBLAST_AUTH_PASSWORD
-
-  if (!isProduction() && !username && !password) {
+function readEmergencyCredentials(): Credentials | null {
+  if (!authConfig.emergencyBasicAuthEnabled) {
     return null
   }
 
+  const username = authConfig.emergencyBasicAuthUser
+  const password = authConfig.emergencyBasicAuthPassword
+
   if (!username || !password) {
-    throw new Error(
-      "PLAYBLAST_AUTH_USER and PLAYBLAST_AUTH_PASSWORD are required in production",
-    )
+    if (isProduction()) {
+      throw new Error(
+        "PLAYBLAST_EMERGENCY_BASIC_AUTH requires PLAYBLAST_AUTH_USER and PLAYBLAST_AUTH_PASSWORD",
+      )
+    }
+    return null
   }
 
   return { username, password }
@@ -59,16 +64,41 @@ function hasValidCredentials(request: Request, expected: Credentials): boolean {
   return timingSafeEqual(supplied, credentialDigest(expected.username, expected.password))
 }
 
+function isEmergencyBootstrapPath(request: Request): boolean {
+  const path = request.path
+  return (
+    path === "/health" ||
+    path === "/api/setup/status" ||
+    path === "/api/setup/admin" ||
+    path.startsWith("/api/auth/")
+  )
+}
+
+/**
+ * Optional deployment-wide emergency Basic Auth for bootstrap-only protection.
+ * Normal application access uses Playblast sessions instead.
+ */
 export function createAuthMiddleware() {
-  const credentials = readCredentials()
+  const credentials = readEmergencyCredentials()
 
   return (request: Request, response: Response, next: NextFunction): void => {
-    if (!credentials || hasValidCredentials(request, credentials)) {
+    if (!credentials) {
       next()
       return
     }
 
-    response.setHeader("WWW-Authenticate", 'Basic realm="Playblast pilot"')
+    const setup = getSetupStatusResponse()
+    if (setup.setupComplete || isEmergencyBootstrapPath(request)) {
+      next()
+      return
+    }
+
+    if (hasValidCredentials(request, credentials)) {
+      next()
+      return
+    }
+
+    response.setHeader("WWW-Authenticate", 'Basic realm="Playblast emergency bootstrap"')
     response.status(401).json({ error: "Authentication required" })
   }
 }

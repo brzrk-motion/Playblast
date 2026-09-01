@@ -17,6 +17,10 @@ import {
   isIdentityApiError,
 } from "@/lib/identity-api"
 
+function shouldLoadSession(setupStatus: string): boolean {
+  return setupStatus !== "pending"
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SessionState>({ status: "loading" })
 
@@ -25,7 +29,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const setup = await fetchSetupStatus()
       let session = null
 
-      if (setup.setupComplete) {
+      if (shouldLoadSession(setup.status)) {
         try {
           session = await fetchCurrentSession()
         } catch (error) {
@@ -70,7 +74,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         }
 
         let session = null
-        if (setup.setupComplete) {
+        if (shouldLoadSession(setup.status)) {
           try {
             session = await fetchCurrentSession()
           } catch (error) {

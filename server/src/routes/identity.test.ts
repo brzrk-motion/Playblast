@@ -78,24 +78,24 @@ describe("identity API contracts", () => {
     assert.equal(body.error, createApiError("UNAUTHENTICATED").error)
   })
 
-  it("GET /api/studio returns setup-not-complete before bootstrap", async () => {
+  it("GET /api/studio returns unauthenticated before bootstrap", async () => {
     const { status, body } = await getJson<unknown>("/api/studio")
 
-    assert.equal(status, 403)
+    assert.equal(status, 401)
     assert.ok(isApiErrorEnvelope(body))
-    assert.equal(body.code, "SETUP_NOT_COMPLETE")
+    assert.equal(body.code, "UNAUTHENTICATED")
   })
 
-  it("GET /api/users and /api/invitations require setup completion", async () => {
+  it("GET /api/users and /api/invitations require authentication before setup completion", async () => {
     for (const path of ["/api/users", "/api/invitations"]) {
       const { status, body } = await getJson<unknown>(path)
-      assert.equal(status, 403)
+      assert.equal(status, 401)
       assert.ok(isApiErrorEnvelope(body))
-      assert.equal(body.code, "SETUP_NOT_COMPLETE")
+      assert.equal(body.code, "UNAUTHENTICATED")
     }
   })
 
-  it("GET /api/capabilities returns unauthenticated until Phase 2", async () => {
+  it("GET /api/capabilities returns unauthenticated without a session", async () => {
     const { status, body } = await getJson<unknown>("/api/capabilities")
     assert.equal(status, 401)
     assert.ok(isApiErrorEnvelope(body))

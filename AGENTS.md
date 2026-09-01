@@ -36,7 +36,7 @@ The repo is an **npm workspaces monorepo** with two packages:
 
 In development, the Vite dev server (port `5173`) proxies `/api` and `/video` to the Express server (port `3000`). In production, Express serves the built client from `client/dist` alongside the API.
 
-Application authentication and the Admin/Creative/Proofing role model are part of the MVP target, but are not implemented yet on the current branch. The current branch only has deployment-wide HTTP Basic Auth in production; do not treat that as application authentication or as a reason to skip the audit’s identity, session, invitation, and authorization tasks.
+Application authentication uses secure sessions, first-run bootstrap, and role-based access. Deployment-wide HTTP Basic Auth is optional emergency bootstrap protection only (`PLAYBLAST_EMERGENCY_BASIC_AUTH`); normal access uses Playblast login sessions.
 
 ### Data & storage
 
@@ -55,6 +55,10 @@ Copy `.env.example` to `.env` at the repo root. Supported variables:
 | `DB_PATH` | `/app/data/playblast.db` | Absolute path to the SQLite database file |
 | `MAX_UPLOAD_SIZE` | `5000` | Max upload size in megabytes |
 | `NODE_ENV` | `development` | `production` or `development` |
+| `SESSION_SECRET` | dev fallback | Session signing secret (required in production, 32+ chars) |
+| `SESSION_TTL_HOURS` | `168` | Session lifetime in hours |
+| `PLAYBLAST_EMERGENCY_BASIC_AUTH` | `false` | Optional bootstrap-only Basic Auth before setup completes |
+| `PLAYBLAST_ADMIN_RECOVERY_TOKEN` | unset | Operator recovery token for lost admin credentials |
 
 ### Standard commands
 

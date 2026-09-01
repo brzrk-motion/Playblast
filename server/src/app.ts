@@ -4,6 +4,10 @@ import express, { type NextFunction, type Request, type Response } from "express
 import path from "node:path"
 import { CLIENT_DIST } from "./config/paths.js"
 import { createAuthMiddleware } from "./middleware/auth.js"
+import {
+  attachSessionContext,
+  requireCsrfProtection,
+} from "./middleware/session.js"
 import { validateVideoParams } from "./middleware/validateParams.js"
 import apiRouter from "./routes/index.js"
 import videoRouter from "./routes/video.js"
@@ -19,11 +23,16 @@ export function createApp() {
     })
   })
 
-  // Keep health checks public, but protect every application route and the
-  // static UI when production credentials are configured.
   app.use(createAuthMiddleware())
-  app.use(cors())
+  app.use(
+    cors({
+      origin: true,
+      credentials: true,
+    }),
+  )
   app.use(express.json())
+  app.use(attachSessionContext())
+  app.use(requireCsrfProtection())
   app.use("/api", apiRouter)
   app.use(
     "/video/:projectId/:deliverableId/:version/:filename",
@@ -40,8 +49,6 @@ export function createApp() {
     })
   }
 
-  // Catch-all error handler so a thrown route error returns a controlled 500
-  // instead of bubbling up and potentially crashing the process.
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     console.error("Unhandled request error:", err)
     if (res.headersSent) {

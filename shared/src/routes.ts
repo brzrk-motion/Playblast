@@ -28,8 +28,8 @@ export interface AppRouteDefinition {
  */
 export const APP_ROUTES: AppRouteDefinition[] = [
   { path: "/health", name: "Health check", access: "public", requiredCapabilities: [], implemented: true, notes: "Server-only; not a client route." },
-  { path: "/login", name: "Login", access: "public", requiredCapabilities: [], implemented: false },
-  { path: "/setup", name: "First-run admin", access: "setup", requiredCapabilities: ["setup.complete"], implemented: false },
+  { path: "/login", name: "Login", access: "public", requiredCapabilities: [], implemented: true },
+  { path: "/setup", name: "First-run admin", access: "setup", requiredCapabilities: ["setup.complete"], implemented: true },
   { path: "/setup/studio", name: "Studio profile", access: "setup", requiredCapabilities: ["setup.complete", "studio.manage"], implemented: false },
   { path: "/setup/complete", name: "Setup completion", access: "setup", requiredCapabilities: ["setup.complete"], implemented: false },
   { path: "/invite/:token", name: "Invite acceptance", access: "public", requiredCapabilities: [], implemented: false },
@@ -46,8 +46,8 @@ export const APP_ROUTES: AppRouteDefinition[] = [
   { path: "/services", name: "Services", access: "admin", requiredCapabilities: ["projects.view"], implemented: true, notes: "Deferred CRM surface; Admin-only in MVP." },
   { path: "/timesheet", name: "Timesheet", access: "admin", requiredCapabilities: ["projects.view"], implemented: true, notes: "Deferred operations surface; Admin-only in MVP." },
   { path: "/capacity", name: "Capacity", access: "admin", requiredCapabilities: ["projects.view"], implemented: true, notes: "Deferred operations surface; Admin-only in MVP." },
-  { path: "/forbidden", name: "Forbidden", access: "public", requiredCapabilities: [], implemented: false },
-  { path: "/session-expired", name: "Session expired", access: "public", requiredCapabilities: [], implemented: false },
+  { path: "/forbidden", name: "Forbidden", access: "public", requiredCapabilities: [], implemented: true },
+  { path: "/session-expired", name: "Session expired", access: "public", requiredCapabilities: [], implemented: true },
 ]
 
 export function getRouteDefinition(path: string): AppRouteDefinition | undefined {
