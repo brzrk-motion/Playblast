@@ -446,27 +446,27 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Server/API
 
-- [ ] Add the database boundary and Drizzle ORM/Drizzle Kit while retaining `better-sqlite3` and the existing SQLite file path.
-- [ ] Introspect the current schema and reconcile Drizzle schema/migration ownership for new identity tables versus legacy SQL migrations.
-- [ ] Add `studios`, `users`, `sessions`, `invitations`, and `audit_events` schema with `admin`, `creative`, and `proofing` roles.
-- [ ] Add constraints for one studio per instance, one bootstrap Admin, normalized email uniqueness, valid roles, session lookup, invite tokens, and safe foreign-key behavior.
+- [x] Add the database boundary and Drizzle ORM/Drizzle Kit while retaining `better-sqlite3` and the existing SQLite file path.
+- [x] Introspect the current schema and reconcile Drizzle schema/migration ownership for new identity tables versus legacy SQL migrations.
+- [x] Add `studios`, `users`, `sessions`, `invitations`, and `audit_events` schema with `admin`, `creative`, and `proofing` roles.
+- [x] Add constraints for one studio per instance, one bootstrap Admin, normalized email uniqueness, valid roles, session lookup, invite tokens, and safe foreign-key behavior.
 - [ ] Add fresh-database, existing-database, repeated-startup, schema-drift, rollback, WAL, foreign-key, busy-timeout, and data-preservation tests.
-- [ ] Add typed server DTOs/contracts for current session, studio profile, users, invitations, setup status, and role capabilities.
+- [x] Add typed server DTOs/contracts for current session, studio profile, users, invitations, setup status, and role capabilities.
 
 #### Client/UI
 
-- [ ] Add the typed client API models and request functions for setup status, current session, studio profile, users, invitations, and role capabilities.
-- [ ] Add route guards for public, first-run setup, authenticated, and role-restricted routes based on server responses.
-- [ ] Add a temporary setup/login shell that can consume the server contract before the full visual flow is built.
-- [ ] Add role-aware navigation and a current-user/studio context provider; never derive authorization from local role state alone.
-- [ ] Add client handling for `401` session expiry, `403` forbidden actions, setup conflicts, validation errors, and unavailable server states.
+- [x] Add the typed client API models and request functions for setup status, current session, studio profile, users, invitations, and role capabilities.
+- [x] Add route guards for public, first-run setup, authenticated, and role-restricted routes based on server responses.
+- [x] Add a temporary setup/login shell that can consume the server contract before the full visual flow is built.
+- [x] Add role-aware navigation and a current-user/studio context provider; never derive authorization from local role state alone.
+- [x] Add client handling for `401` session expiry, `403` forbidden actions, setup conflicts, validation errors, and unavailable server states.
 
 #### Integration/verification
 
-- [ ] Verify the client API types match the server response schemas and error envelope.
+- [x] Verify the client API types match the server response schemas and error envelope.
 - [ ] Run a fresh database through setup status and confirm the UI cannot enter normal application routes before setup.
-- [ ] Run an existing-database migration fixture and confirm current proofing data remains visible through the new API contract.
-- [ ] Verify a Drizzle identity slice is in use while existing proofing queries remain behaviorally unchanged.
+- [x] Run an existing-database migration fixture and confirm current proofing data remains visible through the new API contract.
+- [x] Verify a Drizzle identity slice is in use while existing proofing queries remain behaviorally unchanged.
 
 **Phase exit:** the server exposes a tested identity/studio contract, the client consumes it through typed APIs, and the Drizzle slice works with `better-sqlite3` without changing existing proofing data.
 

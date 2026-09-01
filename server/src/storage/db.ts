@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto"
 import { fileURLToPath } from "node:url"
 import type Database from "better-sqlite3"
 import DatabaseConstructor from "better-sqlite3"
+import { migrateIdentity } from "../db/migrate-identity.js"
+import { resetDrizzle } from "../db/drizzle.js"
 import { config } from "../config/env.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -228,12 +230,14 @@ export function initDatabase(dbPath?: string): void {
   dbInstance.pragma("foreign_keys = ON")
   dbInstance.exec(fs.readFileSync(SCHEMA_PATH, "utf8"))
   runMigrations(dbInstance)
+  migrateIdentity(dbInstance)
 }
 
 export function closeDatabase(): void {
   if (dbInstance) {
     dbInstance.close()
     dbInstance = null
+    resetDrizzle()
   }
 }
 

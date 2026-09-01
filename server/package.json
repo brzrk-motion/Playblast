@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc && cp src/storage/schema.sql dist/storage/schema.sql && cp -r src/storage/migrations dist/storage/migrations",
+    "build": "tsc && cp src/storage/schema.sql dist/storage/schema.sql && cp -r src/storage/migrations dist/storage/migrations && cp -r src/db/migrations dist/db/migrations",
     "start": "node dist/index.js",
     "migrate": "tsx src/scripts/migrate.ts",
     "migrate:prod": "node dist/scripts/migrate.js",
@@ -16,6 +16,7 @@
     "better-sqlite3": "^12.10.0",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
     "express": "^5.1.0",
     "multer": "^2.3.0",
     "pdfkit": "^0.19.1"
@@ -27,6 +28,7 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^24.13.2",
     "@types/pdfkit": "^0.17.6",
+    "drizzle-kit": "^0.31.10",
     "tsx": "^4.20.6",
     "typescript": "~6.0.2"
   }
