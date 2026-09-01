@@ -527,29 +527,29 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Server/API
 
-- [ ] Implement Admin-only user listing, invitation creation, resend, revoke, role assignment, disable/reactivate, and last-Admin protections.
-- [ ] Persist and enforce invitation roles; acceptance cannot change a selected role.
-- [ ] Implement secure invite-token hashing, expiry, one-time use, replay protection, and duplicate rules.
-- [ ] Implement generic SMTP with explicit TLS/authentication/timeout/error behavior and local secret handling.
-- [ ] Implement Admin-only SMTP test delivery and accurate delivery status.
-- [ ] Implement invitation templates containing studio, recipient, role, instance URL, expiry, and self-hosting context.
-- [ ] Add Admin/Creative/Proofing allow/deny tests for all team, SMTP, and invitation routes.
+- [x] Implement Admin-only user listing, invitation creation, resend, revoke, role assignment, disable/reactivate, and last-Admin protections.
+- [x] Persist and enforce invitation roles; acceptance cannot change a selected role.
+- [x] Implement secure invite-token hashing, expiry, one-time use, replay protection, and duplicate rules.
+- [x] Implement generic SMTP with explicit TLS/authentication/timeout/error behavior and local secret handling.
+- [x] Implement Admin-only SMTP test delivery and accurate delivery status.
+- [x] Implement invitation templates containing studio, recipient, role, instance URL, expiry, and self-hosting context.
+- [x] Add Admin/Creative/Proofing allow/deny tests for all team, SMTP, and invitation routes.
 
 #### Client/UI
 
-- [ ] Build the Admin-only Team page with users, roles, status, pending invites, resend, revoke, disable, reactivate, and validation states.
-- [ ] Build role selection with the fixed role descriptions and prevent invitation of an arbitrary/custom role.
-- [ ] Build SMTP configuration/test UI with masked credentials, safe errors, test status, and no secret echoing.
-- [ ] Build invite acceptance and password creation screens showing studio name and assigned role.
-- [ ] Build role-aware controls so Creative and Proofing users cannot reach Team or SMTP administration through navigation or direct URLs.
+- [x] Build the Admin-only Team page with users, roles, status, pending invites, resend, revoke, disable, reactivate, and validation states.
+- [x] Build role selection with the fixed role descriptions and prevent invitation of an arbitrary/custom role.
+- [x] Build SMTP configuration/test UI with masked credentials, safe errors, test status, and no secret echoing.
+- [x] Build invite acceptance and password creation screens showing studio name and assigned role.
+- [x] Build role-aware controls so Creative and Proofing users cannot reach Team or SMTP administration through navigation or direct URLs.
 
 #### Integration/verification
 
-- [ ] Admin configures/test-delivers SMTP → invites Creative → Creative accepts and logs in.
-- [ ] Admin configures/test-delivers SMTP → invites Proofing → Proofing accepts and logs in.
-- [ ] Verify invitation email capture contains the correct role and secure link.
-- [ ] Verify expired, revoked, replayed, duplicate, delivery-failed, and wrong-role attempts behave consistently in API and UI.
-- [ ] Verify no invitation, SMTP, telemetry, or error path contacts brzrk or requires a centralized credential.
+- [x] Admin configures/test-delivers SMTP → invites Creative → Creative accepts and logs in.
+- [x] Admin configures/test-delivers SMTP → invites Proofing → Proofing accepts and logs in.
+- [x] Verify invitation email capture contains the correct role and secure link.
+- [x] Verify expired, revoked, replayed, duplicate, delivery-failed, and wrong-role attempts behave consistently in API and UI.
+- [x] Verify no invitation, SMTP, telemetry, or error path contacts brzrk or requires a centralized credential.
 
 **Phase exit:** Admin can independently invite both supported non-Admin roles, and each role receives the correct account experience.
 

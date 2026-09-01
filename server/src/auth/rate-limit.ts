@@ -22,6 +22,13 @@ export const AUTH_RATE_LIMITS = {
     maxAttempts: 5,
     windowMs: 15 * 60 * 1000,
   },
+  invite: { keyPrefix: "invite", maxAttempts: 10, windowMs: 15 * 60 * 1000 },
+  inviteAccept: {
+    keyPrefix: "invite-accept",
+    maxAttempts: 5,
+    windowMs: 15 * 60 * 1000,
+  },
+  smtpTest: { keyPrefix: "smtp-test", maxAttempts: 5, windowMs: 15 * 60 * 1000 },
 } as const satisfies Record<string, RateLimitRule>
 
 function getClientKey(request: Request): string {

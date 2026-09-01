@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Settings,
   TrendingUp,
+  UserCog,
   Users,
 } from "lucide-react"
 
@@ -59,6 +60,11 @@ export const navMain: NavItem[] = [
     title: "Capacity",
     icon: Gauge,
     url: "/capacity",
+  },
+  {
+    title: "Team",
+    icon: UserCog,
+    url: "/team",
   },
 ]
 
@@ -119,6 +125,10 @@ export function getPageHeader(pathname: string): { title: string; subtitle?: str
     return { title: "Capacity", subtitle: "Active workload & hours remaining" }
   }
 
+  if (pathname === "/team") {
+    return { title: "Team", subtitle: "Users, roles, and invitations" }
+  }
+
   if (pathname === "/") {
     return { title: "Dashboard" }
   }
@@ -153,6 +163,9 @@ export function isNavItemActive(pathname: string, url: string): boolean {
   }
   if (url === "/capacity") {
     return pathname === "/capacity" || pathname.startsWith("/capacity/")
+  }
+  if (url === "/team") {
+    return pathname === "/team" || pathname.startsWith("/team/")
   }
   return pathname === url
 }

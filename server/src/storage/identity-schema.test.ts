@@ -46,6 +46,7 @@ describe("identity schema and Drizzle migrations", () => {
       "users",
       "sessions",
       "invitations",
+      "studio_smtp_settings",
       "audit_events",
       "__drizzle_migrations",
     ]) {
@@ -98,6 +99,7 @@ describe("identity schema and Drizzle migrations", () => {
     assert.ok(__testOnly_tableHasColumn(db, "users", "email_normalized"))
     assert.ok(__testOnly_tableHasColumn(db, "users", "password_hash"))
     assert.ok(__testOnly_tableHasColumn(db, "invitations", "token_hash"))
+    assert.ok(__testOnly_tableHasColumn(db, "studio_smtp_settings", "password_encrypted"))
     assert.ok(__testOnly_tableHasColumn(db, "sessions", "token_hash"))
 
     const userEmailIndex = db
