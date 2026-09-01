@@ -1,4 +1,4 @@
-import { Link, NavLink, useLocation } from "react-router-dom"
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom"
 import {
   ChevronRight,
   Clapperboard,
@@ -43,6 +43,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useSession } from "@/hooks/use-session"
 import { getMvpNavItemsForRole } from "@/lib/mvp-contracts"
+import { logout } from "@/lib/identity-api"
 import {
   isNavGroupActive,
   isNavItemActive,
@@ -64,7 +65,8 @@ function ComingSoonBadge() {
 
 export function AppSidebar() {
   const location = useLocation()
-  const { state, role } = useSession()
+  const navigate = useNavigate()
+  const { state, role, refresh } = useSession()
 
   const sessionUser = state.status === "ready" ? state.session?.user : null
   const sessionStudio = state.status === "ready" ? state.session?.studio : null
@@ -80,6 +82,15 @@ export function AppSidebar() {
   const userEmail = sessionUser?.email || "Not signed in"
   const userInitials = getInitials(sessionUser?.name || studioName)
   const roleBadge = role ? ROLE_BADGE_TOKENS[role] : null
+
+  async function handleLogout() {
+    try {
+      await logout()
+    } finally {
+      await refresh()
+      navigate("/login", { replace: true })
+    }
+  }
 
   return (
     <Sidebar collapsible="icon">
@@ -240,9 +251,14 @@ export function AppSidebar() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem disabled>
+                <DropdownMenuItem
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    void handleLogout()
+                  }}
+                >
                   <LogOut className="mr-2 size-4" />
-                  Log out (Phase 2)
+                  Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

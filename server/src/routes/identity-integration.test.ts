@@ -54,8 +54,8 @@ describe("Phase 1 identity integration", () => {
 
     const studioResponse = await fetch(`${baseUrl}/api/studio`)
     const studioBody = (await studioResponse.json()) as { code: string }
-    assert.equal(studioResponse.status, 403)
-    assert.equal(studioBody.code, "SETUP_NOT_COMPLETE")
+    assert.equal(studioResponse.status, 401)
+    assert.equal(studioBody.code, "UNAUTHENTICATED")
   })
 
   it("keeps legacy proofing APIs available while identity is pending", async () => {

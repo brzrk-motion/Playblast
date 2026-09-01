@@ -7,9 +7,6 @@ import type { Server } from "node:http"
 import { createApp } from "../app.js"
 import { closeDatabase, initDatabase } from "../storage/db.js"
 
-const SMOKE_AUTH_USER = "pilot-smoke"
-const SMOKE_AUTH_PASSWORD = "smoke-test-password-not-for-production"
-
 let tempDir = ""
 let dbPath = ""
 let uploadRoot = ""
@@ -17,17 +14,9 @@ let server: Server
 let baseUrl = ""
 
 const previousNodeEnv = process.env.NODE_ENV
-const previousUser = process.env.PLAYBLAST_AUTH_USER
-const previousPassword = process.env.PLAYBLAST_AUTH_PASSWORD
 const previousDbPath = process.env.DB_PATH
 const previousUploadDir = process.env.UPLOAD_DIR
-
-function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
-  const credentials = Buffer.from(`${SMOKE_AUTH_USER}:${SMOKE_AUTH_PASSWORD}`).toString(
-    "base64",
-  )
-  return { Authorization: `Basic ${credentials}`, ...extra }
-}
+const previousSessionSecret = process.env.SESSION_SECRET
 
 before(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "playblast-pilot-e2e-"))
@@ -35,10 +24,12 @@ before(async () => {
   uploadRoot = path.join(tempDir, "uploads")
 
   process.env.NODE_ENV = "production"
-  process.env.PLAYBLAST_AUTH_USER = SMOKE_AUTH_USER
-  process.env.PLAYBLAST_AUTH_PASSWORD = SMOKE_AUTH_PASSWORD
+  process.env.SESSION_SECRET = "pilot-smoke-session-secret-32-characters"
   process.env.DB_PATH = dbPath
   process.env.UPLOAD_DIR = uploadRoot
+  delete process.env.PLAYBLAST_EMERGENCY_BASIC_AUTH
+  delete process.env.PLAYBLAST_AUTH_USER
+  delete process.env.PLAYBLAST_AUTH_PASSWORD
   initDatabase(dbPath)
 
   const app = createApp()
@@ -63,40 +54,30 @@ after(async () => {
 
   if (previousNodeEnv === undefined) delete process.env.NODE_ENV
   else process.env.NODE_ENV = previousNodeEnv
-  if (previousUser === undefined) delete process.env.PLAYBLAST_AUTH_USER
-  else process.env.PLAYBLAST_AUTH_USER = previousUser
-  if (previousPassword === undefined) delete process.env.PLAYBLAST_AUTH_PASSWORD
-  else process.env.PLAYBLAST_AUTH_PASSWORD = previousPassword
   if (previousDbPath === undefined) delete process.env.DB_PATH
   else process.env.DB_PATH = previousDbPath
   if (previousUploadDir === undefined) delete process.env.UPLOAD_DIR
   else process.env.UPLOAD_DIR = previousUploadDir
+  if (previousSessionSecret === undefined) delete process.env.SESSION_SECRET
+  else process.env.SESSION_SECRET = previousSessionSecret
 })
 
 describe("pilot authenticated E2E smoke", () => {
-  it("keeps health public and enforces Basic Auth on application routes", async () => {
+  it("keeps health public without deployment Basic Auth in normal production mode", async () => {
     const health = await fetch(`${baseUrl}/health`)
     assert.equal(health.status, 200)
     const healthBody = (await health.json()) as { status: string }
     assert.equal(healthBody.status, "ok")
 
-    const unauthenticated = await fetch(`${baseUrl}/api/projects`)
-    assert.equal(unauthenticated.status, 401)
-    assert.equal(
-      unauthenticated.headers.get("www-authenticate"),
-      'Basic realm="Playblast pilot"',
-    )
-
-    const authenticated = await fetch(`${baseUrl}/api/projects`, {
-      headers: authHeaders(),
-    })
-    assert.equal(authenticated.status, 200)
+    const projects = await fetch(`${baseUrl}/api/projects`)
+    assert.equal(projects.status, 200)
+    assert.equal(projects.headers.get("www-authenticate"), null)
   })
 
   it("covers project → deliverable → upload → playback → download → comment → approval", async () => {
     const projectResponse = await fetch(`${baseUrl}/api/projects`, {
       method: "POST",
-      headers: authHeaders({ "Content-Type": "application/json" }),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: "pilot-smoke",
         name: "Pilot Smoke Spot",
@@ -111,7 +92,7 @@ describe("pilot authenticated E2E smoke", () => {
       `${baseUrl}/api/projects/${project.id}/deliverables`,
       {
         method: "POST",
-        headers: authHeaders({ "Content-Type": "application/json" }),
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: "Hero Cut" }),
       },
     )
@@ -138,7 +119,7 @@ describe("pilot authenticated E2E smoke", () => {
       `${baseUrl}/api/deliverables/${deliverable.id}/versions/${versionLabel}/upload`,
       {
         method: "POST",
-        headers: authHeaders(),
+        headers: {},
         body: formData,
       },
     )
@@ -154,7 +135,7 @@ describe("pilot authenticated E2E smoke", () => {
 
     const playbackResponse = await fetch(
       `${baseUrl}/video/${project.id}/${deliverable.id}/${versionLabel}/${videoFilename}`,
-      { headers: authHeaders({ Range: "bytes=0-15" }) },
+      { headers: { Range: "bytes=0-15" } },
     )
     assert.equal(playbackResponse.status, 206)
     assert.equal(playbackResponse.headers.get("content-type"), "video/mp4")
@@ -164,7 +145,6 @@ describe("pilot authenticated E2E smoke", () => {
 
     const downloadResponse = await fetch(
       `${baseUrl}/api/versions/${upload.versionId}/download`,
-      { headers: authHeaders() },
     )
     assert.equal(downloadResponse.status, 200)
     assert.equal(downloadResponse.headers.get("content-type"), "video/mp4")
@@ -192,7 +172,7 @@ describe("pilot authenticated E2E smoke", () => {
 
     const commentResponse = await fetch(`${baseUrl}/api/comments`, {
       method: "POST",
-      headers: authHeaders({ "Content-Type": "application/json" }),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         versionId: upload.versionId,
         timestamp: 2.5,
@@ -212,7 +192,6 @@ describe("pilot authenticated E2E smoke", () => {
 
     const commentsListResponse = await fetch(
       `${baseUrl}/api/comments?versionId=${encodeURIComponent(upload.versionId)}`,
-      { headers: authHeaders() },
     )
     assert.equal(commentsListResponse.status, 200)
     const comments = (await commentsListResponse.json()) as Array<{ id: string }>
@@ -223,7 +202,7 @@ describe("pilot authenticated E2E smoke", () => {
       `${baseUrl}/api/versions/${upload.versionId}/status`,
       {
         method: "PATCH",
-        headers: authHeaders({ "Content-Type": "application/json" }),
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "approved" }),
       },
     )
@@ -231,9 +210,7 @@ describe("pilot authenticated E2E smoke", () => {
     const approvedVersion = (await approveResponse.json()) as { status: string }
     assert.equal(approvedVersion.status, "approved")
 
-    const projectsListResponse = await fetch(`${baseUrl}/api/projects`, {
-      headers: authHeaders(),
-    })
+    const projectsListResponse = await fetch(`${baseUrl}/api/projects`)
     assert.equal(projectsListResponse.status, 200)
     const projects = (await projectsListResponse.json()) as Array<{
       id: string
@@ -247,7 +224,6 @@ describe("pilot authenticated E2E smoke", () => {
 
     const deliverablesResponse = await fetch(
       `${baseUrl}/api/projects/${project.id}/deliverables`,
-      { headers: authHeaders() },
     )
     assert.equal(deliverablesResponse.status, 200)
     const deliverables = (await deliverablesResponse.json()) as Array<{
@@ -262,7 +238,6 @@ describe("pilot authenticated E2E smoke", () => {
 
     const versionsResponse = await fetch(
       `${baseUrl}/api/deliverables/${deliverable.id}/versions`,
-      { headers: authHeaders() },
     )
     assert.equal(versionsResponse.status, 200)
     const versions = (await versionsResponse.json()) as Array<{

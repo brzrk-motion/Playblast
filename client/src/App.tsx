@@ -5,8 +5,13 @@ import { RouteGuard } from "@/components/routing/route-guard"
 import { SessionProvider } from "@/context/session-provider"
 import { ForbiddenPage } from "@/pages/auth/forbidden"
 import { LoginShellPage } from "@/pages/auth/login-shell"
+import { RecoverAdminPage } from "@/pages/auth/recover-admin"
 import { SessionExpiredPage } from "@/pages/auth/session-expired"
 import { SetupShellPage } from "@/pages/auth/setup-shell"
+import {
+  SetupCompletePlaceholderPage,
+  SetupStudioPlaceholderPage,
+} from "@/pages/auth/setup-placeholders"
 import { CapacityPage } from "@/pages/capacity"
 import { ComparePage } from "@/pages/compare"
 import { ComingSoonPage } from "@/pages/coming-soon"
@@ -32,9 +37,10 @@ function App() {
             <Routes>
               <Route element={<RouteGuard />}>
                 <Route path="/login" element={<LoginShellPage />} />
+                <Route path="/recover-admin" element={<RecoverAdminPage />} />
                 <Route path="/setup" element={<SetupShellPage />} />
-                <Route path="/setup/studio" element={<SetupShellPage />} />
-                <Route path="/setup/complete" element={<SetupShellPage />} />
+                <Route path="/setup/studio" element={<SetupStudioPlaceholderPage />} />
+                <Route path="/setup/complete" element={<SetupCompletePlaceholderPage />} />
                 <Route path="/forbidden" element={<ForbiddenPage />} />
                 <Route path="/session-expired" element={<SessionExpiredPage />} />
                 <Route element={<AppLayout />}>
