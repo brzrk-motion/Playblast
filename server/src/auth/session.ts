@@ -21,6 +21,10 @@ export interface CreatedSession {
   response: CurrentSessionResponse
 }
 
+function buildStudioAvatarUrl(avatarPath: string | null): string | null {
+  return avatarPath ? "/api/studio/avatar" : null
+}
+
 function buildSessionResponse(
   user: typeof users.$inferSelect,
   studio: typeof studios.$inferSelect,
@@ -38,6 +42,7 @@ function buildSessionResponse(
       id: studio.id,
       name: studio.name,
       setupStatus: studio.setupStatus,
+      avatarUrl: buildStudioAvatarUrl(studio.avatarPath),
     },
     expiresAt,
   }

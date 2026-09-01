@@ -35,3 +35,24 @@ export interface RecoverAdminRequest {
 export interface AuthSuccessResponse extends CurrentSessionResponse {
   csrfToken: string
 }
+
+/** Studio name policy enforced during setup and profile updates. */
+export const STUDIO_NAME_POLICY = {
+  minLength: 2,
+  maxLength: 120,
+} as const
+
+/** Studio avatar upload policy. */
+export const STUDIO_AVATAR_POLICY = {
+  maxSizeBytes: 2 * 1024 * 1024,
+  allowedMimeTypes: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+  ] as const,
+} as const
+
+export interface UpdateStudioRequest {
+  name: string
+}

@@ -30,7 +30,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
@@ -79,8 +79,10 @@ export function AppSidebar() {
     : navSecondary
 
   const studioName = sessionStudio?.name || "Playblast Studio"
+  const userName = sessionUser?.name || "Signed-in user"
   const userEmail = sessionUser?.email || "Not signed in"
-  const userInitials = getInitials(sessionUser?.name || studioName)
+  const studioAvatarUrl = sessionStudio?.avatarUrl
+  const userInitials = getInitials(userName)
   const roleBadge = role ? ROLE_BADGE_TOKENS[role] : null
 
   async function handleLogout() {
@@ -212,11 +214,20 @@ export function AppSidebar() {
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="size-8 rounded-lg">
+                    {studioAvatarUrl ? (
+                      <AvatarImage
+                        src={studioAvatarUrl}
+                        alt={`${studioName} avatar`}
+                        className="rounded-lg"
+                      />
+                    ) : null}
                     <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">{studioName}</span>
-                    <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {userName}
+                    </span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4" />
                 </SidebarMenuButton>
@@ -230,11 +241,20 @@ export function AppSidebar() {
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                     <Avatar className="size-8 rounded-lg">
+                      {studioAvatarUrl ? (
+                        <AvatarImage
+                          src={studioAvatarUrl}
+                          alt={`${studioName} avatar`}
+                          className="rounded-lg"
+                        />
+                      ) : null}
                       <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">{studioName}</span>
-                      <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
+                      <span className="truncate font-semibold">{userName}</span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {userEmail}
+                      </span>
                     </div>
                     {roleBadge ? (
                       <Badge variant="outline" className={cn("ml-2", roleBadge.className)}>

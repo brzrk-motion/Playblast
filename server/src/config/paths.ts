@@ -52,3 +52,52 @@ export function getVideoPath(
 
   return resolvedPath
 }
+
+export function getStudioAvatarDir(studioId: string): string {
+  return path.join(config.uploadDir, "avatars", studioId)
+}
+
+export function ensureStudioAvatarDir(studioId: string): string {
+  const avatarDir = getStudioAvatarDir(studioId)
+  fs.mkdirSync(avatarDir, { recursive: true })
+  return avatarDir
+}
+
+export function resolveStudioAvatarPath(
+  studioId: string,
+  filename: string,
+): string | null {
+  const avatarDir = path.resolve(getStudioAvatarDir(studioId))
+  const resolvedPath = path.resolve(avatarDir, filename)
+
+  if (
+    resolvedPath !== avatarDir &&
+    !resolvedPath.startsWith(`${avatarDir}${path.sep}`)
+  ) {
+    return null
+  }
+
+  return resolvedPath
+}
+
+export function resolveStoredAvatarPath(relativePath: string): string | null {
+  const uploadDir = path.resolve(config.uploadDir)
+  const resolvedPath = path.resolve(uploadDir, relativePath)
+
+  if (
+    resolvedPath !== uploadDir &&
+    !resolvedPath.startsWith(`${uploadDir}${path.sep}`)
+  ) {
+    return null
+  }
+
+  const avatarsRoot = path.resolve(uploadDir, "avatars")
+  if (
+    resolvedPath !== avatarsRoot &&
+    !resolvedPath.startsWith(`${avatarsRoot}${path.sep}`)
+  ) {
+    return null
+  }
+
+  return resolvedPath
+}

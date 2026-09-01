@@ -8,8 +8,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  StudioAvatarField,
+  StudioNameField,
+} from "@/components/studio/studio-profile-fields"
+import { validateStudioNameInput } from "@/lib/studio-profile"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useSession } from "@/hooks/use-session"
+import {
+  deleteStudioAvatar,
+  isIdentityApiError,
+  updateStudioProfile,
+  uploadStudioAvatar,
+} from "@/lib/identity-api"
 import {
   getInternalHourlyCostRate,
   setInternalHourlyCostRate,
@@ -20,6 +32,10 @@ import {
 } from "@/lib/weekly-capacity"
 
 export function SettingsPage() {
+  const { state, role, refresh } = useSession()
+  const isAdmin = role === "admin"
+  const sessionStudio = state.status === "ready" ? state.session?.studio : null
+
   const [internalRateInput, setInternalRateInput] = useState(() => {
     const rate = getInternalHourlyCostRate()
     return rate !== null ? String(rate) : ""
@@ -29,6 +45,21 @@ export function SettingsPage() {
     return hours !== null ? String(hours) : ""
   })
   const [saved, setSaved] = useState(false)
+
+  const [draftStudioName, setDraftStudioName] = useState<string | null>(null)
+  const [draftAvatarUrl, setDraftAvatarUrl] = useState<string | null | undefined>(undefined)
+  const [studioNameError, setStudioNameError] = useState<string | null>(null)
+  const [studioAvatarError, setStudioAvatarError] = useState<string | null>(null)
+  const [studioFormError, setStudioFormError] = useState<string | null>(null)
+  const [studioSaved, setStudioSaved] = useState(false)
+  const [studioSaving, setStudioSaving] = useState(false)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [avatarDeleting, setAvatarDeleting] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+
+  const studioName = draftStudioName ?? sessionStudio?.name ?? ""
+  const avatarUrl =
+    draftAvatarUrl === undefined ? sessionStudio?.avatarUrl ?? null : draftAvatarUrl
 
   function handleSaveInternalRate() {
     const trimmed = internalRateInput.trim()
@@ -76,6 +107,82 @@ export function SettingsPage() {
     setSaved(true)
   }
 
+  async function handleSaveStudioProfile() {
+    setStudioFormError(null)
+    setStudioNameError(null)
+    setStudioSaved(false)
+
+    const validationError = validateStudioNameInput(studioName)
+    if (validationError) {
+      setStudioNameError(validationError)
+      return
+    }
+
+    setStudioSaving(true)
+    try {
+      const updated = await updateStudioProfile({ name: studioName.trim() })
+      setDraftStudioName(null)
+      setDraftAvatarUrl(updated.avatarUrl)
+      await refresh()
+      setStudioSaved(true)
+    } catch (error) {
+      if (isIdentityApiError(error)) {
+        setStudioNameError(error.details?.name?.[0] ?? null)
+        setStudioFormError(error.message)
+      } else {
+        setStudioFormError("Could not save studio profile.")
+      }
+    } finally {
+      setStudioSaving(false)
+    }
+  }
+
+  async function handleAvatarUpload(file: File) {
+    setStudioAvatarError(null)
+    setStudioSaved(false)
+    setAvatarUploading(true)
+    setUploadProgress(0)
+
+    try {
+      const updated = await uploadStudioAvatar(file, (progress) => {
+        setUploadProgress(progress.percent)
+      })
+      setDraftAvatarUrl(updated.avatarUrl)
+      await refresh()
+      setStudioSaved(true)
+    } catch (error) {
+      if (isIdentityApiError(error)) {
+        setStudioAvatarError(error.details?.avatar?.[0] ?? error.message)
+      } else {
+        setStudioAvatarError("Avatar upload failed.")
+      }
+    } finally {
+      setAvatarUploading(false)
+      setUploadProgress(null)
+    }
+  }
+
+  async function handleAvatarDelete() {
+    setStudioAvatarError(null)
+    setStudioSaved(false)
+    setAvatarDeleting(true)
+
+    try {
+      const updated = await deleteStudioAvatar()
+      setDraftAvatarUrl(updated.avatarUrl)
+      await refresh()
+      setStudioSaved(true)
+    } catch (error) {
+      if (isIdentityApiError(error)) {
+        setStudioAvatarError(error.message)
+      } else {
+        setStudioAvatarError("Could not remove avatar.")
+      }
+    } finally {
+      setAvatarDeleting(false)
+    }
+  }
+
   useEffect(() => {
     if (!saved) {
       return
@@ -85,6 +192,15 @@ export function SettingsPage() {
     return () => window.clearTimeout(timeout)
   }, [saved])
 
+  useEffect(() => {
+    if (!studioSaved) {
+      return
+    }
+
+    const timeout = window.setTimeout(() => setStudioSaved(false), 2000)
+    return () => window.clearTimeout(timeout)
+  }, [studioSaved])
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <div className="flex flex-col gap-2">
@@ -93,6 +209,54 @@ export function SettingsPage() {
           Workspace preferences and appearance.
         </p>
       </div>
+
+      {isAdmin ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Studio profile</CardTitle>
+            <CardDescription>
+              Update the studio name and avatar shown across the application shell.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <StudioNameField
+              id="settings-studio-name"
+              value={studioName}
+              onChange={setDraftStudioName}
+              disabled={studioSaving || avatarUploading || avatarDeleting}
+              error={studioNameError}
+            />
+            <StudioAvatarField
+              studioName={studioName.trim() || "Your studio"}
+              avatarUrl={avatarUrl}
+              disabled={studioSaving || avatarUploading || avatarDeleting}
+              uploading={avatarUploading}
+              deleting={avatarDeleting}
+              uploadProgress={uploadProgress}
+              error={studioAvatarError}
+              onSelectFile={handleAvatarUpload}
+              onDelete={handleAvatarDelete}
+            />
+            {studioFormError ? (
+              <p className="text-destructive text-sm" role="alert">
+                {studioFormError}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                onClick={() => void handleSaveStudioProfile()}
+                disabled={studioSaving || avatarUploading || avatarDeleting}
+              >
+                {studioSaving ? "Saving..." : "Save studio profile"}
+              </Button>
+              {studioSaved ? (
+                <p className="text-muted-foreground text-sm">Studio profile saved.</p>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
