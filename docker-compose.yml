@@ -5,17 +5,37 @@ services:
     init: true
     ports:
       - "3000:3000"
+    env_file:
+      - path: .env
+        required: false
     environment:
       NODE_ENV: production
+      PORT: "3000"
       UPLOAD_DIR: /app/uploads
       DB_PATH: /app/data/playblast.db
-      # Set these in an external .env file before starting the pilot.
-      PLAYBLAST_AUTH_USER: ${PLAYBLAST_AUTH_USER:?Set PLAYBLAST_AUTH_USER}
-      PLAYBLAST_AUTH_PASSWORD: ${PLAYBLAST_AUTH_PASSWORD:?Set PLAYBLAST_AUTH_PASSWORD}
+      MAX_UPLOAD_SIZE: "5000"
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env (32+ characters)}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-168}
+      PLAYBLAST_ADMIN_RECOVERY_TOKEN: ${PLAYBLAST_ADMIN_RECOVERY_TOKEN:-}
+      PLAYBLAST_EMERGENCY_BASIC_AUTH: ${PLAYBLAST_EMERGENCY_BASIC_AUTH:-false}
+      PLAYBLAST_AUTH_USER: ${PLAYBLAST_AUTH_USER:-}
+      PLAYBLAST_AUTH_PASSWORD: ${PLAYBLAST_AUTH_PASSWORD:-}
     volumes:
       - playblast_uploads:/app/uploads
       - playblast_data:/app/data
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "-qO-",
+          "http://127.0.0.1:3000/health",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
 volumes:
   playblast_uploads:

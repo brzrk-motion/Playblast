@@ -1,5 +1,5 @@
 # Stage 1: build the Vite client and compile the Express server
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 RUN apk add --no-cache python3 make g++
 
@@ -19,7 +19,7 @@ COPY shared ./shared
 RUN npm run build -w shared && npm run build -w client && npm run build -w server
 
 # Stage 2: production runtime
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
@@ -44,7 +44,7 @@ COPY --from=builder /app/shared/dist ./shared/dist
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- "http://127.0.0.1:${PORT:-3000}/health" || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- "http://127.0.0.1:${PORT:-3000}/health" | grep -q '"status":"ok"' || exit 1
 
 CMD ["node", "server/dist/index.js"]

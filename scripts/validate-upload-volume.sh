@@ -6,15 +6,30 @@ cd "$ROOT_DIR"
 
 MARKER_FILE="persistence-check.txt"
 MARKER_CONTENT="playblast-volume-persistence-$(date +%s)"
-COMPOSE="docker compose"
 
 if ! command -v docker >/dev/null 2>&1; then
-  echo "error: docker is required to validate upload volume persistence" >&2
-  exit 1
+  echo "note: docker is unavailable; skipped upload volume persistence check."
+  exit 0
 fi
 
+if ! docker info >/dev/null 2>&1; then
+  echo "note: docker daemon is unavailable; skipped upload volume persistence check."
+  exit 0
+fi
+
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+  COMPOSE="docker-compose"
+else
+  echo "note: docker compose is unavailable; skipped upload volume persistence check."
+  exit 0
+fi
+
+export SESSION_SECRET="upload-volume-check-secret-32-characters"
+
 cleanup() {
-  $COMPOSE down >/dev/null 2>&1 || true
+  $COMPOSE down -v >/dev/null 2>&1 || true
 }
 
 trap cleanup EXIT
@@ -22,15 +37,15 @@ trap cleanup EXIT
 echo "Building and starting Playblast..."
 $COMPOSE up -d --build
 
-echo "Waiting for server to become ready..."
-for _ in $(seq 1 30); do
-  if curl -fsS "http://localhost:3000/api/projects" >/dev/null 2>&1; then
+echo "Waiting for /health..."
+for _ in $(seq 1 60); do
+  if curl -fsS "http://localhost:3000/health" 2>/dev/null | grep -q '"status":"ok"'; then
     break
   fi
   sleep 1
 done
 
-if ! curl -fsS "http://localhost:3000/api/projects" >/dev/null 2>&1; then
+if ! curl -fsS "http://localhost:3000/health" 2>/dev/null | grep -q '"status":"ok"'; then
   echo "error: server did not become ready in time" >&2
   exit 1
 fi
@@ -44,9 +59,9 @@ $COMPOSE down
 echo "Starting containers again..."
 $COMPOSE up -d
 
-echo "Waiting for server after restart..."
-for _ in $(seq 1 30); do
-  if curl -fsS "http://localhost:3000/api/projects" >/dev/null 2>&1; then
+echo "Waiting for /health after restart..."
+for _ in $(seq 1 60); do
+  if curl -fsS "http://localhost:3000/health" 2>/dev/null | grep -q '"status":"ok"'; then
     break
   fi
   sleep 1

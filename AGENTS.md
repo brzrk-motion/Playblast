@@ -89,14 +89,17 @@ npm run start -w server    # Run compiled server (after build)
 
 ### Deployment
 
-- `Dockerfile` builds both workspaces and runs a single Node process that serves API + static client on port `3000`.
-- `docker-compose.yml` mounts named volumes at `/app/uploads` and `/app/data` for upload and database persistence.
+- `Dockerfile` builds both workspaces on Node 22 Alpine and runs a single Node process on port `3000`.
+- `docker-compose.yml` requires `SESSION_SECRET`; see `docker-compose.env.example`.
+- Operator guides live under `docs/deployment/`.
 - `scripts/validate-upload-volume.sh` smoke-tests Docker volume persistence (requires Docker).
 - `scripts/validate-backup-restore.sh` (`npm run verify:backup-restore`) verifies filesystem backup → wipe → restore of `data/` + `uploads/` without Docker; does not exercise Hyper Backup or container volumes.
-- `scripts/verify-pilot-browser.sh` (`npm run verify:pilot-browser`) auth-boundary curl smoke (local stub by default; live via `PLAYBLAST_PILOT_URL` + auth env); does not drive the browser UI.
+- `scripts/validate-deployment-config.sh` (`npm run verify:deployment-config`) static Dockerfile/Compose/docs checks.
+- `scripts/validate-docker-compose.sh` (`npm run verify:docker-compose`) renders Compose config (skipped without Docker).
+- `scripts/verify-docker-deployment.sh` (`npm run verify:docker-deployment`) build/start/health smoke (skipped without Docker).
 
 ### Notes
 
-- Node 20+ is required (Dockerfile uses Node 20; Vite 8 needs `^20.19` or `>=22.12`).
+- Node 22 LTS is required (Dockerfile uses Node 22; see `engines` in `package.json`).
 - Client API calls go through `client/src/lib/api.ts` using relative `/api/*` paths.
 - Key client routes: dashboard (`/`), project review (`/projects/:projectId`), version comparison (`/projects/:projectId/compare`).

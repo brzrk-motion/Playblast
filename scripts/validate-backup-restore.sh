@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Verifies that the pilot data layout (SQLite under data/ + files under uploads/)
-# survives backup → wipe → restore. This is a filesystem-level gate that mirrors
-# the NAS bind-mount folders Hyper Backup should cover.
+# Verifies that the self-hosted data layout (SQLite under data/ + files under uploads/)
+# survives backup → wipe → restore, including identity tables, avatars, invites, and sessions.
 #
 # Does not require Docker. Does not read or print auth credentials.
 # Full container/NAS Hyper Backup end-to-end is out of scope for this script.
@@ -12,7 +11,8 @@ cd "$ROOT_DIR"
 
 MARKER_ID="backup-restore-marker-$(date +%s)"
 MARKER_UPLOAD_CONTENT="playblast-upload-${MARKER_ID}"
-MARKER_PROJECT_NAME="Pilot Backup Gate ${MARKER_ID}"
+MARKER_PROJECT_NAME="Backup Gate ${MARKER_ID}"
+AVATAR_CONTENT="avatar-${MARKER_ID}"
 
 if ! command -v tar >/dev/null 2>&1; then
   echo "error: tar is required to validate backup/restore" >&2
@@ -43,44 +43,17 @@ ARCHIVE="$BACKUP_DIR/playblast-data-uploads.tar.gz"
 DB_PATH="$DATA_DIR/playblast.db"
 UPLOAD_REL="projects/demo/versions/v1/marker.bin"
 UPLOAD_PATH="$UPLOADS_DIR/$UPLOAD_REL"
+AVATAR_REL="avatars/studio-${MARKER_ID}/avatar.png"
+AVATAR_PATH="$UPLOADS_DIR/$AVATAR_REL"
+STUDIO_ID="studio-${MARKER_ID}"
 
 mkdir -p "$DATA_DIR" "$UPLOADS_DIR/$(dirname "$UPLOAD_REL")" "$BACKUP_DIR"
 
-echo "Seeding fixture SQLite DB and upload file..."
+echo "Seeding fixture database, identity rows, media, and avatar..."
+DATA_DIR="$DATA_DIR" \
+UPLOADS_DIR="$UPLOADS_DIR" \
 MARKER_ID="$MARKER_ID" \
-MARKER_PROJECT_NAME="$MARKER_PROJECT_NAME" \
-DB_PATH="$DB_PATH" \
-UPLOAD_PATH="$UPLOAD_PATH" \
-MARKER_UPLOAD_CONTENT="$MARKER_UPLOAD_CONTENT" \
-node --input-type=module <<'EOF'
-import fs from "node:fs"
-import path from "node:path"
-import { createRequire } from "node:module"
-
-const require = createRequire(path.join(process.cwd(), "package.json"))
-const Database = require("better-sqlite3")
-
-const dbPath = process.env.DB_PATH
-const uploadPath = process.env.UPLOAD_PATH
-const markerId = process.env.MARKER_ID
-const projectName = process.env.MARKER_PROJECT_NAME
-const uploadContent = process.env.MARKER_UPLOAD_CONTENT
-
-fs.mkdirSync(path.dirname(dbPath), { recursive: true })
-fs.mkdirSync(path.dirname(uploadPath), { recursive: true })
-
-const db = new Database(dbPath)
-db.exec(`
-  CREATE TABLE projects (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL
-  );
-`)
-db.prepare("INSERT INTO projects (id, name) VALUES (?, ?)").run(markerId, projectName)
-db.close()
-
-fs.writeFileSync(uploadPath, uploadContent, "utf8")
-EOF
+npx tsx server/src/scripts/backup-restore-fixture.ts seed
 
 echo "Creating backup archive of data/ and uploads/..."
 tar -C "$LIVE_DIR" -czf "$ARCHIVE" data uploads
@@ -96,46 +69,18 @@ echo "Restoring from backup archive..."
 mkdir -p "$LIVE_DIR"
 tar -C "$LIVE_DIR" -xzf "$ARCHIVE"
 
-echo "Verifying restored SQLite integrity and upload content..."
+echo "Verifying restored SQLite integrity, identity rows, media, and avatar..."
 MARKER_ID="$MARKER_ID" \
 MARKER_PROJECT_NAME="$MARKER_PROJECT_NAME" \
 DB_PATH="$DB_PATH" \
 UPLOAD_PATH="$UPLOAD_PATH" \
 MARKER_UPLOAD_CONTENT="$MARKER_UPLOAD_CONTENT" \
-node --input-type=module <<'EOF'
-import fs from "node:fs"
-import path from "node:path"
-import assert from "node:assert/strict"
-import { createRequire } from "node:module"
-
-const require = createRequire(path.join(process.cwd(), "package.json"))
-const Database = require("better-sqlite3")
-
-const dbPath = process.env.DB_PATH
-const uploadPath = process.env.UPLOAD_PATH
-const markerId = process.env.MARKER_ID
-const projectName = process.env.MARKER_PROJECT_NAME
-const uploadContent = process.env.MARKER_UPLOAD_CONTENT
-
-assert.equal(fs.existsSync(dbPath), true, "restored database is missing")
-assert.equal(fs.existsSync(uploadPath), true, "restored upload file is missing")
-assert.equal(
-  fs.readFileSync(uploadPath, "utf8"),
-  uploadContent,
-  "restored upload content mismatch",
-)
-
-const db = new Database(dbPath, { readonly: true })
-const integrity = db.pragma("integrity_check", { simple: true })
-assert.equal(integrity, "ok", `sqlite integrity_check failed: ${integrity}`)
-
-const row = db
-  .prepare("SELECT id, name FROM projects WHERE id = ?")
-  .get(markerId)
-assert.ok(row, "restored marker project row is missing")
-assert.equal(row.name, projectName, "restored project name mismatch")
-db.close()
-EOF
+AVATAR_PATH="$AVATAR_PATH" \
+AVATAR_CONTENT="$AVATAR_CONTENT" \
+STUDIO_ID="$STUDIO_ID" \
+USER_EMAIL="admin@example.test" \
+INVITE_EMAIL="creative@example.test" \
+npx tsx server/src/scripts/backup-restore-fixture.ts verify
 
 if command -v docker >/dev/null 2>&1; then
   echo "note: docker is available, but this gate validates filesystem backup/restore only (not container volumes)."

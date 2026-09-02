@@ -2,6 +2,9 @@
   "name": "playblast",
   "private": true,
   "version": "0.0.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "workspaces": [
     "client",
     "server",
@@ -15,6 +18,9 @@
     "build:deploy": "bash scripts/build-deploy.sh",
     "verify:backup-restore": "bash scripts/validate-backup-restore.sh",
     "verify:pilot-browser": "bash scripts/verify-pilot-browser.sh",
+    "verify:deployment-config": "bash scripts/validate-deployment-config.sh",
+    "verify:docker-compose": "bash scripts/validate-docker-compose.sh",
+    "verify:docker-deployment": "bash scripts/verify-docker-deployment.sh",
     "migrate": "npm run migrate -w server"
   },
   "devDependencies": {
