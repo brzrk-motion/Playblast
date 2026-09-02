@@ -18,7 +18,7 @@ import {
 
 export function getSetupStatusResponse(): SetupStatusResponse {
   const studio = getStudioRow()
-  const status: SetupStatus = studio?.setupStatus ?? "pending"
+  const status = resolveEffectiveSetupStatus(studio?.setupStatus, getUserCount())
   const step = getBootstrapStep(status)
 
   return {
@@ -26,6 +26,18 @@ export function getSetupStatusResponse(): SetupStatusResponse {
     nextRoute: step.nextRoute,
     setupComplete: isApplicationRouteAvailable(status),
   }
+}
+
+/** Setup requires a bootstrap admin even when a legacy studio row already exists. */
+function resolveEffectiveSetupStatus(
+  studioStatus: SetupStatus | undefined,
+  userCount: number,
+): SetupStatus {
+  if (userCount === 0) {
+    return "pending"
+  }
+
+  return studioStatus ?? "pending"
 }
 
 export function getStudioProfile(): StudioProfileResponse | null {

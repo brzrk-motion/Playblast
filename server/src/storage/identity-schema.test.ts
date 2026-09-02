@@ -148,14 +148,15 @@ describe("identity migration on existing proofing database", () => {
     fs.rmSync(tempDir, { recursive: true, force: true })
   })
 
-  it("backfills a complete studio when proofing data already exists", () => {
+  it("backfills a pending studio when proofing data already exists", () => {
     const studio = __testOnly_getStudioById("legacy-studio")
     assert.ok(studio)
-    assert.equal(studio.setupStatus, "complete")
+    assert.equal(studio.setupStatus, "pending")
 
     const status = getSetupStatusResponse()
-    assert.equal(status.status, "complete")
-    assert.equal(status.setupComplete, true)
+    assert.equal(status.status, "pending")
+    assert.equal(status.nextRoute, "/setup")
+    assert.equal(status.setupComplete, false)
   })
 
   it("keeps legacy project rows intact after identity migration", () => {

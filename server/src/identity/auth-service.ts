@@ -119,14 +119,6 @@ export async function createBootstrapAdmin(
 
   try {
     db.transaction((tx) => {
-      const existingStudio = tx.select().from(studios).limit(1).get()
-      if (existingStudio && existingStudio.setupStatus !== "pending") {
-        throw new AuthServiceError(
-          "SETUP_ALREADY_COMPLETE",
-          "Setup has already been completed.",
-        )
-      }
-
       const existingUsers = tx.select().from(users).all()
       if (existingUsers.length > 0) {
         throw new AuthServiceError(
@@ -134,6 +126,8 @@ export async function createBootstrapAdmin(
           "Setup has already been completed.",
         )
       }
+
+      const existingStudio = tx.select().from(studios).limit(1).get()
 
       const existingEmail = tx
         .select()

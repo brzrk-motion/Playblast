@@ -39,6 +39,8 @@ function backfillExistingInstallations(db: Database.Database): void {
         | { id: string }
         | undefined
     )?.id
+
+    repairLegacyStudioWithoutUsers(db, studioId)
   } else {
     const projectTable = db
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'projects'")
@@ -60,7 +62,7 @@ function backfillExistingInstallations(db: Database.Database): void {
     studioId = "legacy-studio"
     db.prepare(
       `INSERT INTO studios (id, name, avatar_path, setup_status, created_at, updated_at)
-       VALUES (?, '', NULL, 'complete', ?, ?)`,
+       VALUES (?, '', NULL, 'pending', ?, ?)`,
     ).run(studioId, now, now)
   }
 
@@ -79,6 +81,27 @@ function tableHasColumnLocal(
   const columns = db
     .pragma(`table_info(${table})`) as Array<{ name: string }>
   return columns.some((entry) => entry.name === column)
+}
+
+function repairLegacyStudioWithoutUsers(
+  db: Database.Database,
+  studioId: string | undefined,
+): void {
+  if (!studioId) {
+    return
+  }
+
+  const userCount = (
+    db.prepare("SELECT COUNT(*) AS count FROM users").get() as { count: number }
+  ).count
+
+  if (userCount > 0) {
+    return
+  }
+
+  db.prepare(
+    "UPDATE studios SET setup_status = 'pending', updated_at = ? WHERE id = ? AND setup_status = 'complete'",
+  ).run(new Date().toISOString(), studioId)
 }
 
 function backfillStudioOwnership(db: Database.Database, studioId: string): void {

@@ -34,7 +34,23 @@ pass "docker-compose.env.example documents SESSION_SECRET"
 
 [[ -f .env.example ]] || fail ".env.example is missing"
 grep -q 'SESSION_SECRET' .env.example || fail ".env.example must document SESSION_SECRET"
-pass ".env.example documents SESSION_SECRET"
+for var in \
+  PORT \
+  NODE_ENV \
+  UPLOAD_DIR \
+  DB_PATH \
+  MAX_UPLOAD_SIZE \
+  SESSION_SECRET \
+  SESSION_TTL_HOURS \
+  PLAYBLAST_EMERGENCY_BASIC_AUTH \
+  PLAYBLAST_AUTH_USER \
+  PLAYBLAST_AUTH_PASSWORD \
+  PLAYBLAST_ADMIN_RECOVERY_TOKEN \
+  VITE_DEFAULT_VIDEO_FPS
+do
+  grep -q "$var" .env.example || fail ".env.example must document $var"
+done
+pass ".env.example documents all server and client runtime variables"
 
 node -e "
 const pkg = require('./package.json');
