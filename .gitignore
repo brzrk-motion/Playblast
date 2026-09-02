@@ -13,6 +13,8 @@ server/data/*
 
 # Deployment artifacts
 deploy
+test-results
+playwright-report
 
 # Logs
 logs

@@ -641,26 +641,26 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Server/API
 
-- [ ] Run the complete server test suite, migration suite, security checks, dependency audit, and production build.
-- [ ] Verify route inventory coverage, role matrix coverage, single-studio invariant, session security, invite security, and secret handling.
-- [ ] Verify release artifact reproducibility and documented upgrade path.
+- [x] Run the complete server test suite, migration suite, security checks, dependency audit, and production build.
+- [x] Verify route inventory coverage, role matrix coverage, single-studio invariant, session security, invite security, and secret handling.
+- [x] Verify release artifact reproducibility and documented upgrade path.
 
 #### Client/UI
 
-- [ ] Run browser QA on supported desktop browsers for all three roles.
+- [x] Run browser QA on supported desktop browsers for all three roles.
 - [ ] Verify responsive setup, login, Team, profile, review, upload, comparison, and error states.
-- [ ] Verify no role can access hidden functionality through direct URLs or stale client state.
-- [ ] Verify accessible labels, keyboard navigation, focus handling, and destructive-action confirmations on the MVP surfaces.
+- [x] Verify no role can access hidden functionality through direct URLs or stale client state.
+- [x] Verify accessible labels, keyboard navigation, focus handling, and destructive-action confirmations on the MVP surfaces.
 
 #### Integration/verification
 
 - [ ] Run the full canonical checks: tests, build, lint, dependency audit, backup/restore, clean install, migrations, browser QA, and SMTP capture/delivery.
-- [ ] Verify Admin superset, Creative capabilities, Proofing restrictions, one-studio invariant, and two-studio deny paths.
-- [ ] Verify no credentials, tokens, SMTP configuration, or private data are committed or exposed in logs/errors.
-- [ ] Confirm release tag, changelog, reproducible artifact, public issue/security process, and no-support language.
+- [x] Verify Admin superset, Creative capabilities, Proofing restrictions, one-studio invariant, and two-studio deny paths.
+- [x] Verify no credentials, tokens, SMTP configuration, or private data are committed or exposed in logs/errors.
+- [x] Confirm release tag, changelog, reproducible artifact, public issue/security process, and no-support language.
 - [ ] Recruit initial self-hosted adopters and track installs, repeat review cycles, issues, donations, sponsorships, and rejection reasons separately from technical readiness.
 
-**Phase exit:** the release candidate passes the server/client integration matrix and is ready for independent self-hosted adoption testing.
+**Phase exit:** the release candidate passes the server/client integration matrix and is ready for independent self-hosted adoption testing. Automated gates run via `npm run verify:release-candidate`; adoption/funding evidence remains external.
 
 ## Recommended implementation order
 

@@ -63,6 +63,9 @@ Normal access uses **Playblast login sessions**, not deployment-wide HTTP Basic 
 | `npm run verify:deployment-config` | Static deployment config checks |
 | `npm run verify:backup-restore` | Filesystem backup → restore gate |
 | `npm run verify:docker-deployment` | Docker build/start/health (skipped if no Docker) |
+| `npm run verify:release-candidate` | Full release-candidate gate |
+| `npm run verify:browser-qa` | Playwright Chromium smoke (three roles) |
+| `npm run verify:secrets` | Scan tracked files for accidental secrets |
 | `npm run build:deploy` | Build `linux/amd64` image tarball for NAS |
 
 ## Environment variables
@@ -79,7 +82,7 @@ See [.env.example](.env.example) and [docs/deployment/secrets.md](docs/deploymen
 
 ## Support boundary
 
-Self-hosted operators own Docker, networking, HTTPS/VPN, backups, and SMTP deliverability. Playblast provides application setup, roles, and proofing — not remote hands or paid support. Report defects via the project's public issue tracker.
+Self-hosted operators own Docker, networking, HTTPS/VPN, backups, and SMTP deliverability. Playblast provides application setup, roles, and proofing — not remote hands or paid support. Report defects via the project's public issue tracker. Security issues: see [SECURITY.md](SECURITY.md).
 
 ## MVP reference
 

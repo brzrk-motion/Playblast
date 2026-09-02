@@ -12,6 +12,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint-and-build:
+    name: Lint and production build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y python3 make g++
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint client
+        run: npm run lint
+
+      - name: Production build
+        run: npm run build
+
   server-tests:
     name: Server tests
     runs-on: ubuntu-latest
@@ -32,6 +56,7 @@ jobs:
             node_modules
             client/node_modules
             server/node_modules
+            shared/node_modules
           key: ${{ runner.os }}-node-22-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-22-
@@ -70,6 +95,7 @@ jobs:
             node_modules
             client/node_modules
             server/node_modules
+            shared/node_modules
           key: ${{ runner.os }}-node-22-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-22-
@@ -87,6 +113,52 @@ jobs:
 
       - name: Run client tests
         run: npm run test -w client
+
+  shared-tests:
+    name: Shared contract tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run shared tests
+        run: npm run test -w shared
+
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit production dependencies
+        run: npm run audit:prod
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan for accidental secrets
+        run: npm run verify:secrets
 
   deployment-config:
     name: Deployment config
@@ -122,6 +194,27 @@ jobs:
       - name: Run backup restore verification
         run: npm run verify:backup-restore
 
+  browser-qa:
+    name: Browser QA (Chromium)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y python3 make g++
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run browser QA
+        run: npm run verify:browser-qa
+
   docker-build:
     name: Docker image build
     runs-on: ubuntu-latest
@@ -147,6 +240,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Run Docker deployment verification
         run: npm run verify:docker-deployment

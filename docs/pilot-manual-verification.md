@@ -1,41 +1,40 @@
-# Playblast pilot — manual browser verification
+# Playblast — manual browser verification
 
-Operator checklist for a **private production pilot** before reviewers use the instance. Run this after deployment (see [README](../README.md) — Synology / Container Manager) and after automated gates pass.
+Operator checklist for a **self-hosted release candidate** after automated gates pass. Complements deterministic Playwright smoke tests (`npm run verify:browser-qa`).
 
-**Scope:** browser workflow only. Does not replace NAS Hyper Backup drills or container-volume restore tests.
+**Scope:** browser workflow only. Does not replace NAS Hyper Backup drills, container-volume restore tests, or live SMTP delivery to external mailboxes.
 
 ---
 
 ## Prerequisites
 
-- [ ] Production container is **Running** in Container Manager; built-in healthcheck reports healthy (`GET /health` every 30s).
-- [ ] Pilot URL reachable from the verifier machine on the **private network** (LAN IP + host port, e.g. `http://<nas-ip>:3000`).
-- [ ] `PLAYBLAST_AUTH_USER` and `PLAYBLAST_AUTH_PASSWORD` are set in the deployment environment (not in git). Verifier has the credentials out-of-band.
-- [ ] Bind mounts exist and are writable:
-  - `<nas>/docker/playblast/data/` — SQLite database
-  - `<nas>/docker/playblast/uploads/` — video files
-- [ ] Test assets ready: one small **H.264 MP4** (browser-friendly; avoid ProRes-only `.mov` for playback checks) and optionally a second file for compare.
-- [ ] Repo checkout on a build/ops machine with `npm install` completed (for automated gates below).
+- [ ] Production container is running; `GET /health` returns `"status":"ok"`.
+- [ ] Instance URL reachable from the verifier machine (e.g. `http://<host>:3000` on LAN/VPN).
+- [ ] Persistent volumes exist for `/app/data` and `/app/uploads`.
+- [ ] Test assets ready: one small **H.264 MP4** for playback and optionally a second file for compare.
+- [ ] Repository checkout with `npm install` completed (for automated gates below).
+
+Normal access uses **Playblast login sessions**, not deployment-wide HTTP Basic Auth. Optional emergency Basic Auth (`PLAYBLAST_EMERGENCY_BASIC_AUTH`) applies only before first-run setup completes.
 
 ---
 
-## Production access & auth boundary
+## Production access and auth boundary
 
 | Endpoint / surface | Auth expected | Pass criteria |
 |--------------------|---------------|---------------|
-| `GET /health` | **None** (public) | `200`, body includes `"status":"ok"` |
-| Web UI (`/`, `/projects`, …) | HTTP Basic Auth | Browser prompts; wrong password → `401` / no app load |
-| `/api/*` | HTTP Basic Auth | Unauthenticated → `401`, `WWW-Authenticate: Basic realm="Playblast pilot"` |
-| `/video/...` playback | HTTP Basic Auth | Range request succeeds only with valid credentials |
+| `GET /health` | None (public) | `200`, body includes `"status":"ok"` |
+| `GET /api/setup/status` | None (public) | `200` with setup lifecycle JSON |
+| Web UI (`/login`, `/`, `/projects`, …) | Playblast session cookie | Unauthenticated protected routes redirect to `/login` |
+| `/api/*` (protected) | Session + CSRF on mutations | Unauthenticated → `401`; wrong role → `403` |
+| `/video/...` playback | Session + `review.play` capability | Unauthenticated → `401` |
 
-**Security:** Use HTTPS or VPN on untrusted networks. Do not send Basic Auth credentials over plain public HTTP.
+**Security:** Terminate TLS at a reverse proxy or VPN on untrusted networks. Never commit `SESSION_SECRET`, SMTP passwords, or invite links.
 
-**Quick curl checks** (replace host, user, password):
+**Quick curl checks** (replace host):
 
 ```bash
-curl -sS "http://<host>:<port>/health"
-curl -sS -o /dev/null -w "%{http_code}\n" "http://<host>:<port>/api/projects"          # expect 401
-curl -sS -u '<user>:<password>' "http://<host>:<port>/api/projects"                     # expect 200
+curl -sS "http://<host>:3000/health"
+curl -sS -o /dev/null -w "%{http_code}\n" "http://<host>:3000/api/projects"   # expect 401
 ```
 
 ---
@@ -45,161 +44,89 @@ curl -sS -u '<user>:<password>' "http://<host>:<port>/api/projects"             
 From the repository root:
 
 ```bash
-npm run test                 # includes pilot authenticated E2E smoke (API parity)
-npm run verify:backup-restore
-npm run verify:pilot-browser # auth-boundary curl smoke (local stub; no prod URL/creds)
+npm run verify:release-candidate   # full RC gate; skips Docker locally if daemon absent
+npm run verify:browser-qa        # Chromium smoke for three-role direct-URL guards
 ```
 
-Live pilot (optional; credentials never printed):
+Individual gates:
 
 ```bash
-PLAYBLAST_PILOT_URL="http://<host>:<port>" \
-PLAYBLAST_AUTH_USER="<user>" \
-PLAYBLAST_AUTH_PASSWORD="<password>" \
+npm run test
+npm run build
+npm run lint
+npm run audit:prod
+npm run verify:secrets
+npm run verify:backup-restore
 npm run verify:pilot-browser
+npm run verify:deployment-config
 ```
 
-- [ ] `npm run test` — all server tests pass, including **pilot authenticated E2E smoke** (project → deliverable → upload → playback → comment + annotation → approval).
-- [ ] `npm run verify:backup-restore` — prints `Backup/restore verification passed.` (filesystem `data/` + `uploads/` archive/restore; no Docker, no auth secrets).
-- [ ] `npm run verify:pilot-browser` — prints `Pilot browser auth-boundary verification passed (self-check).` Default mode uses an ephemeral local stub; does **not** require a live URL or real credentials. Remaining UI steps stay in the checklist below.
+- [ ] `npm run test` — shared, server, and client tests pass (includes release verification and role matrix suites).
+- [ ] `npm run verify:browser-qa` — Playwright smoke passes (Admin Team access; Creative/Proofing forbidden redirects; login labels).
+- [ ] `npm run verify:backup-restore` — prints `Backup/restore verification passed.`
+- [ ] `npm run verify:secrets` — no accidental secret patterns in tracked files.
+
+**Manual / external gates** (documented in [docs/release/README.md](release/README.md)):
+
+- [ ] Cross-browser desktop QA (Firefox, Safari, Edge) on a clean instance.
+- [ ] Clean-machine install from [deployment docs](deployment/README.md) only.
+- [ ] Live SMTP invitation delivery to a real mailbox (operator relay).
 
 ---
 
-## Browser workflow
+## Browser workflow (three roles)
 
-Use a **private/incognito** window if you want a clean auth prompt. Complete steps in order; note the project/deliverable names for the evidence log.
+Use a private/incognito window per role. Complete steps in order.
 
-### 1. Sign in & load dashboard
+### 1. First-run setup (fresh instance only)
 
-- [ ] Open pilot URL → enter Basic Auth credentials when prompted.
-- [ ] Dashboard / **Projects** loads without console errors.
+- [ ] Open `/setup` → create bootstrap **Admin** account.
+- [ ] Complete studio name (and optional avatar) on `/setup/studio`.
+- [ ] Finish setup → land on dashboard or Team onboarding.
 
-### 2. Create a project
+### 2. Admin smoke
 
-- [ ] **Projects** → create a new project (name e.g. `Pilot Manual Verify <date>`).
-- [ ] Project appears in the list; open its overview page.
+- [ ] Sign in at `/login` if needed.
+- [ ] Open **Team** — page loads; SMTP section visible.
+- [ ] Create a project, upload a version, add a comment, and approve or resolve feedback.
+- [ ] Open **Compare** when two versions exist.
 
-### 3. Add a deliverable
+### 3. Creative smoke
 
-- [ ] Project overview → **Deliverables** tab → add deliverable (e.g. `Hero Cut`).
-- [ ] Deliverable row visible; open the deliverable review page.
+- [ ] Sign in as a **Creative** member (invite acceptance or seeded test account).
+- [ ] Create or edit project content; confirm **Team** and CRM routes redirect to `/forbidden` when opened directly.
+- [ ] Complete a review cycle (comment, playback).
 
-### 4. Upload version v1
+### 4. Proofing smoke
 
-- [ ] **Upload** → choose test MP4, label `v1` (or accept suggested label) → upload completes with progress/success toast.
-- [ ] Video loads in the player; scrub/play works; no persistent playback error banner.
+- [ ] Sign in as a **Proofing** member.
+- [ ] Confirm project **creation** and destructive actions are unavailable (UI and API).
+- [ ] Complete read/review/comment workflow; direct URL to `/clients` shows **Permission denied**.
 
-### 5. Timestamped comment + frame annotation
+### 5. Error and recovery states
 
-- [ ] Pause at a known time (e.g. ~2–5s); open comment composer (`C` or UI control).
-- [ ] Enter author name and comment body → submit.
-- [ ] Draw at least one annotation on the paused frame (arrow/freehand/text) and attach to the comment.
-- [ ] Comment appears in the sidebar at the correct timestamp; annotation visible when seeking to that time.
+- [ ] Invalid login shows generic error without leaking account existence.
+- [ ] Expired session redirects to `/session-expired` or `/login`.
+- [ ] Deployment failure surfaces the server-unavailable page with retry (stop container briefly to verify).
 
-### 6. Approval
+### 6. Accessibility spot checks
 
-- [ ] Use **Approve** (confirm if prompted) on the current version.
-- [ ] Version status shows **Approved**; deliverable/project summaries reflect open comment count and approved latest version where shown.
-
-### 7. Upload version v2 & compare
-
-- [ ] Upload a second version (`v2`) on the same deliverable.
-- [ ] **Compare** link appears (requires ≥2 versions) → side-by-side compare view opens with left/right selectors.
-- [ ] Both videos play; changing left/right versions updates the comparison.
-
-### 8. Download (optional spot check)
-
-- [ ] **Download** on a version returns the file with correct size/type (matches uploaded asset).
+- [ ] Login and setup forms expose visible labels tied to inputs.
+- [ ] Destructive actions (delete project, revoke invite) require explicit confirmation.
+- [ ] Keyboard: Tab reaches primary actions; Enter submits login form.
 
 ---
 
-## Expected results (summary)
+## Evidence log (optional)
 
-After the workflow above, the pilot instance should match the authenticated smoke test behavior:
+| Check | Date | Result | Notes |
+|-------|------|--------|-------|
+| Automated RC gate | | | |
+| Browser QA (Chromium) | | | |
+| Admin walkthrough | | | |
+| Creative walkthrough | | | |
+| Proofing walkthrough | | | |
+| Cross-browser manual | | | |
+| Live SMTP delivery | | | |
 
-| Check | Expected |
-|-------|----------|
-| Health | Public `200 ok` |
-| Unauthenticated API | `401` + Basic realm |
-| Project + deliverable | Created and listed |
-| Upload | File on disk under uploads; version `pending_review` then updatable |
-| Playback | `/video/...` serves MP4 with range support |
-| Comment | Stored with timestamp, author, body; listed for the version |
-| Annotation | Arrow/shape persisted on comment; visible at timestamp |
-| Approval | Version status `approved`; summaries show `latestVersionStatus: approved` |
-| Compare | Two versions selectable; synced side-by-side UI |
-| Open comments | Count includes unresolved comments (smoke expects ≥1 after step 5) |
-
----
-
-## Data ownership (what to back up)
-
-All application state lives in two on-disk locations (container paths → typical NAS bind mounts):
-
-| Path (container) | NAS bind mount (example) | Contents |
-|------------------|----------------------------|----------|
-| `/app/data/playblast.db` | `/volume1/docker/playblast/data/` | Projects, deliverables, versions, comments, annotations (SQLite) |
-| `/app/uploads/` | `/volume1/docker/playblast/uploads/` | Uploaded video files (hierarchical by project/deliverable/version) |
-
-Back up **both** folders together (Hyper Backup or scheduled copy). Image updates do not touch these mounts.
-
----
-
-## Backup / restore gate
-
-**Command:** `npm run verify:backup-restore` (runs `scripts/validate-backup-restore.sh`).
-
-Validates: seed DB + upload → `tar` archive → wipe → restore → SQLite `integrity_check` + byte match on upload file.
-
-**Out of scope for this script:** live NAS Hyper Backup restore drill, Docker named volumes (use bind mounts on NAS per README).
-
-- [ ] Gate passed on ops machine before pilot sign-off.
-- [ ] (Manual NAS) Schedule or confirm Hyper Backup includes `data/` and `uploads/`.
-
----
-
-## Evidence log
-
-Copy for ticket / run record:
-
-```text
-Pilot manual verification — Playblast
-Date: __________  Verifier: __________  Environment: __________
-URL: http://<host>:<port>
-
-Automated gates
-  [ ] npm run test — pass (pilot E2E smoke included)
-  [ ] npm run verify:backup-restore — pass
-  [ ] npm run verify:pilot-browser — pass (self-check or live auth-boundary)
-
-Auth boundary
-  [ ] /health public 200
-  [ ] /api without creds → 401
-  [ ] UI + API with creds → OK
-
-Browser workflow
-  [ ] Project created: ____________________
-  [ ] Deliverable: ____________________
-  [ ] v1 upload + playback: ____________________
-  [ ] Comment @ ______s + annotation: ____________________
-  [ ] v1 approved
-  [ ] v2 upload + compare: ____________________
-  [ ] Download spot check (optional): ____________________
-
-Data paths confirmed
-  [ ] data/  [ ] uploads/
-
-Issues / notes:
-_________________________________________________________________
-_________________________________________________________________
-
-Sign-off:  [ ] Pilot ready for reviewers   [ ] Blocked — see notes
-```
-
----
-
-## References
-
-- Deployment & NAS layout: [README](../README.md#deploying-to-a-synology-nas)
-- Auth implementation: `server/src/middleware/auth.ts` (production requires `PLAYBLAST_AUTH_USER` + `PLAYBLAST_AUTH_PASSWORD`)
-- API smoke parity: `server/src/routes/pilot-e2e-smoke.test.ts`
+Do not record passwords, tokens, or SMTP secrets in this log.
