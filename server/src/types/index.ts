@@ -97,7 +97,6 @@ export type {
   UpdateServiceInput,
 } from "./service.js"
 export { isServiceType, SERVICE_TYPES } from "./service.js"
-export type { DataStore } from "./store.js"
 export type { UploadResponse } from "./upload.js"
 export type {
   CreateVersionInput,

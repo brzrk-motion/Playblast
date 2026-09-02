@@ -76,18 +76,6 @@ export const navSecondary: NavItem[] = [
   },
 ]
 
-export type ComingSoonPageConfig = {
-  title: string
-  description: string
-}
-
-export const comingSoonPages: Record<string, ComingSoonPageConfig> = {
-  "/profile": {
-    title: "Profile",
-    description: "Manage your account details and personal preferences.",
-  },
-}
-
 export function getPageHeader(pathname: string): { title: string; subtitle?: string } {
   if (pathname.startsWith("/projects/") && pathname.endsWith("/compare")) {
     return { title: "Compare", subtitle: "Side-by-side review" }
@@ -137,9 +125,8 @@ export function getPageHeader(pathname: string): { title: string; subtitle?: str
     return { title: "Settings" }
   }
 
-  const comingSoon = comingSoonPages[pathname]
-  if (comingSoon) {
-    return { title: comingSoon.title }
+  if (pathname === "/profile") {
+    return { title: "Profile" }
   }
 
   return { title: "Playblast" }

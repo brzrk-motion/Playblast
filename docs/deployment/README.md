@@ -25,7 +25,7 @@ Run from the repository root after `npm install`:
 | `npm run verify:docker-compose` | Yes (skipped if absent) | `docker compose config` renders cleanly |
 | `npm run verify:docker-deployment` | Yes (skipped if absent) | Build, start, `/health`, clean setup status |
 | `npm run verify:backup-restore` | No | Filesystem backup → wipe → restore of DB + uploads |
-| `npm run verify:pilot-browser` | No | Auth-boundary curl smoke (local stub by default) |
+| `npm run verify:pilot-browser` | No | Session auth-boundary curl smoke (local stub by default) |
 
 ## Support boundary
 

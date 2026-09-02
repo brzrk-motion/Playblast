@@ -27,7 +27,7 @@ export interface SessionStudio {
   avatarUrl: string | null
 }
 
-/** Current session contract (GET /api/session). Phase 2 implements auth. */
+/** Current session contract (GET /api/session). */
 export interface CurrentSessionResponse {
   user: SessionUser
   studio: SessionStudio

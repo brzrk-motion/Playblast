@@ -32,7 +32,7 @@ The repo is an **npm workspaces monorepo** with two packages:
 | Package | Path | Stack |
 |---------|------|-------|
 | `@playblast/client` | `client/` | React 19, Vite 8, TypeScript, shadcn/ui, Tailwind CSS, Vidstack |
-| `@playblast/server` | `server/` | Express 5, TypeScript, local filesystem + SQLite via `better-sqlite3` (Drizzle migration planned) |
+| `@playblast/server` | `server/` | Express 5, TypeScript, local filesystem + SQLite via `better-sqlite3` with Drizzle for identity tables |
 
 In development, the Vite dev server (port `5173`) proxies `/api` and `/video` to the Express server (port `3000`). In production, Express serves the built client from `client/dist` alongside the API.
 

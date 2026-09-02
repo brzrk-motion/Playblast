@@ -6,9 +6,9 @@ Source of truth: `@playblast/shared` (`platform-boundaries.ts`).
 
 | Boundary | MVP value |
 |----------|-----------|
-| Node minimum | 20.19.0 |
-| Docker image | `node:20-alpine` |
-| Release target | Supported Node LTS before Phase 7 |
+| Node minimum | 22.12.0 |
+| Docker image | `node:22-alpine` |
+| Release target | Node 22 LTS (package.json `engines`, Dockerfile) |
 
 ## Deployment
 

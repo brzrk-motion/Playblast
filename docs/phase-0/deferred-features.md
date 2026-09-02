@@ -20,8 +20,8 @@ The repository contains CRM/finance routes (`/clients`, `/pipeline`, `/services`
 - **Enforcement:** Server authorization in Phase 5; navigation hidden in Phase 0 contract.
 - Creative and Proofing users access proofing through Projects only.
 
-## Basic Auth (current branch)
+## Basic Auth (historical pilot boundary)
 
-Deployment-wide HTTP Basic Auth is a temporary pilot boundary, not application authentication. Phase 2 replaces it for normal access. It is not listed as an MVP user-facing feature.
+Deployment-wide HTTP Basic Auth was a temporary pilot boundary before application sessions shipped. Normal access uses Playblast login sessions. Optional emergency bootstrap Basic Auth (`PLAYBLAST_EMERGENCY_BASIC_AUTH`) applies only before first-run setup completes.
 
 Source: `DEFERRED_FEATURE_SURFACES` and `MVP_CRM_ROUTES_ADMIN_ONLY` in `@playblast/shared`.

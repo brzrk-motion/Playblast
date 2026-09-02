@@ -1,28 +1,12 @@
 #!/usr/bin/env bash
-# Auth-boundary smoke for the private pilot. Default mode spins an ephemeral
-# local stub (deterministic; no real URL or secrets). Set PLAYBLAST_PILOT_URL
-# plus PLAYBLAST_AUTH_USER / PLAYBLAST_AUTH_PASSWORD to hit a live pilot.
-#
-# Does not drive a browser. Does not print credential values.
-# Remaining UI steps: docs/pilot-manual-verification.md
+# Session auth-boundary curl smoke. Default mode uses a local stub (deterministic;
+# no secrets). Set PLAYBLAST_INSTANCE_URL or PLAYBLAST_PILOT_URL to probe a live
+# instance. Does not drive a browser. Does not print credential values.
+# UI checklist: docs/pilot-manual-verification.md
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
-
-REALM='Basic realm="Playblast pilot"'
-STUB_USER="pilot-selfcheck"
-STUB_PASSWORD="pilot-selfcheck-password"
-
-if ! command -v curl >/dev/null 2>&1; then
-  echo "error: curl is required" >&2
-  exit 1
-fi
-
-if ! command -v node >/dev/null 2>&1; then
-  echo "error: node is required" >&2
-  exit 1
-fi
 
 fail() {
   echo "error: $*" >&2
@@ -35,7 +19,7 @@ assert_health() {
   local code
   local body
 
-  body_file="$(mktemp "${TMPDIR:-/tmp}/playblast-pilot-health.XXXXXX")"
+  body_file="$(mktemp "${TMPDIR:-/tmp}/playblast-auth-health.XXXXXX")"
   code="$(curl -sS -o "$body_file" -w "%{http_code}" "${base_url}/health")" || {
     rm -f "$body_file"
     fail "GET /health request failed"
@@ -48,12 +32,21 @@ assert_health() {
   echo "  ✓ GET /health → 200 status ok"
 }
 
-assert_unauth_api() {
+assert_setup_status_public() {
+  local base_url="$1"
+  local code
+
+  code="$(curl -sS -o /dev/null -w "%{http_code}" "${base_url}/api/setup/status")" || fail "GET /api/setup/status request failed"
+  [[ "$code" == "200" ]] || fail "GET /api/setup/status expected 200, got ${code}"
+  echo "  ✓ GET /api/setup/status → 200 (public)"
+}
+
+assert_unauth_api_session() {
   local base_url="$1"
   local headers
   local code
 
-  headers="$(mktemp "${TMPDIR:-/tmp}/playblast-pilot-headers.XXXXXX")"
+  headers="$(mktemp "${TMPDIR:-/tmp}/playblast-auth-headers.XXXXXX")"
   code="$(curl -sS -D "$headers" -o /dev/null -w "%{http_code}" "${base_url}/api/projects")" || {
     rm -f "$headers"
     fail "GET /api/projects (unauthenticated) request failed"
@@ -61,51 +54,35 @@ assert_unauth_api() {
 
   [[ "$code" == "401" ]] || {
     rm -f "$headers"
-    fail "GET /api/projects without auth expected 401, got ${code}"
+    fail "GET /api/projects without session expected 401, got ${code}"
   }
-  grep -qiE "^WWW-Authenticate:[[:space:]]*Basic realm=\"Playblast pilot\"" "$headers" || {
+  if grep -qiE '^WWW-Authenticate:[[:space:]]*Basic' "$headers"; then
     rm -f "$headers"
-    fail "missing WWW-Authenticate: ${REALM}"
-  }
+    fail "GET /api/projects returned Basic WWW-Authenticate; expected session auth boundary"
+  fi
   rm -f "$headers"
-  echo "  ✓ GET /api/projects unauthenticated → 401 + Basic realm"
-}
-
-assert_auth_api() {
-  local base_url="$1"
-  local user="$2"
-  local password="$3"
-  local code
-
-  code="$(curl -sS -o /dev/null -w "%{http_code}" -u "${user}:${password}" "${base_url}/api/projects")" || fail "GET /api/projects (authenticated) request failed"
-  [[ "$code" == "200" ]] || fail "GET /api/projects with credentials expected 200, got ${code}"
-  echo "  ✓ GET /api/projects authenticated → 200"
+  echo "  ✓ GET /api/projects unauthenticated → 401 (no Basic challenge)"
 }
 
 run_checks() {
   local base_url="$1"
-  local user="$2"
-  local password="$3"
 
   assert_health "$base_url"
-  assert_unauth_api "$base_url"
-  assert_auth_api "$base_url" "$user" "$password"
+  assert_setup_status_public "$base_url"
+  assert_unauth_api_session "$base_url"
 }
 
-if [[ -n "${PLAYBLAST_PILOT_URL:-}" ]]; then
-  [[ -n "${PLAYBLAST_AUTH_USER:-}" ]] || fail "PLAYBLAST_AUTH_USER is required when PLAYBLAST_PILOT_URL is set"
-  [[ -n "${PLAYBLAST_AUTH_PASSWORD:-}" ]] || fail "PLAYBLAST_AUTH_PASSWORD is required when PLAYBLAST_PILOT_URL is set"
-
-  BASE_URL="${PLAYBLAST_PILOT_URL%/}"
-  echo "Pilot browser auth-boundary check (live): ${BASE_URL}"
-  echo "  (credentials present; values not printed)"
-  run_checks "$BASE_URL" "$PLAYBLAST_AUTH_USER" "$PLAYBLAST_AUTH_PASSWORD"
-  echo "Pilot browser auth-boundary verification passed (live)."
+LIVE_URL="${PLAYBLAST_INSTANCE_URL:-${PLAYBLAST_PILOT_URL:-}}"
+if [[ -n "$LIVE_URL" ]]; then
+  BASE_URL="${LIVE_URL%/}"
+  echo "Session auth-boundary check (live): ${BASE_URL}"
+  run_checks "$BASE_URL"
+  echo "Session auth-boundary verification passed (live)."
   echo "Continue browser workflow checklist: docs/pilot-manual-verification.md"
   exit 0
 fi
 
-STUB_DIR="$(mktemp -d "${TMPDIR:-/tmp}/playblast-pilot-browser.XXXXXX")"
+STUB_DIR="$(mktemp -d "${TMPDIR:-/tmp}/playblast-auth-boundary.XXXXXX")"
 STUB_PORT_FILE="$STUB_DIR/port"
 STUB_PID=""
 
@@ -118,20 +95,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "Pilot browser auth-boundary check (self-check stub)..."
+echo "Session auth-boundary check (self-check stub)..."
 
-STUB_USER="$STUB_USER" \
-STUB_PASSWORD="$STUB_PASSWORD" \
 STUB_PORT_FILE="$STUB_PORT_FILE" \
 node <<'EOF' &
 import http from "node:http"
 import fs from "node:fs"
 
-const user = process.env.STUB_USER
-const password = process.env.STUB_PASSWORD
 const portFile = process.env.STUB_PORT_FILE
-const expected =
-  "Basic " + Buffer.from(`${user}:${password}`, "utf8").toString("base64")
 
 const server = http.createServer((req, res) => {
   if (req.url === "/health") {
@@ -140,17 +111,14 @@ const server = http.createServer((req, res) => {
     return
   }
 
+  if (req.url === "/api/setup/status") {
+    res.writeHead(200, { "Content-Type": "application/json" })
+    res.end(JSON.stringify({ status: "complete", setupComplete: true, nextRoute: "/" }))
+    return
+  }
+
   if ((req.url || "").startsWith("/api")) {
-    const auth = req.headers.authorization
-    if (auth === expected) {
-      res.writeHead(200, { "Content-Type": "application/json" })
-      res.end("[]")
-      return
-    }
-    res.writeHead(401, {
-      "Content-Type": "application/json",
-      "WWW-Authenticate": 'Basic realm="Playblast pilot"',
-    })
+    res.writeHead(401, { "Content-Type": "application/json" })
     res.end(JSON.stringify({ error: "Authentication required" }))
     return
   }
@@ -180,7 +148,7 @@ done
 STUB_PORT="$(cat "$STUB_PORT_FILE")"
 BASE_URL="http://127.0.0.1:${STUB_PORT}"
 
-run_checks "$BASE_URL" "$STUB_USER" "$STUB_PASSWORD"
-echo "Pilot browser auth-boundary verification passed (self-check)."
-echo "Live pilot: PLAYBLAST_PILOT_URL=... PLAYBLAST_AUTH_USER=... PLAYBLAST_AUTH_PASSWORD=... npm run verify:pilot-browser"
+run_checks "$BASE_URL"
+echo "Session auth-boundary verification passed (self-check)."
+echo "Live instance: PLAYBLAST_INSTANCE_URL=http://<host>:3000 npm run verify:pilot-browser"
 echo "Browser workflow checklist: docs/pilot-manual-verification.md"
