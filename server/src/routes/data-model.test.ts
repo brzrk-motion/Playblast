@@ -6,11 +6,19 @@ import assert from "node:assert/strict"
 import type { Server } from "node:http"
 import { createApp } from "../app.js"
 import { closeDatabase, initDatabase } from "../storage/db.js"
+import {
+  authHeaders,
+  completeStudioSetup,
+  setupAdminAccount,
+} from "../test/auth-helpers.js"
 
 let tempDir = ""
 let dbPath = ""
 let server: Server
 let baseUrl = ""
+let adminCookies: string[] = []
+let adminCsrf = ""
+let studioId = ""
 
 before(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "playblast-api-"))
@@ -29,6 +37,15 @@ before(async () => {
   }
 
   baseUrl = `http://127.0.0.1:${address.port}`
+
+  process.env.SESSION_SECRET = "data-model-test-secret-32chars-min"
+  process.env.NODE_ENV = "development"
+
+  const admin = await setupAdminAccount(baseUrl)
+  adminCookies = admin.cookies
+  adminCsrf = admin.csrfToken
+  studioId = admin.session.studio.id
+  await completeStudioSetup(baseUrl, adminCookies, adminCsrf)
 })
 
 after(async () => {
@@ -41,21 +58,36 @@ after(async () => {
   fs.rmSync(tempDir, { recursive: true, force: true })
 })
 
+async function authenticatedFetch(url: string, init: RequestInit = {}) {
+  const needsJson =
+    init.method !== undefined &&
+    init.method !== "GET" &&
+    init.method !== "HEAD"
+  const baseHeaders = authHeaders(adminCookies, adminCsrf, needsJson)
+  return fetch(url, {
+    ...init,
+    headers: {
+      ...baseHeaders,
+      ...(init.headers as Record<string, string> | undefined),
+    },
+  })
+}
+
 async function createProject(id: string, name: string, extra: object = {}) {
-  const response = await fetch(`${baseUrl}/api/projects`, {
+  const response = await authenticatedFetch(`${baseUrl}/api/projects`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(adminCookies, adminCsrf),
     body: JSON.stringify({ id, name, ...extra }),
   })
   return response
 }
 
 async function createDeliverable(projectId: string, name: string) {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${baseUrl}/api/projects/${projectId}/deliverables`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({ name }),
     },
   )
@@ -110,21 +142,21 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
   it("gets a project by id and returns 404 when missing", async () => {
     await createProject("spot-get", "Spot Get")
 
-    const getResponse = await fetch(`${baseUrl}/api/projects/spot-get`)
+    const getResponse = await authenticatedFetch(`${baseUrl}/api/projects/spot-get`)
     assert.equal(getResponse.status, 200)
     const project = (await getResponse.json()) as { id: string }
     assert.equal(project.id, "spot-get")
 
-    const missingResponse = await fetch(`${baseUrl}/api/projects/missing-id`)
+    const missingResponse = await authenticatedFetch(`${baseUrl}/api/projects/missing-id`)
     assert.equal(missingResponse.status, 404)
   })
 
   it("updates a project via PATCH", async () => {
     await createProject("spot-patch", "Spot Patch")
 
-    const patchResponse = await fetch(`${baseUrl}/api/projects/spot-patch`, {
+    const patchResponse = await authenticatedFetch(`${baseUrl}/api/projects/spot-patch`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         status: "completed",
         client: "Acme",
@@ -143,9 +175,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(updated.budget.currency, "USD")
     assert.equal(updated.budget.spent, 5000)
 
-    const notesResponse = await fetch(`${baseUrl}/api/projects/spot-patch`, {
+    const notesResponse = await authenticatedFetch(`${baseUrl}/api/projects/spot-patch`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         notes: "Internal creative direction.",
       }),
@@ -154,18 +186,18 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const withNotes = (await notesResponse.json()) as { notes: string }
     assert.equal(withNotes.notes, "Internal creative direction.")
 
-    const invalid = await fetch(`${baseUrl}/api/projects/spot-patch`, {
+    const invalid = await authenticatedFetch(`${baseUrl}/api/projects/spot-patch`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({ status: "nope" }),
     })
     assert.equal(invalid.status, 400)
   })
 
   it("links projects to clients via POST, PATCH, GET detail, and list filter", async () => {
-    const clientResponse = await fetch(`${baseUrl}/api/clients`, {
+    const clientResponse = await authenticatedFetch(`${baseUrl}/api/clients`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Acme Corp",
         email: "contact@acme.example",
@@ -175,9 +207,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(clientResponse.status, 201)
     const client = (await clientResponse.json()) as { id: string; name: string }
 
-    const otherClientResponse = await fetch(`${baseUrl}/api/clients`, {
+    const otherClientResponse = await authenticatedFetch(`${baseUrl}/api/clients`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Other Co",
         email: "other@example.com",
@@ -200,7 +232,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     })
     assert.equal(invalidClientResponse.status, 400)
 
-    const detailResponse = await fetch(`${baseUrl}/api/projects/spot-client-link`)
+    const detailResponse = await authenticatedFetch(`${baseUrl}/api/projects/spot-client-link`)
     assert.equal(detailResponse.status, 200)
     const detail = (await detailResponse.json()) as {
       clientId: string
@@ -212,7 +244,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
 
     await createProject("spot-unlinked", "Unlinked Spot")
 
-    const filteredResponse = await fetch(
+    const filteredResponse = await authenticatedFetch(
       `${baseUrl}/api/projects?clientId=${client.id}`,
     )
     assert.equal(filteredResponse.status, 200)
@@ -220,16 +252,16 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(filtered.length, 1)
     assert.equal(filtered[0]?.id, "spot-client-link")
 
-    const clearResponse = await fetch(`${baseUrl}/api/projects/spot-client-link`, {
+    const clearResponse = await authenticatedFetch(`${baseUrl}/api/projects/spot-client-link`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({ clientId: null }),
     })
     assert.equal(clearResponse.status, 200)
     const cleared = (await clearResponse.json()) as { clientId?: string }
     assert.equal(cleared.clientId, undefined)
 
-    const clearedDetailResponse = await fetch(
+    const clearedDetailResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/spot-client-link`,
     )
     const clearedDetail = (await clearedDetailResponse.json()) as {
@@ -237,20 +269,20 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     }
     assert.equal(clearedDetail.client, null)
 
-    const relinkResponse = await fetch(`${baseUrl}/api/projects/spot-client-link`, {
+    const relinkResponse = await authenticatedFetch(`${baseUrl}/api/projects/spot-client-link`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({ client_id: otherClient.id }),
     })
     assert.equal(relinkResponse.status, 200)
     const relinked = (await relinkResponse.json()) as { clientId: string }
     assert.equal(relinked.clientId, otherClient.id)
 
-    const invalidPatchResponse = await fetch(
+    const invalidPatchResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/spot-client-link`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ clientId: "missing-client-id" }),
       },
     )
@@ -263,7 +295,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const created = await createDeliverable("spot-deliv", "Hero Film")
     assert.equal(created.status, "not_started")
 
-    const listResponse = await fetch(
+    const listResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/spot-deliv/deliverables`,
     )
     assert.equal(listResponse.status, 200)
@@ -274,11 +306,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(list.length, 1)
     assert.equal(list[0]?.versionCount, 0)
 
-    const statusResponse = await fetch(
+    const statusResponse = await authenticatedFetch(
       `${baseUrl}/api/deliverables/${created.id}/status`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ status: "approved" }),
       },
     )
@@ -286,32 +318,32 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const withStatus = (await statusResponse.json()) as { status: string }
     assert.equal(withStatus.status, "approved")
 
-    const badStatusResponse = await fetch(
+    const badStatusResponse = await authenticatedFetch(
       `${baseUrl}/api/deliverables/${created.id}/status`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ status: "done" }),
       },
     )
     assert.equal(badStatusResponse.status, 400)
 
-    const deleteResponse = await fetch(
+    const deleteResponse = await authenticatedFetch(
       `${baseUrl}/api/deliverables/${created.id}`,
       { method: "DELETE" },
     )
     assert.equal(deleteResponse.status, 204)
 
-    const getResponse = await fetch(`${baseUrl}/api/deliverables/${created.id}`)
+    const getResponse = await authenticatedFetch(`${baseUrl}/api/deliverables/${created.id}`)
     assert.equal(getResponse.status, 404)
   })
 
   it("returns 404 when creating a deliverable for a missing project", async () => {
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `${baseUrl}/api/projects/does-not-exist/deliverables`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ name: "Nope" }),
       },
     )
@@ -321,11 +353,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
   it("creates, updates, and deletes milestones", async () => {
     await createProject("spot-milestone", "Spot Milestone")
 
-    const createResponse = await fetch(
+    const createResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/spot-milestone/milestones`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ name: "First cut", dueDate: "2026-04-01" }),
       },
     )
@@ -336,11 +368,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     }
     assert.equal(milestone.done, false)
 
-    const patchResponse = await fetch(
+    const patchResponse = await authenticatedFetch(
       `${baseUrl}/api/milestones/${milestone.id}`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ done: true }),
       },
     )
@@ -348,7 +380,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const updated = (await patchResponse.json()) as { done: boolean }
     assert.equal(updated.done, true)
 
-    const deleteResponse = await fetch(
+    const deleteResponse = await authenticatedFetch(
       `${baseUrl}/api/milestones/${milestone.id}`,
       { method: "DELETE" },
     )
@@ -358,22 +390,22 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
   it("creates tasks and logs time entries", async () => {
     await createProject("spot-time", "Spot Time")
 
-    const milestoneResponse = await fetch(
+    const milestoneResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/spot-time/milestones`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ name: "Animation pass" }),
       },
     )
     assert.equal(milestoneResponse.status, 201)
     const milestone = (await milestoneResponse.json()) as { id: string }
 
-    const taskResponse = await fetch(
+    const taskResponse = await authenticatedFetch(
       `${baseUrl}/api/milestones/${milestone.id}/tasks`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ name: "Rig polish" }),
       },
     )
@@ -381,11 +413,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const task = (await taskResponse.json()) as { id: string; name: string }
     assert.equal(task.name, "Rig polish")
 
-    const manualLogResponse = await fetch(
+    const manualLogResponse = await authenticatedFetch(
       `${baseUrl}/api/tasks/${task.id}/time-logs`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({
           durationHours: 1.5,
           notes: "Blocked out motion",
@@ -401,37 +433,37 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(manualLog.durationHours, 1.5)
     assert.equal(manualLog.notes, "Blocked out motion")
 
-    const timerLogResponse = await fetch(
+    const timerLogResponse = await authenticatedFetch(
       `${baseUrl}/api/tasks/${task.id}/time-logs`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ durationHours: 0.5 }),
       },
     )
     assert.equal(timerLogResponse.status, 201)
 
-    const listResponse = await fetch(
+    const listResponse = await authenticatedFetch(
       `${baseUrl}/api/tasks/${task.id}/time-logs`,
     )
     assert.equal(listResponse.status, 200)
     const entries = (await listResponse.json()) as Array<{ durationHours: number }>
     assert.equal(entries.length, 2)
 
-    const projectTasksResponse = await fetch(
+    const projectTasksResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/spot-time/tasks`,
     )
     assert.equal(projectTasksResponse.status, 200)
     const projectTasks = (await projectTasksResponse.json()) as Array<{ id: string }>
     assert.equal(projectTasks.length, 1)
 
-    const deleteLogResponse = await fetch(
+    const deleteLogResponse = await authenticatedFetch(
       `${baseUrl}/api/time-logs/${manualLog.id}`,
       { method: "DELETE" },
     )
     assert.equal(deleteLogResponse.status, 204)
 
-    const deleteTaskResponse = await fetch(`${baseUrl}/api/tasks/${task.id}`, {
+    const deleteTaskResponse = await authenticatedFetch(`${baseUrl}/api/tasks/${task.id}`, {
       method: "DELETE",
     })
     assert.equal(deleteTaskResponse.status, 204)
@@ -448,31 +480,31 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
       durationHours: number,
       loggedAt: string,
     ) {
-      const milestoneResponse = await fetch(
+      const milestoneResponse = await authenticatedFetch(
         `${baseUrl}/api/projects/${projectId}/milestones`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders(adminCookies, adminCsrf),
           body: JSON.stringify({ name: milestoneName }),
         },
       )
       const milestone = (await milestoneResponse.json()) as { id: string }
 
-      const taskResponse = await fetch(
+      const taskResponse = await authenticatedFetch(
         `${baseUrl}/api/milestones/${milestone.id}/tasks`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders(adminCookies, adminCsrf),
           body: JSON.stringify({ name: taskName }),
         },
       )
       const task = (await taskResponse.json()) as { id: string }
 
-      const logResponse = await fetch(
+      const logResponse = await authenticatedFetch(
         `${baseUrl}/api/tasks/${task.id}/time-logs`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders(adminCookies, adminCsrf),
           body: JSON.stringify({ durationHours, loggedAt }),
         },
       )
@@ -502,11 +534,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
       3,
       "2026-06-16T12:00:00.000Z",
     )
-    const sundayLogResponse = await fetch(
+    const sundayLogResponse = await authenticatedFetch(
       `${baseUrl}/api/tasks/${blockingTask.id}/time-logs`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({
           durationHours: 4,
           loggedAt: "2026-06-21T12:00:00.000Z",
@@ -515,7 +547,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     )
     assert.equal(sundayLogResponse.status, 201)
 
-    const sheetResponse = await fetch(
+    const sheetResponse = await authenticatedFetch(
       `${baseUrl}/api/timesheet?weekStart=${weekStart}`,
     )
     assert.equal(sheetResponse.status, 200)
@@ -550,15 +582,15 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(blocking.days[1], 2)
     assert.equal(blocking.days[6], 4)
 
-    const updateResponse = await fetch(
+    const updateResponse = await authenticatedFetch(
       `${baseUrl}/api/tasks/${taskB.id}/time-logs`,
     )
     const entries = (await updateResponse.json()) as Array<{ id: string }>
-    const patchResponse = await fetch(
+    const patchResponse = await authenticatedFetch(
       `${baseUrl}/api/time-logs/${entries[0].id}`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ durationHours: 2, notes: "Adjusted" }),
       },
     )
@@ -570,7 +602,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(patched.durationHours, 2)
     assert.equal(patched.notes, "Adjusted")
 
-    const refreshedResponse = await fetch(
+    const refreshedResponse = await authenticatedFetch(
       `${baseUrl}/api/timesheet?weekStart=${weekStart}`,
     )
     const refreshed = (await refreshedResponse.json()) as { grandTotal: number }
@@ -580,9 +612,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
   it("returns project hours summary with estimates and logged time", async () => {
     await createProject("hours-summary", "Hours Summary Project")
 
-    const serviceAResponse = await fetch(`${baseUrl}/api/services`, {
+    const serviceAResponse = await authenticatedFetch(`${baseUrl}/api/services`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Animation",
         hourEstimate: 40,
@@ -593,9 +625,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(serviceAResponse.status, 201)
     const serviceA = (await serviceAResponse.json()) as { id: string }
 
-    const serviceBResponse = await fetch(`${baseUrl}/api/services`, {
+    const serviceBResponse = await authenticatedFetch(`${baseUrl}/api/services`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Layout",
         hourEstimate: 20,
@@ -607,18 +639,18 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const serviceB = (await serviceBResponse.json()) as { id: string }
 
     for (const serviceId of [serviceA.id, serviceB.id]) {
-      const attachResponse = await fetch(
+      const attachResponse = await authenticatedFetch(
         `${baseUrl}/api/projects/hours-summary/services`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders(adminCookies, adminCsrf),
           body: JSON.stringify({ serviceId }),
         },
       )
       assert.equal(attachResponse.status, 201)
     }
 
-    const emptySummaryResponse = await fetch(
+    const emptySummaryResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/hours-summary/hours-summary`,
     )
     assert.equal(emptySummaryResponse.status, 200)
@@ -633,39 +665,39 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(emptySummary.deltaHours, -60)
     assert.equal(emptySummary.lines.length, 2)
 
-    const milestoneResponse = await fetch(
+    const milestoneResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/hours-summary/milestones`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ name: "Production" }),
       },
     )
     assert.equal(milestoneResponse.status, 201)
     const milestone = (await milestoneResponse.json()) as { id: string }
 
-    const taskResponse = await fetch(
+    const taskResponse = await authenticatedFetch(
       `${baseUrl}/api/milestones/${milestone.id}/tasks`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ name: "Blocking" }),
       },
     )
     assert.equal(taskResponse.status, 201)
     const task = (await taskResponse.json()) as { id: string }
 
-    const logResponse = await fetch(
+    const logResponse = await authenticatedFetch(
       `${baseUrl}/api/tasks/${task.id}/time-logs`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ durationHours: 12.5 }),
       },
     )
     assert.equal(logResponse.status, 201)
 
-    const summaryResponse = await fetch(
+    const summaryResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/hours-summary/hours-summary`,
     )
     assert.equal(summaryResponse.status, 200)
@@ -681,7 +713,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(summary.lines[0]?.serviceName, "Animation")
     assert.equal(summary.lines[0]?.estimatedHours, 40)
 
-    const missingResponse = await fetch(
+    const missingResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/missing-project/hours-summary`,
     )
     assert.equal(missingResponse.status, 404)
@@ -690,31 +722,31 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
   it("rejects invalid time log duration", async () => {
     await createProject("spot-time-invalid", "Spot Time Invalid")
 
-    const milestoneResponse = await fetch(
+    const milestoneResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/spot-time-invalid/milestones`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ name: "QA" }),
       },
     )
     const milestone = (await milestoneResponse.json()) as { id: string }
 
-    const taskResponse = await fetch(
+    const taskResponse = await authenticatedFetch(
       `${baseUrl}/api/milestones/${milestone.id}/tasks`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ name: "Review renders" }),
       },
     )
     const task = (await taskResponse.json()) as { id: string }
 
-    const invalidResponse = await fetch(
+    const invalidResponse = await authenticatedFetch(
       `${baseUrl}/api/tasks/${task.id}/time-logs`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ durationHours: 0 }),
       },
     )
@@ -726,7 +758,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const deliverable = await createDeliverable("spot-summary", "Cut")
     await createVersion("spot-summary", deliverable.id, "v1")
 
-    const listResponse = await fetch(`${baseUrl}/api/projects`)
+    const listResponse = await authenticatedFetch(`${baseUrl}/api/projects`)
     assert.equal(listResponse.status, 200)
     const projects = (await listResponse.json()) as Array<{
       id: string
@@ -748,22 +780,22 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const deliverable = await createDeliverable("spot-delete", "Cut")
     const version = await createVersion("spot-delete", deliverable.id, "v1")
 
-    const createCommentResponse = await fetch(
+    const createCommentResponse = await authenticatedFetch(
       `${baseUrl}/api/deliverables/${deliverable.id}/versions/v1/comments`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ timestamp: 1, body: "Test comment", author: "Sam" }),
       },
     )
     assert.equal(createCommentResponse.status, 201)
 
-    const deleteResponse = await fetch(`${baseUrl}/api/projects/spot-delete`, {
+    const deleteResponse = await authenticatedFetch(`${baseUrl}/api/projects/spot-delete`, {
       method: "DELETE",
     })
     assert.equal(deleteResponse.status, 204)
 
-    const getResponse = await fetch(`${baseUrl}/api/projects/spot-delete`)
+    const getResponse = await authenticatedFetch(`${baseUrl}/api/projects/spot-delete`)
     assert.equal(getResponse.status, 404)
 
     const { listComments } = await import("../storage/repository.js")
@@ -771,7 +803,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
   })
 
   it("returns 404 when uploading to a non-existent deliverable", async () => {
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `${baseUrl}/api/deliverables/does-not-exist/versions/v1/upload`,
       { method: "POST" },
     )
@@ -784,11 +816,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const deliverable = await createDeliverable("spot-b", "Cut")
     await createVersion("spot-b", deliverable.id, "v1")
 
-    const createCommentResponse = await fetch(
+    const createCommentResponse = await authenticatedFetch(
       `${baseUrl}/api/deliverables/${deliverable.id}/versions/v1/comments`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({
           timestamp: 8.2,
           body: "Soften the highlight",
@@ -804,18 +836,18 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     }
     assert.equal(comment.resolved, false)
 
-    const listResponse = await fetch(
+    const listResponse = await authenticatedFetch(
       `${baseUrl}/api/deliverables/${deliverable.id}/versions/v1/comments`,
     )
     assert.equal(listResponse.status, 200)
     const comments = (await listResponse.json()) as Array<{ id: string }>
     assert.equal(comments.length, 1)
 
-    const patchResponse = await fetch(
+    const patchResponse = await authenticatedFetch(
       `${baseUrl}/api/comments/${comment.id}/resolve`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ resolved: true }),
       },
     )
@@ -824,7 +856,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const updated = (await patchResponse.json()) as { resolved: boolean }
     assert.equal(updated.resolved, true)
 
-    const deleteResponse = await fetch(`${baseUrl}/api/comments/${comment.id}`, {
+    const deleteResponse = await authenticatedFetch(`${baseUrl}/api/comments/${comment.id}`, {
       method: "DELETE",
     })
     assert.equal(deleteResponse.status, 204)
@@ -837,11 +869,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
 
     assert.equal(version.status, "pending_review")
 
-    const approvedResponse = await fetch(
+    const approvedResponse = await authenticatedFetch(
       `${baseUrl}/api/versions/${version.id}/status`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ status: "approved" }),
       },
     )
@@ -850,22 +882,22 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const approved = (await approvedResponse.json()) as { status: string }
     assert.equal(approved.status, "approved")
 
-    const invalidResponse = await fetch(
+    const invalidResponse = await authenticatedFetch(
       `${baseUrl}/api/versions/${version.id}/status`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ status: "rejected" }),
       },
     )
 
     assert.equal(invalidResponse.status, 400)
 
-    const missingResponse = await fetch(
+    const missingResponse = await authenticatedFetch(
       `${baseUrl}/api/versions/missing-version-id/status`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ status: "approved" }),
       },
     )
@@ -879,11 +911,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const version = await createVersion("spot-rename", deliverable.id, "v1")
     await createVersion("spot-rename", deliverable.id, "v2")
 
-    const renamedResponse = await fetch(
+    const renamedResponse = await authenticatedFetch(
       `${baseUrl}/api/versions/${version.id}/label`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ label: "v1-review" }),
       },
     )
@@ -892,11 +924,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const renamed = (await renamedResponse.json()) as { label: string }
     assert.equal(renamed.label, "v1-review")
 
-    const conflictResponse = await fetch(
+    const conflictResponse = await authenticatedFetch(
       `${baseUrl}/api/versions/${version.id}/label`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ label: "v2" }),
       },
     )
@@ -909,9 +941,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const deliverable = await createDeliverable("spot-flat", "Cut")
     const version = await createVersion("spot-flat", deliverable.id, "v1")
 
-    const createResponse = await fetch(`${baseUrl}/api/comments`, {
+    const createResponse = await authenticatedFetch(`${baseUrl}/api/comments`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         versionId: version.id,
         timestamp: 3.5,
@@ -924,7 +956,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const created = (await createResponse.json()) as { id: string; versionId: string }
     assert.equal(created.versionId, version.id)
 
-    const listResponse = await fetch(
+    const listResponse = await authenticatedFetch(
       `${baseUrl}/api/comments?versionId=${encodeURIComponent(version.id)}`,
     )
     assert.equal(listResponse.status, 200)
@@ -953,9 +985,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
       ],
     }
 
-    const createResponse = await fetch(`${baseUrl}/api/comments`, {
+    const createResponse = await authenticatedFetch(`${baseUrl}/api/comments`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         versionId: version.id,
         timestamp: 4.25,
@@ -982,9 +1014,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
       "v1",
     )
 
-    const mismatchResponse = await fetch(`${baseUrl}/api/comments`, {
+    const mismatchResponse = await authenticatedFetch(`${baseUrl}/api/comments`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         versionId: version.id,
         timestamp: 2,
@@ -1011,9 +1043,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
   })
 
   it("creates, filters, updates, and deletes leads with contact log routes", async () => {
-    const createResponse = await fetch(`${baseUrl}/api/leads`, {
+    const createResponse = await authenticatedFetch(`${baseUrl}/api/leads`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Jordan Ellis",
         email: "jordan@example.com",
@@ -1027,9 +1059,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     }
     assert.equal(created.replied, false)
 
-    await fetch(`${baseUrl}/api/leads`, {
+    await authenticatedFetch(`${baseUrl}/api/leads`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Sam Rivera",
         email: "sam@example.com",
@@ -1038,7 +1070,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
       }),
     })
 
-    const filteredResponse = await fetch(
+    const filteredResponse = await authenticatedFetch(
       `${baseUrl}/api/leads?status=new&replied=false`,
     )
     assert.equal(filteredResponse.status, 200)
@@ -1046,12 +1078,12 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(filtered.length, 1)
     assert.equal(filtered[0]?.id, created.id)
 
-    const badFilterResponse = await fetch(`${baseUrl}/api/leads?replied=maybe`)
+    const badFilterResponse = await authenticatedFetch(`${baseUrl}/api/leads?replied=maybe`)
     assert.equal(badFilterResponse.status, 400)
 
-    const logResponse = await fetch(`${baseUrl}/api/leads/${created.id}/log`, {
+    const logResponse = await authenticatedFetch(`${baseUrl}/api/leads/${created.id}/log`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         type: "email",
         notes: "Sent portfolio.",
@@ -1060,11 +1092,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     })
     assert.equal(logResponse.status, 201)
 
-    const repliedLogResponse = await fetch(
+    const repliedLogResponse = await authenticatedFetch(
       `${baseUrl}/api/leads/${created.id}/log`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({
           type: "call",
           notes: "Lead replied.",
@@ -1076,7 +1108,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(repliedLogResponse.status, 201)
     const logEntry = (await repliedLogResponse.json()) as { id: string }
 
-    const getResponse = await fetch(`${baseUrl}/api/leads/${created.id}`)
+    const getResponse = await authenticatedFetch(`${baseUrl}/api/leads/${created.id}`)
     assert.equal(getResponse.status, 200)
     const lead = (await getResponse.json()) as {
       replied: boolean
@@ -1087,39 +1119,39 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(lead.lastContactedAt, "2026-06-11T14:00:00.000Z")
     assert.equal(lead.contactLog.length, 2)
 
-    const listLogResponse = await fetch(`${baseUrl}/api/leads/${created.id}/log`)
+    const listLogResponse = await authenticatedFetch(`${baseUrl}/api/leads/${created.id}/log`)
     assert.equal(listLogResponse.status, 200)
     const logEntries = (await listLogResponse.json()) as unknown[]
     assert.equal(logEntries.length, 2)
 
-    const patchResponse = await fetch(`${baseUrl}/api/leads/${created.id}`, {
+    const patchResponse = await authenticatedFetch(`${baseUrl}/api/leads/${created.id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({ status: "negotiating", notes: "Budget discussion." }),
     })
     assert.equal(patchResponse.status, 200)
     const patched = (await patchResponse.json()) as { status: string }
     assert.equal(patched.status, "negotiating")
 
-    const deleteLogResponse = await fetch(
+    const deleteLogResponse = await authenticatedFetch(
       `${baseUrl}/api/leads/${created.id}/log/${logEntry.id}`,
       { method: "DELETE" },
     )
     assert.equal(deleteLogResponse.status, 204)
 
-    const deleteResponse = await fetch(`${baseUrl}/api/leads/${created.id}`, {
+    const deleteResponse = await authenticatedFetch(`${baseUrl}/api/leads/${created.id}`, {
       method: "DELETE",
     })
     assert.equal(deleteResponse.status, 204)
 
-    const missingResponse = await fetch(`${baseUrl}/api/leads/${created.id}`)
+    const missingResponse = await authenticatedFetch(`${baseUrl}/api/leads/${created.id}`)
     assert.equal(missingResponse.status, 404)
   })
 
   it("creates, converts, updates, and deletes clients via API routes", async () => {
-    const leadResponse = await fetch(`${baseUrl}/api/leads`, {
+    const leadResponse = await authenticatedFetch(`${baseUrl}/api/leads`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Avery Chen",
         email: "avery@example.com",
@@ -1131,7 +1163,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(leadResponse.status, 201)
     const lead = (await leadResponse.json()) as { id: string }
 
-    const convertResponse = await fetch(
+    const convertResponse = await authenticatedFetch(
       `${baseUrl}/api/leads/${lead.id}/convert`,
       { method: "POST" },
     )
@@ -1144,25 +1176,25 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(converted.convertedFromLeadId, lead.id)
     assert.equal(converted.company, "Lumen Co")
 
-    const duplicateConvertResponse = await fetch(
+    const duplicateConvertResponse = await authenticatedFetch(
       `${baseUrl}/api/leads/${lead.id}/convert`,
       { method: "POST" },
     )
     assert.equal(duplicateConvertResponse.status, 409)
 
-    const leadGetResponse = await fetch(`${baseUrl}/api/leads/${lead.id}`)
+    const leadGetResponse = await authenticatedFetch(`${baseUrl}/api/leads/${lead.id}`)
     const updatedLead = (await leadGetResponse.json()) as { status: string }
     assert.equal(updatedLead.status, "converted")
 
     // Converted leads drop out of the default pipeline list...
-    const defaultLeadsResponse = await fetch(`${baseUrl}/api/leads`)
+    const defaultLeadsResponse = await authenticatedFetch(`${baseUrl}/api/leads`)
     const defaultLeads = (await defaultLeadsResponse.json()) as Array<{
       id: string
     }>
     assert.ok(!defaultLeads.some((item) => item.id === lead.id))
 
     // ...but remain reachable via an explicit status filter.
-    const convertedLeadsResponse = await fetch(
+    const convertedLeadsResponse = await authenticatedFetch(
       `${baseUrl}/api/leads?status=converted`,
     )
     const convertedLeads = (await convertedLeadsResponse.json()) as Array<{
@@ -1170,9 +1202,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     }>
     assert.ok(convertedLeads.some((item) => item.id === lead.id))
 
-    const createResponse = await fetch(`${baseUrl}/api/clients`, {
+    const createResponse = await authenticatedFetch(`${baseUrl}/api/clients`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Manual Client",
         email: "manual@example.com",
@@ -1182,7 +1214,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(createResponse.status, 201)
     const created = (await createResponse.json()) as { id: string }
 
-    const listResponse = await fetch(`${baseUrl}/api/clients`)
+    const listResponse = await authenticatedFetch(`${baseUrl}/api/clients`)
     assert.equal(listResponse.status, 200)
     const clients = (await listResponse.json()) as Array<{ id: string }>
     const clientIds = clients.map((item) => item.id)
@@ -1193,13 +1225,14 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
       "../storage/repository.js"
     )
     repoCreateProject({
+      studioId,
       id: "proj-client-api",
       name: "Linked Project",
       clientId: created.id,
       status: "on_hold",
     })
 
-    const getResponse = await fetch(`${baseUrl}/api/clients/${created.id}`)
+    const getResponse = await authenticatedFetch(`${baseUrl}/api/clients/${created.id}`)
     assert.equal(getResponse.status, 200)
     const clientWithProjects = (await getResponse.json()) as {
       website: string
@@ -1208,22 +1241,22 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(clientWithProjects.website, "https://example.com")
     assert.equal(clientWithProjects.projects.length, 1)
 
-    const patchResponse = await fetch(`${baseUrl}/api/clients/${created.id}`, {
+    const patchResponse = await authenticatedFetch(`${baseUrl}/api/clients/${created.id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({ notes: "Key account." }),
     })
     assert.equal(patchResponse.status, 200)
     const patched = (await patchResponse.json()) as { notes: string }
     assert.equal(patched.notes, "Key account.")
 
-    const blockedDeleteResponse = await fetch(
+    const blockedDeleteResponse = await authenticatedFetch(
       `${baseUrl}/api/clients/${created.id}`,
       { method: "DELETE" },
     )
     assert.equal(blockedDeleteResponse.status, 409)
 
-    const archiveResponse = await fetch(
+    const archiveResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/proj-client-api/archive`,
       { method: "POST" },
     )
@@ -1233,12 +1266,12 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     }
     assert.ok(archivedProject.archivedAt)
 
-    const deleteResponse = await fetch(`${baseUrl}/api/clients/${created.id}`, {
+    const deleteResponse = await authenticatedFetch(`${baseUrl}/api/clients/${created.id}`, {
       method: "DELETE",
     })
     assert.equal(deleteResponse.status, 204)
 
-    const missingResponse = await fetch(`${baseUrl}/api/clients/${created.id}`)
+    const missingResponse = await authenticatedFetch(`${baseUrl}/api/clients/${created.id}`)
     assert.equal(missingResponse.status, 404)
 
     assert.equal(converted.id.length > 0, true)
@@ -1254,29 +1287,34 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     } = await import("../storage/repository.js")
 
     const client = repoCreateClient({
+      studioId,
       name: "Lifetime Client",
       email: "lifetime@example.com",
     })
 
     const activeProject = repoCreateProject({
+      studioId,
       id: "ltv-active-project",
       name: "Active Project",
       clientId: client.id,
       status: "active",
     })
     const onHoldProject = repoCreateProject({
+      studioId,
       id: "ltv-on-hold-project",
       name: "On Hold Project",
       clientId: client.id,
       status: "on_hold",
     })
     const completedProject = repoCreateProject({
+      studioId,
       id: "ltv-completed-project",
       name: "Completed Project",
       clientId: client.id,
       status: "completed",
     })
     const emptyProject = repoCreateProject({
+      studioId,
       id: "ltv-empty-project",
       name: "No Services Project",
       clientId: client.id,
@@ -1284,6 +1322,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     })
 
     const service = repoCreateService({
+      studioId,
       name: "Motion Design",
       hourEstimate: 10,
       hourlyRate: 100,
@@ -1296,7 +1335,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     addProjectService(completedProject.id, service.id)
     updateProjectService(completedProject.id, service.id, { overrideHours: 8 })
 
-    const listResponse = await fetch(`${baseUrl}/api/clients`)
+    const listResponse = await authenticatedFetch(`${baseUrl}/api/clients`)
     assert.equal(listResponse.status, 200)
     const clients = (await listResponse.json()) as Array<{
       id: string
@@ -1314,7 +1353,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
       completedEstimated: 800,
     })
 
-    const detailResponse = await fetch(`${baseUrl}/api/clients/${client.id}`)
+    const detailResponse = await authenticatedFetch(`${baseUrl}/api/clients/${client.id}`)
     assert.equal(detailResponse.status, 200)
     const detail = (await detailResponse.json()) as {
       lifetimeValue: {
@@ -1333,9 +1372,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
   })
 
   it("manages retainer clients and cycle hour logging via API routes", async () => {
-    const createResponse = await fetch(`${baseUrl}/api/clients`, {
+    const createResponse = await authenticatedFetch(`${baseUrl}/api/clients`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Retainer Client",
         email: "retainer@example.com",
@@ -1355,7 +1394,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(created.isRetainer, true)
     assert.equal(created.retainerHours, 30)
 
-    const getResponse = await fetch(`${baseUrl}/api/clients/${created.id}`)
+    const getResponse = await authenticatedFetch(`${baseUrl}/api/clients/${created.id}`)
     assert.equal(getResponse.status, 200)
     const detail = (await getResponse.json()) as {
       retainerSummary?: {
@@ -1369,11 +1408,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(detail.retainerSummary.hoursLogged, 0)
     assert.equal(detail.retainerSummary.estimatedValue, 3600)
 
-    const hoursResponse = await fetch(
+    const hoursResponse = await authenticatedFetch(
       `${baseUrl}/api/clients/${created.id}/retainer-hours`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ hoursLogged: 18.5 }),
       },
     )
@@ -1384,9 +1423,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(updated.retainerSummary?.hoursLogged, 18.5)
     assert.equal(updated.retainerSummary?.utilizationPercent, 62)
 
-    const invalidRetainerResponse = await fetch(`${baseUrl}/api/clients`, {
+    const invalidRetainerResponse = await authenticatedFetch(`${baseUrl}/api/clients`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Bad Retainer",
         email: "bad@example.com",
@@ -1399,9 +1438,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
 
   it("reverts clients back to leads via API routes", async () => {
     // A converted lead reverts onto its original lead record.
-    const leadResponse = await fetch(`${baseUrl}/api/leads`, {
+    const leadResponse = await authenticatedFetch(`${baseUrl}/api/leads`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Revert Source",
         email: "revert@example.com",
@@ -1411,14 +1450,14 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     })
     const lead = (await leadResponse.json()) as { id: string }
 
-    const convertResponse = await fetch(
+    const convertResponse = await authenticatedFetch(
       `${baseUrl}/api/leads/${lead.id}/convert`,
       { method: "POST" },
     )
     assert.equal(convertResponse.status, 201)
     const client = (await convertResponse.json()) as { id: string }
 
-    const revertResponse = await fetch(
+    const revertResponse = await authenticatedFetch(
       `${baseUrl}/api/clients/${client.id}/revert-to-lead`,
       { method: "POST" },
     )
@@ -1431,18 +1470,18 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(revertedLead.status, "negotiating")
 
     // The client record is gone and the lead is back in the pipeline list.
-    const clientGone = await fetch(`${baseUrl}/api/clients/${client.id}`)
+    const clientGone = await authenticatedFetch(`${baseUrl}/api/clients/${client.id}`)
     assert.equal(clientGone.status, 404)
 
-    const leadsList = (await (await fetch(`${baseUrl}/api/leads`)).json()) as Array<{
+    const leadsList = (await (await authenticatedFetch(`${baseUrl}/api/leads`)).json()) as Array<{
       id: string
     }>
     assert.ok(leadsList.some((item) => item.id === lead.id))
 
     // A manually created client reverts into a brand new lead.
-    const manualResponse = await fetch(`${baseUrl}/api/clients`, {
+    const manualResponse = await authenticatedFetch(`${baseUrl}/api/clients`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Manual Revert",
         email: "manual-revert@example.com",
@@ -1450,7 +1489,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     })
     const manualClient = (await manualResponse.json()) as { id: string }
 
-    const manualRevertResponse = await fetch(
+    const manualRevertResponse = await authenticatedFetch(
       `${baseUrl}/api/clients/${manualClient.id}/revert-to-lead`,
       { method: "POST" },
     )
@@ -1465,14 +1504,14 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(manualLead.status, "negotiating")
 
     // Reverting is blocked while the client has active (non-archived) projects.
-    const blockedLeadResponse = await fetch(`${baseUrl}/api/leads`, {
+    const blockedLeadResponse = await authenticatedFetch(`${baseUrl}/api/leads`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({ name: "Blocked", email: "blocked@example.com" }),
     })
     const blockedLead = (await blockedLeadResponse.json()) as { id: string }
     const blockedClient = (await (
-      await fetch(`${baseUrl}/api/leads/${blockedLead.id}/convert`, {
+      await authenticatedFetch(`${baseUrl}/api/leads/${blockedLead.id}/convert`, {
         method: "POST",
       })
     ).json()) as { id: string }
@@ -1481,19 +1520,20 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
       "../storage/repository.js"
     )
     repoCreateProject({
+      studioId,
       id: "proj-revert-block",
       name: "Active Linked Project",
       clientId: blockedClient.id,
       status: "active",
     })
 
-    const blockedRevertResponse = await fetch(
+    const blockedRevertResponse = await authenticatedFetch(
       `${baseUrl}/api/clients/${blockedClient.id}/revert-to-lead`,
       { method: "POST" },
     )
     assert.equal(blockedRevertResponse.status, 409)
 
-    const missingRevertResponse = await fetch(
+    const missingRevertResponse = await authenticatedFetch(
       `${baseUrl}/api/clients/does-not-exist/revert-to-lead`,
       { method: "POST" },
     )
@@ -1501,9 +1541,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
   })
 
   it("creates, updates, lists, and deletes services via API routes", async () => {
-    const createResponse = await fetch(`${baseUrl}/api/services`, {
+    const createResponse = await authenticatedFetch(`${baseUrl}/api/services`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Explainer Video",
         hourEstimate: 20,
@@ -1520,9 +1560,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(created.name, "Explainer Video")
     assert.equal(created.type, "animated")
 
-    const invalidTypeResponse = await fetch(`${baseUrl}/api/services`, {
+    const invalidTypeResponse = await authenticatedFetch(`${baseUrl}/api/services`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Invalid",
         hourEstimate: 1,
@@ -1532,9 +1572,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     })
     assert.equal(invalidTypeResponse.status, 400)
 
-    const zeroHourEstimateResponse = await fetch(`${baseUrl}/api/services`, {
+    const zeroHourEstimateResponse = await authenticatedFetch(`${baseUrl}/api/services`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Zero Hours",
         hourEstimate: 0,
@@ -1544,11 +1584,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     })
     assert.equal(zeroHourEstimateResponse.status, 400)
 
-    const invalidHourEstimatePrecisionResponse = await fetch(
+    const invalidHourEstimatePrecisionResponse = await authenticatedFetch(
       `${baseUrl}/api/services`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({
           name: "Too Precise",
           hourEstimate: 1.25,
@@ -1559,9 +1599,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     )
     assert.equal(invalidHourEstimatePrecisionResponse.status, 400)
 
-    const longNameResponse = await fetch(`${baseUrl}/api/services`, {
+    const longNameResponse = await authenticatedFetch(`${baseUrl}/api/services`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "x".repeat(101),
         hourEstimate: 1,
@@ -1571,14 +1611,14 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     })
     assert.equal(longNameResponse.status, 400)
 
-    const listResponse = await fetch(`${baseUrl}/api/services`)
+    const listResponse = await authenticatedFetch(`${baseUrl}/api/services`)
     assert.equal(listResponse.status, 200)
     const services = (await listResponse.json()) as Array<{ id: string }>
     assert.ok(services.some((service) => service.id === created.id))
 
-    const updateResponse = await fetch(`${baseUrl}/api/services/${created.id}`, {
+    const updateResponse = await authenticatedFetch(`${baseUrl}/api/services/${created.id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Explainer Video (Revised)",
         hourEstimate: 24,
@@ -1594,11 +1634,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(updated.name, "Explainer Video (Revised)")
     assert.equal(updated.hourEstimate, 24)
 
-    const missingUpdateResponse = await fetch(
+    const missingUpdateResponse = await authenticatedFetch(
       `${baseUrl}/api/services/missing-service-id`,
       {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({
           name: "Ghost",
           hourEstimate: 1,
@@ -1609,12 +1649,12 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     )
     assert.equal(missingUpdateResponse.status, 404)
 
-    const deleteResponse = await fetch(`${baseUrl}/api/services/${created.id}`, {
+    const deleteResponse = await authenticatedFetch(`${baseUrl}/api/services/${created.id}`, {
       method: "DELETE",
     })
     assert.equal(deleteResponse.status, 204)
 
-    const missingDeleteResponse = await fetch(
+    const missingDeleteResponse = await authenticatedFetch(
       `${baseUrl}/api/services/${created.id}`,
       { method: "DELETE" },
     )
@@ -1622,9 +1662,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
   })
 
   it("returns linked project usage for a service", async () => {
-    const createResponse = await fetch(`${baseUrl}/api/services`, {
+    const createResponse = await authenticatedFetch(`${baseUrl}/api/services`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Social Cutdown",
         hourEstimate: 6,
@@ -1635,7 +1675,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(createResponse.status, 201)
     const service = (await createResponse.json()) as { id: string }
 
-    const usageBeforeLinkResponse = await fetch(
+    const usageBeforeLinkResponse = await authenticatedFetch(
       `${baseUrl}/api/services/${service.id}/usage`,
     )
     assert.equal(usageBeforeLinkResponse.status, 200)
@@ -1650,7 +1690,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const { linkServiceToProject } = await import("../storage/repository.js")
     linkServiceToProject("svc-project", service.id)
 
-    const usageResponse = await fetch(
+    const usageResponse = await authenticatedFetch(
       `${baseUrl}/api/services/${service.id}/usage`,
     )
     assert.equal(usageResponse.status, 200)
@@ -1661,7 +1701,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(usage.projectCount, 1)
     assert.equal(usage.projects[0]?.name, "Launch Film")
 
-    const missingUsageResponse = await fetch(
+    const missingUsageResponse = await authenticatedFetch(
       `${baseUrl}/api/services/missing-service/usage`,
     )
     assert.equal(missingUsageResponse.status, 404)
@@ -1671,9 +1711,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const projectResponse = await createProject("svc-proj-api", "Service Project")
     assert.equal(projectResponse.status, 201)
 
-    const serviceResponse = await fetch(`${baseUrl}/api/services`, {
+    const serviceResponse = await authenticatedFetch(`${baseUrl}/api/services`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Logo Design",
         hourEstimate: 8,
@@ -1684,17 +1724,17 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(serviceResponse.status, 201)
     const service = (await serviceResponse.json()) as { id: string; name: string }
 
-    const emptyListResponse = await fetch(
+    const emptyListResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/svc-proj-api/services`,
     )
     assert.equal(emptyListResponse.status, 200)
     assert.deepEqual(await emptyListResponse.json(), [])
 
-    const attachResponse = await fetch(
+    const attachResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/svc-proj-api/services`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ serviceId: service.id, quantity: 2 }),
       },
     )
@@ -1711,17 +1751,17 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(attached.quantity, 2)
     assert.equal(attached.service.name, "Logo Design")
 
-    const duplicateResponse = await fetch(
+    const duplicateResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/svc-proj-api/services`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ serviceId: service.id }),
       },
     )
     assert.equal(duplicateResponse.status, 409)
 
-    const listResponse = await fetch(
+    const listResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/svc-proj-api/services`,
     )
     assert.equal(listResponse.status, 200)
@@ -1729,11 +1769,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(listed.length, 1)
     assert.equal(listed[0]?.serviceId, service.id)
 
-    const patchResponse = await fetch(
+    const patchResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/svc-proj-api/services/${service.id}`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ overrideHours: 10 }),
       },
     )
@@ -1745,7 +1785,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(patched.overrideHours, 10)
     assert.equal(patched.service.hourEstimate, 8)
 
-    const catalogResponse = await fetch(`${baseUrl}/api/services`)
+    const catalogResponse = await authenticatedFetch(`${baseUrl}/api/services`)
     assert.equal(catalogResponse.status, 200)
     const catalog = (await catalogResponse.json()) as Array<{
       id: string
@@ -1756,11 +1796,11 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
       8,
     )
 
-    const resetResponse = await fetch(
+    const resetResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/svc-proj-api/services/${service.id}`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ overrideHours: null }),
       },
     )
@@ -1768,36 +1808,36 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     const reset = (await resetResponse.json()) as { overrideHours: number | null }
     assert.equal(reset.overrideHours, null)
 
-    const invalidPatchResponse = await fetch(
+    const invalidPatchResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/svc-proj-api/services/${service.id}`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ overrideHours: -1 }),
       },
     )
     assert.equal(invalidPatchResponse.status, 400)
 
-    const deleteResponse = await fetch(
+    const deleteResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/svc-proj-api/services/${service.id}`,
       { method: "DELETE" },
     )
     assert.equal(deleteResponse.status, 204)
 
-    const serviceStillExistsResponse = await fetch(`${baseUrl}/api/services`)
+    const serviceStillExistsResponse = await authenticatedFetch(`${baseUrl}/api/services`)
     assert.equal(serviceStillExistsResponse.status, 200)
     const services = (await serviceStillExistsResponse.json()) as Array<{
       id: string
     }>
     assert.ok(services.some((entry) => entry.id === service.id))
 
-    const missingDeleteResponse = await fetch(
+    const missingDeleteResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/svc-proj-api/services/${service.id}`,
       { method: "DELETE" },
     )
     assert.equal(missingDeleteResponse.status, 404)
 
-    const missingProjectResponse = await fetch(
+    const missingProjectResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/missing-project/services`,
     )
     assert.equal(missingProjectResponse.status, 404)
@@ -1813,9 +1853,9 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     })
     await createDeliverable("dup-source", "Main Film")
 
-    const serviceResponse = await fetch(`${baseUrl}/api/services`, {
+    const serviceResponse = await authenticatedFetch(`${baseUrl}/api/services`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(adminCookies, adminCsrf),
       body: JSON.stringify({
         name: "Edit Package",
         hourEstimate: 6,
@@ -1826,21 +1866,21 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(serviceResponse.status, 201)
     const service = (await serviceResponse.json()) as { id: string }
 
-    const attachResponse = await fetch(
+    const attachResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/dup-source/services`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({ serviceId: service.id, quantity: 1 }),
       },
     )
     assert.equal(attachResponse.status, 201)
 
-    const milestoneResponse = await fetch(
+    const milestoneResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/dup-source/milestones`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({
           name: "Client review",
           dueDate: "2026-04-15",
@@ -1850,7 +1890,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     )
     assert.equal(milestoneResponse.status, 201)
 
-    const duplicateResponse = await fetch(
+    const duplicateResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/dup-source/duplicate`,
       { method: "POST" },
     )
@@ -1875,13 +1915,13 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(duplicate.budget, undefined)
     assert.equal(duplicate.clientId, undefined)
 
-    const deliverablesResponse = await fetch(
+    const deliverablesResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/${duplicate.id}/deliverables`,
     )
     assert.equal(deliverablesResponse.status, 200)
     assert.deepEqual(await deliverablesResponse.json(), [])
 
-    const servicesResponse = await fetch(
+    const servicesResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/${duplicate.id}/services`,
     )
     assert.equal(servicesResponse.status, 200)
@@ -1889,7 +1929,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(services.length, 1)
     assert.equal(services[0]?.serviceId, service.id)
 
-    const milestonesResponse = await fetch(
+    const milestonesResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/${duplicate.id}/milestones`,
     )
     assert.equal(milestonesResponse.status, 200)
@@ -1903,7 +1943,7 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
     assert.equal(milestones[0]?.done, false)
     assert.equal(milestones[0]?.dueDate, undefined)
 
-    const missingResponse = await fetch(
+    const missingResponse = await authenticatedFetch(
       `${baseUrl}/api/projects/missing-project/duplicate`,
       { method: "POST" },
     )

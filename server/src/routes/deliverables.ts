@@ -1,11 +1,11 @@
 import fs from "node:fs"
 import { Router } from "express"
 import { getDeliverableUploadDir } from "../config/paths.js"
+import { requireCapability } from "../middleware/authorization.js"
 import {
   createDeliverable,
   deleteDeliverable,
   getDeliverable,
-  getProject,
   listDeliverableSummaries,
   listVersions,
   updateDeliverable,
@@ -14,25 +14,24 @@ import {
 import type { UpdateDeliverableInput } from "../types/index.js"
 import { isDeliverableStatus } from "../types/index.js"
 import { getParam, getProjectIdParam } from "../utils/params.js"
+import { requireDeliverableStudio, requireProjectStudio } from "./route-helpers.js"
 
 const deliverablesRouter = Router({ mergeParams: true })
 
-deliverablesRouter.get("/", (req, res) => {
+deliverablesRouter.get("/", requireCapability("projects.view"), (req, res) => {
   const projectId = getProjectIdParam(req)
-
-  if (!getProject(projectId)) {
-    res.status(404).json({ error: "Project not found." })
+  const context = requireProjectStudio(req, res, projectId)
+  if (!context) {
     return
   }
 
   res.json(listDeliverableSummaries(projectId))
 })
 
-deliverablesRouter.post("/", (req, res) => {
+deliverablesRouter.post("/", requireCapability("projects.mutate"), (req, res) => {
   const projectId = getProjectIdParam(req)
-
-  if (!getProject(projectId)) {
-    res.status(404).json({ error: "Project not found." })
+  const context = requireProjectStudio(req, res, projectId)
+  if (!context) {
     return
   }
 
@@ -67,8 +66,13 @@ deliverablesRouter.post("/", (req, res) => {
 
 const deliverableByIdRouter = Router()
 
-deliverableByIdRouter.get("/:deliverableId", (req, res) => {
+deliverableByIdRouter.get("/:deliverableId", requireCapability("projects.view"), (req, res) => {
   const deliverableId = getParam(req.params.deliverableId)
+  const context = requireDeliverableStudio(req, res, deliverableId)
+  if (!context) {
+    return
+  }
+
   const deliverable = getDeliverable(deliverableId)
 
   if (!deliverable) {
@@ -79,8 +83,16 @@ deliverableByIdRouter.get("/:deliverableId", (req, res) => {
   res.json(deliverable)
 })
 
-deliverableByIdRouter.get("/:deliverableId/versions", (req, res) => {
+deliverableByIdRouter.get(
+  "/:deliverableId/versions",
+  requireCapability("projects.view"),
+  (req, res) => {
   const deliverableId = getParam(req.params.deliverableId)
+  const context = requireDeliverableStudio(req, res, deliverableId)
+  if (!context) {
+    return
+  }
+
   const deliverable = getDeliverable(deliverableId)
 
   if (!deliverable) {
@@ -89,10 +101,19 @@ deliverableByIdRouter.get("/:deliverableId/versions", (req, res) => {
   }
 
   res.json(listVersions(deliverableId))
-})
+  },
+)
 
-deliverableByIdRouter.patch("/:deliverableId", (req, res) => {
+deliverableByIdRouter.patch(
+  "/:deliverableId",
+  requireCapability("projects.mutate"),
+  (req, res) => {
   const deliverableId = getParam(req.params.deliverableId)
+  const context = requireDeliverableStudio(req, res, deliverableId)
+  if (!context) {
+    return
+  }
+
   const existing = getDeliverable(deliverableId)
 
   if (!existing) {
@@ -142,10 +163,19 @@ deliverableByIdRouter.patch("/:deliverableId", (req, res) => {
 
   const updated = updateDeliverable(deliverableId, input)
   res.json(updated)
-})
+  },
+)
 
-deliverableByIdRouter.patch("/:deliverableId/status", (req, res) => {
+deliverableByIdRouter.patch(
+  "/:deliverableId/status",
+  requireCapability("projects.mutate"),
+  (req, res) => {
   const deliverableId = getParam(req.params.deliverableId)
+  const context = requireDeliverableStudio(req, res, deliverableId)
+  if (!context) {
+    return
+  }
+
   const existing = getDeliverable(deliverableId)
 
   if (!existing) {
@@ -163,10 +193,19 @@ deliverableByIdRouter.patch("/:deliverableId/status", (req, res) => {
 
   const updated = updateDeliverableStatus(deliverableId, req.body.status)
   res.json(updated)
-})
+  },
+)
 
-deliverableByIdRouter.delete("/:deliverableId", (req, res) => {
+deliverableByIdRouter.delete(
+  "/:deliverableId",
+  requireCapability("data.delete"),
+  (req, res) => {
   const deliverableId = getParam(req.params.deliverableId)
+  const context = requireDeliverableStudio(req, res, deliverableId)
+  if (!context) {
+    return
+  }
+
   const existing = getDeliverable(deliverableId)
 
   if (!existing) {
@@ -182,7 +221,8 @@ deliverableByIdRouter.delete("/:deliverableId", (req, res) => {
   }
 
   res.status(204).send()
-})
+  },
+)
 
 export { deliverableByIdRouter }
 export default deliverablesRouter

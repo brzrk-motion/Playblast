@@ -72,12 +72,21 @@ import { closeDatabase, getDbPath, initDatabase } from "./db.js"
 
 let tempDir = ""
 let dbPath = ""
+const STUDIO_ID = "test-studio"
 
 before(() => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "playblast-data-"))
   dbPath = path.join(tempDir, "test.db")
   process.env.DB_PATH = dbPath
   initDatabase(dbPath)
+
+  const db = new Database(dbPath)
+  const now = new Date().toISOString()
+  db.prepare(
+    `INSERT INTO studios (id, name, avatar_path, setup_status, created_at, updated_at)
+     VALUES (?, 'Test Studio', NULL, 'complete', ?, ?)`,
+  ).run(STUDIO_ID, now, now)
+  db.close()
 })
 
 after(() => {
@@ -87,14 +96,14 @@ after(() => {
 })
 
 function setupDeliverable(projectId: string, name = "Hero Spot") {
-  const project = ensureProject(projectId)
+  const project = ensureProject(STUDIO_ID, projectId)
   const deliverable = createDeliverable({ projectId: project.id, name })
   return { project, deliverable }
 }
 
 describe("SQLite data store", () => {
   it("persists projects, deliverables, versions, and comments to SQLite", () => {
-    const project = createProject({ id: "demo", name: "Demo Project" })
+    const project = createProject({ studioId: STUDIO_ID, id: "demo", name: "Demo Project" })
     const deliverable = createDeliverable({
       projectId: project.id,
       name: "Launch Film",
@@ -112,7 +121,7 @@ describe("SQLite data store", () => {
       author: "Alex",
     })
 
-    assert.equal(listProjects().length, 1)
+    assert.equal(listProjects(STUDIO_ID).length, 1)
     assert.equal(listDeliverables(project.id).length, 1)
     assert.equal(listVersions(deliverable.id).length, 1)
     assert.equal(listComments(version.id).length, 1)
@@ -141,7 +150,7 @@ describe("SQLite data store", () => {
     assert.equal(versionCount.count, 1)
     assert.equal(commentCount.count, 1)
 
-    const projectRow = listProjects()[0]
+    const projectRow = listProjects(STUDIO_ID)[0]
     const deliverableRow = listDeliverables(project.id)[0]
     const versionRow = listVersions(deliverable.id)[0]
     const commentRow = listComments(version.id)[0]
@@ -153,7 +162,7 @@ describe("SQLite data store", () => {
   })
 
   it("creates projects with management defaults and updatable fields", () => {
-    const project = createProject({ id: "pm-defaults", name: "PM Defaults" })
+    const project = createProject({ studioId: STUDIO_ID, id: "pm-defaults", name: "PM Defaults" })
     assert.equal(project.status, "active")
 
     const updated = updateProject(project.id, {
@@ -175,7 +184,7 @@ describe("SQLite data store", () => {
   })
 
   it("archives and unarchives projects while preserving related data", () => {
-    const project = createProject({ id: "archive-me", name: "Archive Me" })
+    const project = createProject({ studioId: STUDIO_ID, id: "archive-me", name: "Archive Me" })
     const deliverable = createDeliverable({
       projectId: project.id,
       name: "Hero Spot",
@@ -188,7 +197,7 @@ describe("SQLite data store", () => {
 
     assert.equal(getProject(project.id)?.archivedAt, undefined)
     assert.equal(
-      listProjects({ archivedOnly: true }).some((item) => item.id === project.id),
+      listProjects(STUDIO_ID,{ archivedOnly: true }).some((item) => item.id === project.id),
       false,
     )
 
@@ -196,11 +205,11 @@ describe("SQLite data store", () => {
     assert.ok(archived?.archivedAt)
     assert.equal(getProject(project.id)?.archivedAt, archived?.archivedAt)
     assert.equal(
-      listProjects().some((item) => item.id === project.id),
+      listProjects(STUDIO_ID).some((item) => item.id === project.id),
       false,
     )
     assert.equal(
-      listProjects({ archivedOnly: true }).some((item) => item.id === project.id),
+      listProjects(STUDIO_ID,{ archivedOnly: true }).some((item) => item.id === project.id),
       true,
     )
     assert.equal(listDeliverables(project.id).length, 1)
@@ -209,17 +218,17 @@ describe("SQLite data store", () => {
     const restored = unarchiveProject(project.id)
     assert.equal(restored?.archivedAt, undefined)
     assert.equal(
-      listProjects().some((item) => item.id === project.id),
+      listProjects(STUDIO_ID).some((item) => item.id === project.id),
       true,
     )
     assert.equal(
-      listProjects({ archivedOnly: true }).some((item) => item.id === project.id),
+      listProjects(STUDIO_ID,{ archivedOnly: true }).some((item) => item.id === project.id),
       false,
     )
   })
 
   it("persists internal project notes", () => {
-    const project = createProject({ id: "notes-test", name: "Notes Test" })
+    const project = createProject({ studioId: STUDIO_ID, id: "notes-test", name: "Notes Test" })
     assert.equal(project.notes, undefined)
 
     const withNotes = updateProject(project.id, {
@@ -309,7 +318,7 @@ describe("SQLite data store", () => {
   })
 
   it("summarizes projects with deliverable and version counts", () => {
-    const project = createProject({ id: "summary-test", name: "Summary Test" })
+    const project = createProject({ studioId: STUDIO_ID, id: "summary-test", name: "Summary Test" })
     const deliverable = createDeliverable({
       projectId: project.id,
       name: "Sizzle",
@@ -321,7 +330,7 @@ describe("SQLite data store", () => {
       filename: "clip.mp4",
     })
 
-    const summaries = listProjectSummaries()
+    const summaries = listProjectSummaries(STUDIO_ID)
     const summary = summaries.find((item) => item.id === "summary-test")
 
     assert.ok(summary)
@@ -334,7 +343,7 @@ describe("SQLite data store", () => {
   })
 
   it("rolls up deliverable status counts and the next milestone", () => {
-    const project = createProject({ id: "rollup-test", name: "Rollup Test" })
+    const project = createProject({ studioId: STUDIO_ID, id: "rollup-test", name: "Rollup Test" })
     const a = createDeliverable({ projectId: project.id, name: "A" })
     createDeliverable({ projectId: project.id, name: "B" })
     updateDeliverable(a.id, { status: "approved" })
@@ -350,7 +359,7 @@ describe("SQLite data store", () => {
       dueDate: "2026-04-01",
     })
 
-    const summary = listProjectSummaries().find((item) => item.id === project.id)
+    const summary = listProjectSummaries(STUDIO_ID).find((item) => item.id === project.id)
     assert.ok(summary)
     assert.equal(summary.deliverableStatusCounts.approved, 1)
     assert.equal(summary.deliverableStatusCounts.not_started, 1)
@@ -358,7 +367,7 @@ describe("SQLite data store", () => {
   })
 
   it("counts open comments across all project deliverables", () => {
-    const project = createProject({ id: "open-count-test", name: "Open Count Test" })
+    const project = createProject({ studioId: STUDIO_ID, id: "open-count-test", name: "Open Count Test" })
     const deliverable = createDeliverable({
       projectId: project.id,
       name: "Cutdown",
@@ -383,25 +392,25 @@ describe("SQLite data store", () => {
     })
     updateComment(resolvedComment.id, { resolved: true })
 
-    const summary = listProjectSummaries().find((item) => item.id === project.id)
+    const summary = listProjectSummaries(STUDIO_ID).find((item) => item.id === project.id)
     assert.ok(summary)
     assert.equal(summary.openCommentCount, 1)
     assert.equal(openComment.resolved, false)
   })
 
   it("includes linked client name and services estimate in project summaries", () => {
-    const client = createClient({
+    const client = createClient({ studioId: STUDIO_ID,
       name: "Jane Doe",
       email: "jane@example.com",
       company: "Acme Co",
     })
-    const project = createProject({
+    const project = createProject({ studioId: STUDIO_ID,
       id: "summary-client-estimate",
       name: "Summary Client Estimate",
       clientId: client.id,
       budget: { total: 10_000, currency: "USD" },
     })
-    const service = createService({
+    const service = createService({ studioId: STUDIO_ID,
       name: "Brand Film",
       hourEstimate: 10,
       hourlyRate: 420,
@@ -410,14 +419,14 @@ describe("SQLite data store", () => {
 
     addProjectService(project.id, service.id)
 
-    const summary = listProjectSummaries().find((item) => item.id === project.id)
+    const summary = listProjectSummaries(STUDIO_ID).find((item) => item.id === project.id)
     assert.ok(summary)
     assert.equal(summary.clientName, "Acme Co")
     assert.equal(summary.servicesEstimate, 4200)
     assert.equal(summary.servicesEstimatedHours, 10)
 
-    const bare = createProject({ id: "summary-bare", name: "Bare Project" })
-    const bareSummary = listProjectSummaries().find((item) => item.id === bare.id)
+    const bare = createProject({ studioId: STUDIO_ID, id: "summary-bare", name: "Bare Project" })
+    const bareSummary = listProjectSummaries(STUDIO_ID).find((item) => item.id === bare.id)
     assert.ok(bareSummary)
     assert.equal(bareSummary.clientName, undefined)
     assert.equal(bareSummary.servicesEstimate, undefined)
@@ -431,7 +440,7 @@ describe("SQLite data store", () => {
   })
 
   it("includes logged hours from time logs in project summaries and detail", () => {
-    const project = createProject({
+    const project = createProject({ studioId: STUDIO_ID,
       id: "logged-hours-summary",
       name: "Logged Hours Summary",
     })
@@ -446,7 +455,7 @@ describe("SQLite data store", () => {
     createTimeLog({ taskId: task.id, durationHours: 3.5 })
     createTimeLog({ taskId: task.id, durationHours: 2 })
 
-    const summary = listProjectSummaries().find((item) => item.id === project.id)
+    const summary = listProjectSummaries(STUDIO_ID).find((item) => item.id === project.id)
     assert.ok(summary)
     assert.equal(summary.servicesLoggedHours, 5.5)
 
@@ -458,17 +467,17 @@ describe("SQLite data store", () => {
   })
 
   it("duplicates a project with services and milestones but clears dates and client", () => {
-    const client = createClient({
+    const client = createClient({ studioId: STUDIO_ID,
       name: "Copy Client",
       email: "copy@example.com",
     })
-    const service = createService({
+    const service = createService({ studioId: STUDIO_ID,
       name: "Motion Design",
       hourEstimate: 12,
       hourlyRate: 200,
       type: "animated",
     })
-    const source = createProject({
+    const source = createProject({ studioId: STUDIO_ID,
       id: "copy-source",
       name: "Source Project",
       status: "completed",
@@ -542,7 +551,7 @@ describe("SQLite data store", () => {
   })
 
   it("summarizes deliverables with version and comment rollups", () => {
-    const project = createProject({ id: "deliv-summary", name: "Deliverable Summary" })
+    const project = createProject({ studioId: STUDIO_ID, id: "deliv-summary", name: "Deliverable Summary" })
     const deliverable = createDeliverable({
       projectId: project.id,
       name: "Trailer",
@@ -569,7 +578,7 @@ describe("SQLite data store", () => {
   })
 
   it("manages milestones", () => {
-    const project = createProject({ id: "milestone-test", name: "Milestone Test" })
+    const project = createProject({ studioId: STUDIO_ID, id: "milestone-test", name: "Milestone Test" })
     const milestone = createMilestone({
       projectId: project.id,
       name: "Kickoff",
@@ -588,7 +597,7 @@ describe("SQLite data store", () => {
   })
 
   it("deletes a deliverable and cascades versions and comments", () => {
-    const project = createProject({ id: "deliv-delete", name: "Deliverable Delete" })
+    const project = createProject({ studioId: STUDIO_ID, id: "deliv-delete", name: "Deliverable Delete" })
     const deliverable = createDeliverable({
       projectId: project.id,
       name: "Promo",
@@ -613,7 +622,7 @@ describe("SQLite data store", () => {
   })
 
   it("deletes a project and cascades deliverables, versions, comments, milestones", () => {
-    const project = createProject({ id: "delete-test", name: "Delete Test" })
+    const project = createProject({ studioId: STUDIO_ID, id: "delete-test", name: "Delete Test" })
     const deliverable = createDeliverable({
       projectId: project.id,
       name: "Spot",
@@ -703,24 +712,24 @@ describe("SQLite data store", () => {
   })
 
   it("persists leads, filters them, and manages contact log side effects", () => {
-    const lead = createLead({
+    const lead = createLead({ studioId: STUDIO_ID,
       name: "Jordan Ellis",
       email: "jordan@example.com",
       company: "Northlight",
       status: "new",
     })
 
-    const otherLead = createLead({
+    const otherLead = createLead({ studioId: STUDIO_ID,
       name: "Sam Rivera",
       email: "sam@example.com",
       status: "contacted",
       replied: true,
     })
 
-    assert.equal(listLeads().length, 2)
-    assert.equal(listLeads({ status: "new" }).length, 1)
-    assert.equal(listLeads({ replied: false }).length, 1)
-    assert.equal(listLeads({ replied: true }).length, 1)
+    assert.equal(listLeads(STUDIO_ID,).length, 2)
+    assert.equal(listLeads(STUDIO_ID,{ status: "new" }).length, 1)
+    assert.equal(listLeads(STUDIO_ID,{ replied: false }).length, 1)
+    assert.equal(listLeads(STUDIO_ID,{ replied: true }).length, 1)
 
     const entry = createContactLog({
       leadId: lead.id,
@@ -765,7 +774,8 @@ describe("SQLite data store", () => {
   })
 
   it("persists clients, converts leads, and blocks delete when projects are linked", () => {
-    const lead = createLead({
+    const clientsBefore = listClients(STUDIO_ID).length
+    const lead = createLead({ studioId: STUDIO_ID,
       name: "Avery Chen",
       email: "avery@example.com",
       company: "Lumen Co",
@@ -789,7 +799,7 @@ describe("SQLite data store", () => {
     assert.equal(getLead(lead.id)?.status, "converted")
     assert.equal(convertLeadToClient(lead.id), "already_converted")
 
-    const notesLead = createLead({
+    const notesLead = createLead({ studioId: STUDIO_ID,
       name: "Notes Lead",
       email: "notes@example.com",
       status: "contacted",
@@ -803,27 +813,27 @@ describe("SQLite data store", () => {
     }
     assert.equal(withNotes.notes, "VIP referral from partner")
 
-    const manual = createClient({
+    const manual = createClient({ studioId: STUDIO_ID,
       name: "Manual Client",
       email: "manual@example.com",
       website: "https://example.com",
     })
 
-    assert.equal(listClients().length, 3)
+    assert.equal(listClients(STUDIO_ID).length, clientsBefore + 3)
     assert.equal(getClient(manual.id)?.website, "https://example.com")
 
-    const withProjects = getClientWithProjects(manual.id)
+    const withProjects = getClientWithProjects(manual.id, STUDIO_ID)
     assert.ok(withProjects)
     assert.equal(withProjects.projects.length, 0)
 
-    createProject({
+    createProject({ studioId: STUDIO_ID,
       id: "proj-client",
       name: "Linked Project",
       clientId: manual.id,
       status: "active",
     })
 
-    assert.equal(getClientWithProjects(manual.id)?.projects.length, 1)
+    assert.equal(getClientWithProjects(manual.id, STUDIO_ID)?.projects.length, 1)
     assert.equal(deleteClient(manual.id), "has_active_projects")
 
     updateProject("proj-client", { status: "completed" })
@@ -841,21 +851,22 @@ describe("SQLite data store", () => {
   })
 
   it("creates, updates, lists, and hard-deletes services", () => {
-    const staticService = createService({
+    const beforeCount = listServices(STUDIO_ID).length
+    const staticService = createService({ studioId: STUDIO_ID,
       name: "Logo Design",
       hourEstimate: 4,
       hourlyRate: 150,
       type: "static",
     })
 
-    createService({
+    createService({ studioId: STUDIO_ID,
       name: "Motion Intro",
       hourEstimate: 12,
       hourlyRate: 175,
       type: "animated",
     })
 
-    assert.equal(listServices().length, 2)
+    assert.equal(listServices(STUDIO_ID).length, beforeCount + 2)
     assert.equal(getService(staticService.id)?.type, "static")
 
     const updated = updateService(staticService.id, {
@@ -870,18 +881,18 @@ describe("SQLite data store", () => {
     assert.equal(deleteService(staticService.id), "deleted")
     assert.equal(getService(staticService.id), undefined)
     assert.equal(deleteService(staticService.id), "not_found")
-    assert.equal(listServices().length, 1)
+    assert.equal(listServices(STUDIO_ID).length, beforeCount + 1)
   })
 
   it("reports linked projects for service usage", () => {
-    const service = createService({
+    const service = createService({ studioId: STUDIO_ID,
       name: "Brand Film",
       hourEstimate: 40,
       hourlyRate: 200,
       type: "animated",
     })
-    const alpha = createProject({ name: "Alpha Campaign" })
-    const beta = createProject({ name: "Beta Launch" })
+    const alpha = createProject({ studioId: STUDIO_ID, name: "Alpha Campaign" })
+    const beta = createProject({ studioId: STUDIO_ID, name: "Beta Launch" })
 
     linkServiceToProject(alpha.id, service.id)
     linkServiceToProject(beta.id, service.id)
@@ -896,13 +907,13 @@ describe("SQLite data store", () => {
   })
 
   it("manages project service links with quantity", () => {
-    const service = createService({
+    const service = createService({ studioId: STUDIO_ID,
       name: "Explainer Video",
       hourEstimate: 20,
       hourlyRate: 180,
       type: "animated",
     })
-    const project = createProject({ name: "Explainer Campaign" })
+    const project = createProject({ studioId: STUDIO_ID, name: "Explainer Campaign" })
 
     const attached = addProjectService(project.id, service.id, 3)
     assert.notEqual(attached, "already_linked")
@@ -925,13 +936,13 @@ describe("SQLite data store", () => {
   })
 
   it("stores and clears project-level hour overrides", () => {
-    const service = createService({
+    const service = createService({ studioId: STUDIO_ID,
       name: "Brand Guide",
       hourEstimate: 5,
       hourlyRate: 120,
       type: "static",
     })
-    const project = createProject({ name: "Brand Refresh" })
+    const project = createProject({ studioId: STUDIO_ID, name: "Brand Refresh" })
 
     addProjectService(project.id, service.id)
 

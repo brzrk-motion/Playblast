@@ -1,4 +1,5 @@
 import { Router } from "express"
+import { requireAdminOnly } from "../middleware/authorization.js"
 import {
   createService,
   deleteService,
@@ -9,6 +10,7 @@ import {
 } from "../storage/index.js"
 import { isServiceType } from "../types/index.js"
 import { getParam } from "../utils/params.js"
+import { requireServiceStudio, requireStudioSession } from "./route-helpers.js"
 
 const MAX_NAME_LENGTH = 100
 
@@ -52,11 +54,23 @@ function validateServiceName(name: unknown): { value: string } | { error: string
 
 const servicesRouter = Router()
 
-servicesRouter.get("/", (_req, res) => {
-  res.json(listServices())
+servicesRouter.use(requireAdminOnly())
+
+servicesRouter.get("/", (req, res) => {
+  const context = requireStudioSession(req, res)
+  if (!context) {
+    return
+  }
+
+  res.json(listServices(context.studioId))
 })
 
 servicesRouter.post("/", (req, res) => {
+  const context = requireStudioSession(req, res)
+  if (!context) {
+    return
+  }
+
   const nameResult = validateServiceName(req.body?.name)
   if ("error" in nameResult) {
     res.status(400).json({ error: nameResult.error })
@@ -91,6 +105,7 @@ servicesRouter.post("/", (req, res) => {
   }
 
   const service = createService({
+    studioId: context.studioId,
     name: nameResult.value,
     hourEstimate: hourEstimateResult.value,
     hourlyRate: hourlyRateResult.value,
@@ -102,6 +117,11 @@ servicesRouter.post("/", (req, res) => {
 
 servicesRouter.get("/:id/usage", (req, res) => {
   const serviceId = getServiceIdParam(req)
+  const context = requireServiceStudio(req, res, serviceId)
+  if (!context) {
+    return
+  }
+
   const usage = getServiceProjectUsage(serviceId)
 
   if (!usage) {
@@ -114,6 +134,11 @@ servicesRouter.get("/:id/usage", (req, res) => {
 
 servicesRouter.put("/:id", (req, res) => {
   const serviceId = getServiceIdParam(req)
+  const context = requireServiceStudio(req, res, serviceId)
+  if (!context) {
+    return
+  }
+
   const existing = getService(serviceId)
 
   if (!existing) {
@@ -166,6 +191,11 @@ servicesRouter.put("/:id", (req, res) => {
 
 servicesRouter.delete("/:id", (req, res) => {
   const serviceId = getServiceIdParam(req)
+  const context = requireServiceStudio(req, res, serviceId)
+  if (!context) {
+    return
+  }
+
   const result = deleteService(serviceId)
 
   if (result === "not_found") {

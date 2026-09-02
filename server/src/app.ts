@@ -8,6 +8,11 @@ import {
   attachSessionContext,
   requireCsrfProtection,
 } from "./middleware/session.js"
+import {
+  requireAuthenticatedSession,
+  requireCapability,
+  requireSetupComplete,
+} from "./middleware/authorization.js"
 import { validateVideoParams } from "./middleware/validateParams.js"
 import apiRouter from "./routes/index.js"
 import videoRouter from "./routes/video.js"
@@ -36,6 +41,9 @@ export function createApp() {
   app.use("/api", apiRouter)
   app.use(
     "/video/:projectId/:deliverableId/:version/:filename",
+    requireAuthenticatedSession(),
+    requireSetupComplete(),
+    requireCapability("review.play"),
     validateVideoParams,
     videoRouter,
   )

@@ -1,0 +1,2 @@
+-- Studio ownership columns for proofing and CRM tables.
+-- Backfill runs in migrate-identity.ts after the primary studio row exists.

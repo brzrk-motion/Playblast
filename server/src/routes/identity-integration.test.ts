@@ -6,6 +6,7 @@ import assert from "node:assert/strict"
 import type { Server } from "node:http"
 import { createApp } from "../app.js"
 import { closeDatabase, initDatabase } from "../storage/db.js"
+import { authHeaders, setupAdminAccount } from "../test/auth-helpers.js"
 
 let tempDir = ""
 let dbPath = ""
@@ -16,6 +17,7 @@ before(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "playblast-phase1-integration-"))
   dbPath = path.join(tempDir, "test.db")
   process.env.DB_PATH = dbPath
+  process.env.SESSION_SECRET = "phase1-integration-test-secret-32chars"
   initDatabase(dbPath)
 
   const app = createApp()
@@ -58,27 +60,37 @@ describe("Phase 1 identity integration", () => {
     assert.equal(studioBody.code, "UNAUTHENTICATED")
   })
 
-  it("keeps legacy proofing APIs available while identity is pending", async () => {
+  it("blocks proofing APIs until setup completes", async () => {
     const projectsResponse = await fetch(`${baseUrl}/api/projects`)
-    assert.equal(projectsResponse.status, 200)
-    const projects = (await projectsResponse.json()) as unknown[]
-    assert.ok(Array.isArray(projects))
+    assert.equal(projectsResponse.status, 401)
+    const body = (await projectsResponse.json()) as { code: string }
+    assert.equal(body.code, "UNAUTHENTICATED")
   })
 
-  it("preserves proofing data after seeding a legacy project fixture", async () => {
+  it("blocks proofing APIs for an admin session before setup completes", async () => {
+    const admin = await setupAdminAccount(baseUrl)
+
     const createResponse = await fetch(`${baseUrl}/api/projects`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(admin.cookies, admin.csrfToken),
       body: JSON.stringify({ name: "Phase 1 Proofing Project" }),
     })
-    assert.equal(createResponse.status, 201)
+    assert.equal(createResponse.status, 403)
+    const createBody = (await createResponse.json()) as { code: string }
+    assert.equal(createBody.code, "SETUP_NOT_COMPLETE")
 
-    const listResponse = await fetch(`${baseUrl}/api/projects`)
-    const projects = (await listResponse.json()) as Array<{ name: string }>
-    assert.ok(projects.some((project) => project.name === "Phase 1 Proofing Project"))
+    const listResponse = await fetch(`${baseUrl}/api/projects`, {
+      headers: authHeaders(admin.cookies, admin.csrfToken, false),
+    })
+    assert.equal(listResponse.status, 403)
+    const listBody = (await listResponse.json()) as { code: string }
+    assert.equal(listBody.code, "SETUP_NOT_COMPLETE")
 
     const setupResponse = await fetch(`${baseUrl}/api/setup/status`)
-    const setup = (await setupResponse.json()) as { status: string }
-    assert.equal(setup.status, "pending")
+    const setup = (await setupResponse.json()) as {
+      status: string
+      setupComplete: boolean
+    }
+    assert.equal(setup.setupComplete, false)
   })
 })

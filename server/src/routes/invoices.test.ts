@@ -12,16 +12,25 @@ import {
   createService,
   linkServiceToProject,
 } from "../storage/repository.js"
+import {
+  authHeaders,
+  completeStudioSetup,
+  setupAdminAccount,
+} from "../test/auth-helpers.js"
 
 let tempDir = ""
 let dbPath = ""
 let server: Server
 let baseUrl = ""
+let adminCookies: string[] = []
+let adminCsrf = ""
+let studioId = ""
 
 before(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "playblast-invoices-api-"))
   dbPath = path.join(tempDir, "test.db")
   process.env.DB_PATH = dbPath
+  process.env.SESSION_SECRET = "invoices-test-session-secret-32chars"
   initDatabase(dbPath)
 
   const app = createApp()
@@ -35,6 +44,12 @@ before(async () => {
   }
 
   baseUrl = `http://127.0.0.1:${address.port}`
+
+  const admin = await setupAdminAccount(baseUrl)
+  adminCookies = admin.cookies
+  adminCsrf = admin.csrfToken
+  studioId = admin.session.studio.id
+  await completeStudioSetup(baseUrl, adminCookies, adminCsrf)
 })
 
 after(async () => {
@@ -49,8 +64,9 @@ after(async () => {
 
 describe("invoice API", () => {
   it("rejects invoice generation when no client is linked", async () => {
-    const project = createProject({ name: "No Client Project" })
+    const project = createProject({ studioId: studioId, name: "No Client Project" })
     const service = createService({
+      studioId: studioId,
       name: "Animation",
       hourEstimate: 10,
       hourlyRate: 150,
@@ -60,7 +76,7 @@ describe("invoice API", () => {
 
     const response = await fetch(
       `${baseUrl}/api/projects/${project.id}/invoices`,
-      { method: "POST" },
+      { method: "POST", headers: authHeaders(adminCookies, adminCsrf) },
     )
 
     assert.equal(response.status, 400)
@@ -70,18 +86,20 @@ describe("invoice API", () => {
 
   it("rejects invoice generation when no services are attached", async () => {
     const client = createClient({
+      studioId: studioId,
       name: "Acme Contact",
       email: "billing@acme.test",
       company: "Acme Corp",
     })
     const project = createProject({
+      studioId: studioId,
       name: "Empty Services Project",
       clientId: client.id,
     })
 
     const response = await fetch(
       `${baseUrl}/api/projects/${project.id}/invoices`,
-      { method: "POST" },
+      { method: "POST", headers: authHeaders(adminCookies, adminCsrf) },
     )
 
     assert.equal(response.status, 400)
@@ -91,16 +109,19 @@ describe("invoice API", () => {
 
   it("creates an invoice, lists it, downloads a PDF, and tracks payments", async () => {
     const client = createClient({
+      studioId: studioId,
       name: "Jane Client",
       email: "jane@example.test",
       company: "Example Inc",
     })
     const project = createProject({
+      studioId: studioId,
       name: "Brand Spot",
       clientId: client.id,
       budget: { total: 5000, currency: "USD" },
     })
     const service = createService({
+      studioId: studioId,
       name: "Motion Design",
       hourEstimate: 8,
       hourlyRate: 200,
@@ -110,7 +131,7 @@ describe("invoice API", () => {
 
     const createResponse = await fetch(
       `${baseUrl}/api/projects/${project.id}/invoices`,
-      { method: "POST" },
+      { method: "POST", headers: authHeaders(adminCookies, adminCsrf) },
     )
 
     assert.equal(createResponse.status, 201)
@@ -152,13 +173,16 @@ describe("invoice API", () => {
 
     const listResponse = await fetch(
       `${baseUrl}/api/projects/${project.id}/invoices`,
+      { headers: authHeaders(adminCookies, adminCsrf, false) },
     )
     assert.equal(listResponse.status, 200)
     const invoices = (await listResponse.json()) as Array<{ id: string }>
     assert.equal(invoices.length, 1)
     assert.equal(invoices[0]?.id, created.id)
 
-    const detailResponse = await fetch(`${baseUrl}/api/invoices/${created.id}`)
+    const detailResponse = await fetch(`${baseUrl}/api/invoices/${created.id}`, {
+      headers: authHeaders(adminCookies, adminCsrf, false),
+    })
     assert.equal(detailResponse.status, 200)
     const detail = (await detailResponse.json()) as {
       grandTotal: number
@@ -177,7 +201,7 @@ describe("invoice API", () => {
       `${baseUrl}/api/invoices/${created.id}/payments`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({
           amount: 600,
           paidAt: "2026-06-10",
@@ -203,7 +227,7 @@ describe("invoice API", () => {
       `${baseUrl}/api/invoices/${created.id}/payments`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(adminCookies, adminCsrf),
         body: JSON.stringify({
           amount: 1000,
           paidAt: "2026-06-15",
@@ -224,9 +248,9 @@ describe("invoice API", () => {
     assert.equal(finalBody.invoice.outstandingBalance, 0)
     assert.equal(finalBody.invoice.isOverdue, false)
 
-    const pdfResponse = await fetch(
-      `${baseUrl}/api/invoices/${created.id}/pdf`,
-    )
+    const pdfResponse = await fetch(`${baseUrl}/api/invoices/${created.id}/pdf`, {
+      headers: authHeaders(adminCookies, adminCsrf, false),
+    })
     assert.equal(pdfResponse.status, 200)
     assert.equal(pdfResponse.headers.get("content-type"), "application/pdf")
     assert.match(
@@ -239,6 +263,7 @@ describe("invoice API", () => {
 
     const downloadResponse = await fetch(
       `${baseUrl}/api/invoices/${created.id}/download`,
+      { headers: authHeaders(adminCookies, adminCsrf, false) },
     )
     assert.equal(downloadResponse.status, 200)
     assert.equal(downloadResponse.headers.get("content-type"), "application/pdf")
@@ -249,6 +274,7 @@ describe("invoice API", () => {
 
     const paymentsListResponse = await fetch(
       `${baseUrl}/api/invoices/${created.id}/payments`,
+      { headers: authHeaders(adminCookies, adminCsrf, false) },
     )
     assert.equal(paymentsListResponse.status, 200)
     const listedPayments = (await paymentsListResponse.json()) as unknown[]
@@ -257,13 +283,23 @@ describe("invoice API", () => {
 
   it("auto-increments invoice numbers across projects", async () => {
     const client = createClient({
+      studioId: studioId,
       name: "Repeat Client",
       email: "repeat@example.test",
     })
 
-    const projectA = createProject({ name: "Project A", clientId: client.id })
-    const projectB = createProject({ name: "Project B", clientId: client.id })
+    const projectA = createProject({
+      studioId: studioId,
+      name: "Project A",
+      clientId: client.id,
+    })
+    const projectB = createProject({
+      studioId: studioId,
+      name: "Project B",
+      clientId: client.id,
+    })
     const service = createService({
+      studioId: studioId,
       name: "Static Render",
       hourEstimate: 2,
       hourlyRate: 100,
@@ -274,9 +310,11 @@ describe("invoice API", () => {
 
     const first = await fetch(`${baseUrl}/api/projects/${projectA.id}/invoices`, {
       method: "POST",
+      headers: authHeaders(adminCookies, adminCsrf),
     })
     const second = await fetch(`${baseUrl}/api/projects/${projectB.id}/invoices`, {
       method: "POST",
+      headers: authHeaders(adminCookies, adminCsrf),
     })
 
     assert.equal(first.status, 201)
@@ -291,14 +329,17 @@ describe("invoice API", () => {
 
   it("includes outstanding balance on project and client detail", async () => {
     const client = createClient({
+      studioId: studioId,
       name: "Acme Corp",
       email: "billing@acme.test",
     })
     const project = createProject({
+      studioId: studioId,
       name: "Client Invoice Project",
       clientId: client.id,
     })
     const service = createService({
+      studioId: studioId,
       name: "Editing",
       hourEstimate: 5,
       hourlyRate: 200,
@@ -308,10 +349,12 @@ describe("invoice API", () => {
 
     await fetch(`${baseUrl}/api/projects/${project.id}/invoices`, {
       method: "POST",
+      headers: authHeaders(adminCookies, adminCsrf),
     })
 
     const projectDetailResponse = await fetch(
       `${baseUrl}/api/projects/${project.id}`,
+      { headers: authHeaders(adminCookies, adminCsrf, false) },
     )
     assert.equal(projectDetailResponse.status, 200)
     const projectDetail = (await projectDetailResponse.json()) as {
@@ -325,6 +368,7 @@ describe("invoice API", () => {
 
     const clientDetailResponse = await fetch(
       `${baseUrl}/api/clients/${client.id}`,
+      { headers: authHeaders(adminCookies, adminCsrf, false) },
     )
     assert.equal(clientDetailResponse.status, 200)
     const clientDetail = (await clientDetailResponse.json()) as {

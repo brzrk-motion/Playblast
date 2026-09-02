@@ -48,7 +48,7 @@ const ACTIVE_COMMENT_THRESHOLD = 1
 export interface CommentsPanelProps {
   comments: Comment[]
   loading?: boolean
-  onCreateComment: (input: {
+  onCreateComment?: (input: {
     timestamp: number
     body: string
     author: string
@@ -450,6 +450,9 @@ export function CommentsPanel({
     annotation?: FrameAnnotation
   }) {
     setReplyDraft(null)
+    if (!onCreateComment) {
+      return Promise.resolve()
+    }
     return onCreateComment(input)
   }
 
@@ -579,16 +582,18 @@ export function CommentsPanel({
           </ScrollArea>
         )}
 
-        <CommentComposerInline
-          onSubmit={handleCreateComment}
-          onOpenComposer={(timestamp) => {
-            setReplyDraft(null)
-            openComposer(timestamp)
-          }}
-          onClose={handleCloseComposer}
-          mentionCandidates={mentionCandidates}
-          initialBody={replyDraft ?? undefined}
-        />
+        {onCreateComment ? (
+          <CommentComposerInline
+            onSubmit={handleCreateComment}
+            onOpenComposer={(timestamp) => {
+              setReplyDraft(null)
+              openComposer(timestamp)
+            }}
+            onClose={handleCloseComposer}
+            mentionCandidates={mentionCandidates}
+            initialBody={replyDraft ?? undefined}
+          />
+        ) : null}
       </CardContent>
     </Card>
   )

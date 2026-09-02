@@ -18,6 +18,8 @@ import {
 } from "./repository.js"
 import { getCurrentCycleStart } from "../lib/retainer-cycle.js"
 
+const STUDIO_ID = "retainer-schema-studio"
+
 let tempDir = ""
 
 before(() => {
@@ -105,7 +107,16 @@ describe("retainer client schema", () => {
     process.env.DB_PATH = dbPath
     initDatabase(dbPath)
 
+    const db = new Database(dbPath)
+    const now = new Date().toISOString()
+    db.prepare(
+      `INSERT INTO studios (id, name, avatar_path, setup_status, created_at, updated_at)
+       VALUES (?, 'Test Studio', NULL, 'complete', ?, ?)`,
+    ).run(STUDIO_ID, now, now)
+    db.close()
+
     const client = createClient({
+      studioId: STUDIO_ID,
       name: "Retainer Co",
       email: "retainer@example.com",
       isRetainer: true,
@@ -117,7 +128,7 @@ describe("retainer client schema", () => {
     const cycleStart = getCurrentCycleStart(1)
     upsertRetainerCycleHours(client.id, cycleStart, 12)
 
-    const detail = getClientWithProjects(client.id)
+    const detail = getClientWithProjects(client.id, STUDIO_ID)
     assert.ok(detail?.retainerSummary)
     assert.equal(detail.retainerSummary.hoursContracted, 20)
     assert.equal(detail.retainerSummary.hoursLogged, 12)
@@ -127,7 +138,7 @@ describe("retainer client schema", () => {
     assert.equal(detail.retainerSummary.isOverage, false)
 
     updateClient(client.id, { isRetainer: false })
-    const nonRetainer = getClientWithProjects(client.id)
+    const nonRetainer = getClientWithProjects(client.id, STUDIO_ID)
     assert.equal(nonRetainer?.retainerSummary, undefined)
 
     closeDatabase()

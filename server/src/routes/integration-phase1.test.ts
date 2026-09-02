@@ -7,11 +7,18 @@ import Database from "better-sqlite3"
 import type { Server } from "node:http"
 import { createApp } from "../app.js"
 import { closeDatabase, initDatabase } from "../storage/db.js"
+import {
+  authHeaders,
+  completeStudioSetup,
+  setupAdminAccount,
+} from "../test/auth-helpers.js"
 
 let tempDir = ""
 let dbPath = ""
 let server: Server
 let baseUrl = ""
+let adminCookies: string[] = []
+let adminCsrf = ""
 
 before(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "playblast-phase1-qa-"))
@@ -30,6 +37,14 @@ before(async () => {
   }
 
   baseUrl = `http://127.0.0.1:${address.port}`
+
+  process.env.SESSION_SECRET = "phase-one-test-secret-32chars-min"
+  process.env.NODE_ENV = "development"
+
+  const admin = await setupAdminAccount(baseUrl)
+  adminCookies = admin.cookies
+  adminCsrf = admin.csrfToken
+  await completeStudioSetup(baseUrl, adminCookies, adminCsrf)
 })
 
 after(async () => {
@@ -80,9 +95,12 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
   })
 
   it("wires invoices, payments, retainers, and profitability together", async () => {
+    const headers = authHeaders(adminCookies, adminCsrf)
+    const readHeaders = authHeaders(adminCookies, adminCsrf, false)
+
     const clientResponse = await fetch(`${baseUrl}/api/clients`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         name: "QA Retainer Client",
         email: "qa@example.test",
@@ -104,7 +122,7 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
 
     const nonRetainerResponse = await fetch(`${baseUrl}/api/clients`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         name: "QA Standard Client",
         email: "standard@example.test",
@@ -128,7 +146,7 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
 
     const projectResponse = await fetch(`${baseUrl}/api/projects`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         name: "QA Integration Project",
         clientId: retainerClient.id,
@@ -140,7 +158,7 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
 
     const serviceResponse = await fetch(`${baseUrl}/api/services`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         name: "Motion QA",
         hourEstimate: 10,
@@ -155,7 +173,7 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
       `${baseUrl}/api/projects/${project.id}/services`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ serviceId: service.id }),
       },
     )
@@ -163,6 +181,7 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
 
     const projectDetailResponse = await fetch(
       `${baseUrl}/api/projects/${project.id}`,
+      { headers: readHeaders },
     )
     assert.equal(projectDetailResponse.status, 200)
     const projectDetail = (await projectDetailResponse.json()) as {
@@ -176,7 +195,7 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
 
     const invoiceResponse = await fetch(
       `${baseUrl}/api/projects/${project.id}/invoices`,
-      { method: "POST" },
+      { method: "POST", headers },
     )
     assert.equal(invoiceResponse.status, 201)
     const invoice = (await invoiceResponse.json()) as {
@@ -196,12 +215,15 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
 
     const listResponse = await fetch(
       `${baseUrl}/api/projects/${project.id}/invoices`,
+      { headers: readHeaders },
     )
     assert.equal(listResponse.status, 200)
     const invoices = (await listResponse.json()) as Array<{ id: string }>
     assert.equal(invoices.length, 1)
 
-    const detailResponse = await fetch(`${baseUrl}/api/invoices/${invoice.id}`)
+    const detailResponse = await fetch(`${baseUrl}/api/invoices/${invoice.id}`, {
+      headers: readHeaders,
+    })
     assert.equal(detailResponse.status, 200)
     const detail = (await detailResponse.json()) as {
       payments: unknown[]
@@ -212,6 +234,7 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
 
     const paymentsListResponse = await fetch(
       `${baseUrl}/api/invoices/${invoice.id}/payments`,
+      { headers: readHeaders },
     )
     assert.equal(paymentsListResponse.status, 200)
     const payments = (await paymentsListResponse.json()) as unknown[]
@@ -221,7 +244,7 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
       `${baseUrl}/api/invoices/${invoice.id}/payments`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ amount: 500, paidAt: "2026-06-01" }),
       },
     )
@@ -234,6 +257,7 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
 
     const paymentsAfterPartial = await fetch(
       `${baseUrl}/api/invoices/${invoice.id}/payments`,
+      { headers: readHeaders },
     )
     const listedPayments = (await paymentsAfterPartial.json()) as Array<{
       amount: number
@@ -243,6 +267,7 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
 
     const downloadResponse = await fetch(
       `${baseUrl}/api/invoices/${invoice.id}/download`,
+      { headers: readHeaders },
     )
     assert.equal(downloadResponse.status, 200)
     assert.equal(downloadResponse.headers.get("content-type"), "application/pdf")
@@ -255,7 +280,7 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
       `${baseUrl}/api/clients/${retainerClient.id}`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ retainerHours: 25 }),
       },
     )
@@ -267,6 +292,7 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
 
     const clientDetailResponse = await fetch(
       `${baseUrl}/api/clients/${retainerClient.id}`,
+      { headers: readHeaders },
     )
     assert.equal(clientDetailResponse.status, 200)
     const clientDetail = (await clientDetailResponse.json()) as {
@@ -278,6 +304,7 @@ describe("Phase 1 integration (BRZ-147–150)", () => {
 
     const projectAfterPayment = await fetch(
       `${baseUrl}/api/projects/${project.id}`,
+      { headers: readHeaders },
     )
     const projectAfterPaymentBody = (await projectAfterPayment.json()) as {
       outstandingBalance: number

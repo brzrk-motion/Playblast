@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import { Router } from "express"
 import { getVideoPath } from "../config/paths.js"
+import { requireCapability } from "../middleware/authorization.js"
 import {
   getProject,
   getVersion,
@@ -12,12 +13,21 @@ import { buildVersionDownloadFilename } from "../utils/download-filename.js"
 import { getVideoContentType } from "../utils/mime.js"
 import { getParam } from "../utils/params.js"
 import { SAFE_SEGMENT } from "../middleware/validateParams.js"
+import { requireVersionStudio } from "./route-helpers.js"
 import { pipeVideo } from "./video.js"
 
 const versionsRouter = Router()
 
-versionsRouter.patch("/:versionId/status", (req, res) => {
+versionsRouter.patch(
+  "/:versionId/status",
+  requireCapability("approval.mutate"),
+  (req, res) => {
   const versionId = getParam(req.params.versionId)
+  const context = requireVersionStudio(req, res, versionId)
+  if (!context) {
+    return
+  }
+
   const existing = getVersion(versionId)
 
   if (!existing) {
@@ -37,10 +47,19 @@ versionsRouter.patch("/:versionId/status", (req, res) => {
 
   const version = updateVersionStatus(versionId, status)
   res.json(version)
-})
+  },
+)
 
-versionsRouter.patch("/:versionId/label", (req, res) => {
+versionsRouter.patch(
+  "/:versionId/label",
+  requireCapability("media.version"),
+  (req, res) => {
   const versionId = getParam(req.params.versionId)
+  const context = requireVersionStudio(req, res, versionId)
+  if (!context) {
+    return
+  }
+
   const existing = getVersion(versionId)
 
   if (!existing) {
@@ -76,10 +95,19 @@ versionsRouter.patch("/:versionId/label", (req, res) => {
   }
 
   res.json(result)
-})
+  },
+)
 
-versionsRouter.get("/:versionId/download", (req, res) => {
+versionsRouter.get(
+  "/:versionId/download",
+  requireCapability("downloads.read"),
+  (req, res) => {
   const versionId = getParam(req.params.versionId)
+  const context = requireVersionStudio(req, res, versionId)
+  if (!context) {
+    return
+  }
+
   const version = getVersion(versionId)
 
   if (!version) {
@@ -131,6 +159,7 @@ versionsRouter.get("/:versionId/download", (req, res) => {
   })
 
   pipeVideo(res, videoPath)
-})
+  },
+)
 
 export default versionsRouter

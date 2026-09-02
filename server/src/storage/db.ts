@@ -109,6 +109,30 @@ function upgradeProjectServicesTable(db: Database.Database): void {
   )
 }
 
+function upgradeStudioOwnershipColumns(db: Database.Database): void {
+  const tables = ["projects", "clients", "leads", "services"] as const
+
+  for (const table of tables) {
+    if (!tableExists(db, table)) {
+      continue
+    }
+
+    if (!tableHasColumn(db, table, "studioId")) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN studioId TEXT`)
+      db.exec(
+        `CREATE INDEX IF NOT EXISTS idx_${table}_studioId ON ${table}(studioId)`,
+      )
+    }
+  }
+
+  if (tableExists(db, "comments") && !tableHasColumn(db, "comments", "authorUserId")) {
+    db.exec("ALTER TABLE comments ADD COLUMN authorUserId TEXT")
+    db.exec(
+      "CREATE INDEX IF NOT EXISTS idx_comments_authorUserId ON comments(authorUserId)",
+    )
+  }
+}
+
 function runMigrations(db: Database.Database): void {
   if (!fs.existsSync(MIGRATIONS_DIR)) {
     return
@@ -205,6 +229,10 @@ function runMigrations(db: Database.Database): void {
           "CREATE INDEX IF NOT EXISTS idx_retainer_cycle_hours_clientId ON retainer_cycle_hours(clientId)",
         )
       }
+    }
+
+    if (id === "008_studio_ownership") {
+      upgradeStudioOwnershipColumns(db)
     }
 
     recordMigration(db, id)

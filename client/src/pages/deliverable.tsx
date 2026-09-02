@@ -44,6 +44,7 @@ import type { ProjectDetail } from "@/types/project"
 import type { Version, VersionStatus } from "@/types/version"
 import { ArrowLeft, ChevronDown, Film, GitCompare, Link2, Upload } from "lucide-react"
 import { useProjectPageHeader } from "@/hooks/use-project-page-header"
+import { useCapability } from "@/hooks/use-capability"
 import { cn } from "@/lib/utils"
 
 function deliverableStatusForVersion(
@@ -75,6 +76,11 @@ export function DeliverablePage() {
   const [versionsOpen, setVersionsOpen] = useState(false)
   const [uploadOpen, setUploadOpen] = useState(false)
   const [approveConfirmOpen, setApproveConfirmOpen] = useState(false)
+  const canUpload = useCapability("media.upload")
+  const canApprove = useCapability("approval.mutate")
+  const canDownload = useCapability("downloads.read")
+  const canCompare = useCapability("review.compare")
+  const canComment = useCapability("comments.create")
 
   const dismissOpenPanels = useCallback(() => {
     if (uploadOpen) {
@@ -404,7 +410,7 @@ export function DeliverablePage() {
             <VersionStatusBadge status={selectedVersion.status} />
           ) : null}
 
-          {selectedVersion ? (
+          {selectedVersion && canApprove ? (
             <VideoApprovalActions
               onMarkNeedsRevision={() =>
                 void handleStatusChange(selectedVersion.id, "needs_revision")
@@ -420,7 +426,7 @@ export function DeliverablePage() {
           ) : null}
 
           <div className="flex items-center gap-1">
-            {selectedVersion ? (
+            {selectedVersion && canDownload ? (
               <VersionDownloadButton versionId={selectedVersion.id} />
             ) : null}
 
@@ -434,7 +440,7 @@ export function DeliverablePage() {
               <span className="hidden sm:inline">Copy link</span>
             </Button>
 
-            {versions.length >= 2 ? (
+            {versions.length >= 2 && canCompare ? (
               <Button variant="ghost" size="sm" asChild>
                 <Link
                   to={`/projects/${project.id}/deliverables/${deliverable.id}/compare?left=${encodeURIComponent(selectedLabel ?? versions[0]?.label ?? "")}&right=${encodeURIComponent(versions.find((version) => version.label !== selectedLabel)?.label ?? versions[1]?.label ?? "")}`}
@@ -445,6 +451,7 @@ export function DeliverablePage() {
               </Button>
             ) : null}
 
+            {canUpload ? (
             <Collapsible open={uploadOpen} onOpenChange={setUploadOpen}>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm">
@@ -459,6 +466,7 @@ export function DeliverablePage() {
                 </Button>
               </CollapsibleTrigger>
             </Collapsible>
+            ) : null}
 
             {versions.length > 1 ? (
               <Collapsible open={versionsOpen} onOpenChange={setVersionsOpen}>
@@ -482,7 +490,7 @@ export function DeliverablePage() {
         </div>
       ) : null}
 
-      {!focusMode && uploadOpen ? (
+      {!focusMode && uploadOpen && canUpload ? (
         <div className="mb-2 shrink-0">
           <VersionUpload
             deliverableId={deliverable.id}
@@ -524,29 +532,41 @@ export function DeliverablePage() {
               selectedLabel && commentsLabel === selectedLabel ? comments : []
             }
             commentsLoading={commentsLoading}
-            onCreateComment={async (input) => {
-              try {
-                const comment = await createComment({
-                  versionId: selectedVersion.id,
-                  ...input,
-                })
-                setComments((current) =>
-                  [...current, comment].sort((a, b) => a.timestamp - b.timestamp),
-                )
-                showSuccessToast("Comment posted")
-              } catch (err) {
-                const message = humanizeApiError(err, "Failed to post comment")
-                showErrorToast(message)
-                throw err
-              }
-            }}
-            onResolveComment={handleResolveComment}
-            onDeleteComment={handleDeleteComment}
-            deletingCommentId={deletingCommentId}
-            onMarkNeedsRevision={() =>
-              void handleStatusChange(selectedVersion.id, "needs_revision")
+            onCreateComment={
+              canComment
+                ? async (input) => {
+                    try {
+                      const comment = await createComment({
+                        versionId: selectedVersion.id,
+                        timestamp: input.timestamp,
+                        body: input.body,
+                        annotation: input.annotation,
+                      })
+                      setComments((current) =>
+                        [...current, comment].sort(
+                          (a, b) => a.timestamp - b.timestamp,
+                        ),
+                      )
+                      showSuccessToast("Comment posted")
+                    } catch (err) {
+                      const message = humanizeApiError(err, "Failed to post comment")
+                      showErrorToast(message)
+                      throw err
+                    }
+                  }
+                : undefined
             }
-            onRequestApproveConfirm={() => setApproveConfirmOpen(true)}
+            onResolveComment={canApprove ? handleResolveComment : undefined}
+            onDeleteComment={canComment ? handleDeleteComment : undefined}
+            deletingCommentId={deletingCommentId}
+            onMarkNeedsRevision={
+              canApprove
+                ? () => void handleStatusChange(selectedVersion.id, "needs_revision")
+                : undefined
+            }
+            onRequestApproveConfirm={
+              canApprove ? () => setApproveConfirmOpen(true) : undefined
+            }
             versionStatus={selectedVersion.status}
             statusUpdating={updatingStatusId === selectedVersion.id}
             resolvingCommentId={resolvingCommentId}

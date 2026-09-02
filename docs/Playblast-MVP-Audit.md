@@ -557,26 +557,26 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Server/API
 
-- [ ] Add and backfill studio ownership for every studio-owned table, upload, avatar, and file path.
-- [ ] Require authenticated server-derived studio context in every repository method and route.
-- [ ] Enforce the role matrix on project, deliverable, version, comment, annotation, approval, playback, download, upload, delete, team, settings, and legacy CRM/finance routes.
-- [ ] Enforce the single-studio-per-instance invariant while using a second studio only as an isolated test fixture.
-- [ ] Add route/file-serving inventory and exhaustive allow/deny tests, including nested, search, aggregate, duplicate, archive, and download paths.
-- [ ] Add Admin-superset tests proving Admin can perform every permitted Creative and Proofing operation.
-- [ ] Add Proofing deny tests for all mutations outside comments and annotations; define comment/annotation ownership, edit, and moderation policy.
+- [x] Add and backfill studio ownership for every studio-owned table, upload, avatar, and file path.
+- [x] Require authenticated server-derived studio context in every repository method and route.
+- [x] Enforce the role matrix on project, deliverable, version, comment, annotation, approval, playback, download, upload, delete, team, settings, and legacy CRM/finance routes.
+- [x] Enforce the single-studio-per-instance invariant while using a second studio only as an isolated test fixture.
+- [x] Add route/file-serving inventory and exhaustive allow/deny tests, including nested, search, aggregate, duplicate, archive, and download paths.
+- [x] Add Admin-superset tests proving Admin can perform every permitted Creative and Proofing operation.
+- [x] Add Proofing deny tests for all mutations outside comments and annotations; define comment/annotation ownership, edit, and moderation policy.
 
 #### Client/UI
 
-- [ ] Build role-aware project, deliverable, upload, version, comment, annotation, approval, compare, download, and delete controls.
-- [ ] Hide or disable controls that the current role cannot use, while preserving server-side denial as the authority.
-- [ ] Render forbidden states and safe empty states without leaking cross-studio existence.
-- [ ] Ensure current user/studio context is sent only through the session and not as trusted client authorization data.
-- [ ] Remove or restrict non-MVP CRM/finance/capacity surfaces for Creative and Proofing users.
+- [x] Build role-aware project, deliverable, upload, version, comment, annotation, approval, compare, download, and delete controls.
+- [x] Hide or disable controls that the current role cannot use, while preserving server-side denial as the authority.
+- [x] Render forbidden states and safe empty states without leaking cross-studio existence.
+- [x] Ensure current user/studio context is sent only through the session and not as trusted client authorization data.
+- [x] Remove or restrict non-MVP CRM/finance/capacity surfaces for Creative and Proofing users.
 
 #### Integration/verification
 
 - [ ] Run the complete three-role matrix against every classified route and file-serving path.
-- [ ] Verify two fixture studios cannot read, write, stream, download, or delete one another’s data.
+- [x] Verify two fixture studios cannot read, write, stream, download, or delete one another’s data.
 - [ ] Verify Admin can complete every permitted Creative and Proofing flow through the UI.
 - [ ] Verify Proofing cannot upload, version, edit, approve, delete, administer, or elevate privileges through direct requests or manipulated UI state.
 

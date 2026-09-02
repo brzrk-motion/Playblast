@@ -1,6 +1,8 @@
 import fs from "node:fs"
 import { Router, type Request, type Response } from "express"
 import { getVideoPath } from "../config/paths.js"
+import { resolveProjectStudioId } from "../auth/studio-scope.js"
+import { sendApiError } from "../lib/api-response.js"
 import { getParam } from "../utils/params.js"
 import { getVideoContentType } from "../utils/mime.js"
 
@@ -54,6 +56,17 @@ videoRouter.get("/", (req: Request<VideoParams>, res) => {
   const deliverableId = getParam(req.params.deliverableId)
   const version = getParam(req.params.version)
   const filename = getParam(req.params.filename)
+
+  const sessionStudioId = req.currentSession?.studio.id
+  const resourceStudioId = resolveProjectStudioId(projectId)
+  if (
+    !sessionStudioId ||
+    !resourceStudioId ||
+    resourceStudioId !== sessionStudioId
+  ) {
+    sendApiError(res, "NOT_FOUND")
+    return
+  }
 
   const videoPath = getVideoPath(projectId, deliverableId, version, filename)
   if (!videoPath) {

@@ -96,6 +96,7 @@ interface ProjectRow {
   budget: string | null
   archived_at: string | null
   notes: string | null
+  studioId: string | null
 }
 
 interface DeliverableRow {
@@ -153,6 +154,7 @@ interface CommentRow {
   timestamp: number
   body: string
   author: string
+  authorUserId: string | null
   createdAt: string
   resolved: number
   annotation: string | null
@@ -171,6 +173,7 @@ interface LeadRow {
   replied: number
   createdAt: string
   updatedAt: string
+  studioId: string | null
 }
 
 interface ContactLogRow {
@@ -197,6 +200,7 @@ interface ClientRow {
   retainerCycleDay: number | null
   createdAt: string
   updatedAt: string
+  studioId: string | null
 }
 
 interface RetainerCycleHoursRow {
@@ -216,6 +220,7 @@ interface ServiceRow {
   type: string
   createdAt: string
   updatedAt: string
+  studioId: string | null
 }
 
 function emptyStatusCounts(): Record<DeliverableStatus, number> {
@@ -325,6 +330,7 @@ function rowToComment(row: CommentRow): Comment {
     author: row.author,
     createdAt: row.createdAt,
     resolved: row.resolved === 1,
+    ...(row.authorUserId ? { authorUserId: row.authorUserId } : {}),
   }
 
   if (row.annotation) {
@@ -381,23 +387,35 @@ export interface ListProjectsOptions {
   archivedOnly?: boolean
 }
 
-function buildProjectArchiveClause(options?: ListProjectsOptions): {
+function buildProjectArchiveClause(
+  studioId: string,
+  options?: ListProjectsOptions,
+): {
   clause: string
   params: unknown[]
 } {
   if (options?.archivedOnly) {
-    return { clause: "WHERE archived_at IS NOT NULL", params: [] }
+    return {
+      clause: "WHERE studioId = ? AND archived_at IS NOT NULL",
+      params: [studioId],
+    }
   }
 
   if (options?.includeArchived) {
-    return { clause: "", params: [] }
+    return { clause: "WHERE studioId = ?", params: [studioId] }
   }
 
-  return { clause: "WHERE archived_at IS NULL", params: [] }
+  return {
+    clause: "WHERE studioId = ? AND archived_at IS NULL",
+    params: [studioId],
+  }
 }
 
-export function listProjects(options?: ListProjectsOptions): Project[] {
-  const { clause, params } = buildProjectArchiveClause(options)
+export function listProjects(
+  studioId: string,
+  options?: ListProjectsOptions,
+): Project[] {
+  const { clause, params } = buildProjectArchiveClause(studioId, options)
   const rows = getDb()
     .prepare(`SELECT * FROM projects ${clause} ORDER BY createdAt ASC`)
     .all(...params) as ProjectRow[]
@@ -406,13 +424,14 @@ export function listProjects(options?: ListProjectsOptions): Project[] {
 }
 
 export function listProjectSummaries(
+  studioId: string,
   clientId?: string,
   options?: ListProjectsOptions,
 ): ProjectSummary[] {
   const db = getDb()
   const projects = clientId
-    ? listProjectsByClientId(clientId)
-    : listProjects(options)
+    ? listProjectsByClientId(studioId, clientId)
+    : listProjects(studioId, options)
 
   return projects.map((project) => {
     const deliverables = listDeliverables(project.id)
@@ -525,6 +544,10 @@ export function getProjectWithClient(id: string): ProjectDetail | undefined {
 }
 
 export function createProject(input: CreateProjectInput): Project {
+  if (!input.studioId) {
+    throw new Error("studioId is required to create a project")
+  }
+
   return withTransaction(() => {
     const id = input.id ?? randomUUID()
     const project: Project = {
@@ -544,8 +567,8 @@ export function createProject(input: CreateProjectInput): Project {
     getDb()
       .prepare(
         `INSERT INTO projects (
-          id, name, createdAt, status, client, clientId, description, startDate, endDate, budget, archived_at, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, name, createdAt, status, client, clientId, description, startDate, endDate, budget, archived_at, notes, studioId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         project.id,
@@ -560,6 +583,7 @@ export function createProject(input: CreateProjectInput): Project {
         project.budget ? JSON.stringify(project.budget) : null,
         null,
         project.notes ?? null,
+        input.studioId,
       )
 
     return project
@@ -568,11 +592,15 @@ export function createProject(input: CreateProjectInput): Project {
 
 export function duplicateProject(sourceProjectId: string): Project | undefined {
   return withTransaction(() => {
-    const source = getProject(sourceProjectId)
-    if (!source) {
+    const sourceRow = getDb()
+      .prepare("SELECT * FROM projects WHERE id = ?")
+      .get(sourceProjectId) as ProjectRow | undefined
+
+    if (!sourceRow) {
       return undefined
     }
 
+    const source = rowToProject(sourceRow)
     const now = new Date().toISOString()
     const newProject: Project = {
       id: randomUUID(),
@@ -585,8 +613,8 @@ export function duplicateProject(sourceProjectId: string): Project | undefined {
     getDb()
       .prepare(
         `INSERT INTO projects (
-          id, name, createdAt, status, client, clientId, description, startDate, endDate, budget
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, name, createdAt, status, client, clientId, description, startDate, endDate, budget, studioId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         newProject.id,
@@ -599,6 +627,7 @@ export function duplicateProject(sourceProjectId: string): Project | undefined {
         null,
         null,
         null,
+        sourceRow.studioId,
       )
 
     const sourceServices = getDb()
@@ -807,13 +836,17 @@ export function unarchiveProject(id: string): Project | undefined {
   })
 }
 
-export function ensureProject(id: string, name?: string): Project {
+export function ensureProject(
+  studioId: string,
+  id: string,
+  name?: string,
+): Project {
   const existing = getProject(id)
   if (existing) {
     return existing
   }
 
-  return createProject({ id, name: name ?? id })
+  return createProject({ studioId, id, name: name ?? id })
 }
 
 // --- Deliverables -----------------------------------------------------------
@@ -1589,14 +1622,15 @@ export function createComment(input: CreateCommentInput): Comment {
       author: input.author,
       createdAt: new Date().toISOString(),
       resolved: false,
+      ...(input.authorUserId ? { authorUserId: input.authorUserId } : {}),
       ...(input.annotation ? { annotation: input.annotation } : {}),
     }
 
     getDb()
       .prepare(
         `INSERT INTO comments (
-          id, versionId, timestamp, body, author, createdAt, resolved, annotation
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, versionId, timestamp, body, author, authorUserId, createdAt, resolved, annotation
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         comment.id,
@@ -1604,6 +1638,7 @@ export function createComment(input: CreateCommentInput): Comment {
         comment.timestamp,
         comment.body,
         comment.author,
+        input.authorUserId ?? null,
         comment.createdAt,
         0,
         comment.annotation ? JSON.stringify(comment.annotation) : null,
@@ -1692,9 +1727,12 @@ function rowToContactLog(row: ContactLogRow): ContactLog {
   return entry
 }
 
-export function listLeads(filters: ListLeadsFilters = {}): Lead[] {
-  const conditions: string[] = []
-  const params: Array<string | number> = []
+export function listLeads(
+  studioId: string,
+  filters: ListLeadsFilters = {},
+): Lead[] {
+  const conditions: string[] = ["studioId = ?"]
+  const params: Array<string | number> = [studioId]
 
   if (filters.status !== undefined) {
     conditions.push("status = ?")
@@ -1744,6 +1782,10 @@ export function getLeadWithContactLog(id: string): LeadWithContactLog | undefine
 }
 
 export function createLead(input: CreateLeadInput): Lead {
+  if (!input.studioId) {
+    throw new Error("studioId is required to create a lead")
+  }
+
   return withTransaction(() => {
     const now = new Date().toISOString()
     const lead: Lead = {
@@ -1767,8 +1809,8 @@ export function createLead(input: CreateLeadInput): Lead {
       .prepare(
         `INSERT INTO leads (
           id, name, company, email, phone, source, status, notes,
-          lastContactedAt, replied, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          lastContactedAt, replied, createdAt, updatedAt, studioId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         lead.id,
@@ -1783,6 +1825,7 @@ export function createLead(input: CreateLeadInput): Lead {
         lead.replied ? 1 : 0,
         lead.createdAt,
         lead.updatedAt,
+        input.studioId,
       )
 
     return lead
@@ -2034,12 +2077,12 @@ function buildRetainerSummary(client: Client) {
   })
 }
 
-export function listClients(): ClientListItem[] {
+export function listClients(studioId: string): ClientListItem[] {
   const rows = getDb()
     .prepare(
-      "SELECT * FROM clients ORDER BY updatedAt DESC, createdAt DESC",
+      "SELECT * FROM clients WHERE studioId = ? ORDER BY updatedAt DESC, createdAt DESC",
     )
-    .all() as ClientRow[]
+    .all(studioId) as ClientRow[]
 
   const lifetimeValues = listClientLifetimeValuesByClientId()
 
@@ -2061,23 +2104,34 @@ export function getClient(id: string): Client | undefined {
   return row ? rowToClient(row) : undefined
 }
 
-export function listProjectsByClientId(clientId: string): Project[] {
+export function listProjectsByClientId(
+  studioId: string,
+  clientId: string,
+): Project[] {
   const rows = getDb()
     .prepare(
       `SELECT * FROM projects
-       WHERE clientId = ?
+       WHERE clientId = ? AND studioId = ?
        ORDER BY createdAt DESC`,
     )
-    .all(clientId) as ProjectRow[]
+    .all(clientId, studioId) as ProjectRow[]
 
   return rows.map(rowToProject)
 }
 
 export function getClientWithProjects(
   id: string,
+  studioId: string,
 ): ClientWithProjects | undefined {
   const client = getClient(id)
   if (!client) {
+    return undefined
+  }
+
+  const row = getDb()
+    .prepare("SELECT studioId FROM clients WHERE id = ?")
+    .get(id) as { studioId: string | null } | undefined
+  if (!row?.studioId || row.studioId !== studioId) {
     return undefined
   }
 
@@ -2087,7 +2141,7 @@ export function getClientWithProjects(
 
   return {
     ...client,
-    projects: listProjectsByClientId(id),
+    projects: listProjectsByClientId(studioId, id),
     lifetimeValue,
     ...(outstandingBalance > 0 ? { outstandingBalance } : {}),
     ...(retainerSummary ? { retainerSummary } : {}),
@@ -2095,6 +2149,10 @@ export function getClientWithProjects(
 }
 
 export function createClient(input: CreateClientInput): Client {
+  if (!input.studioId) {
+    throw new Error("studioId is required to create a client")
+  }
+
   return withTransaction(() => {
     const now = new Date().toISOString()
     const client: Client = {
@@ -2131,8 +2189,8 @@ export function createClient(input: CreateClientInput): Client {
         `INSERT INTO clients (
           id, name, company, email, phone, website, notes,
           convertedFromLeadId, isRetainer, retainerHours, retainerRate,
-          retainerCycleDay, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          retainerCycleDay, createdAt, updatedAt, studioId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         client.id,
@@ -2149,6 +2207,7 @@ export function createClient(input: CreateClientInput): Client {
         client.retainerCycleDay ?? null,
         client.createdAt,
         client.updatedAt,
+        input.studioId,
       )
 
     return client
@@ -2271,14 +2330,22 @@ export function convertLeadToClient(
   options?: { notes?: string },
 ): Client | "not_found" | "already_converted" {
   return withTransaction(() => {
-    const lead = getLead(leadId)
+    const leadRow = getDb()
+      .prepare("SELECT * FROM leads WHERE id = ?")
+      .get(leadId) as LeadRow | undefined
 
-    if (!lead) {
+    if (!leadRow) {
       return "not_found"
     }
 
+    const lead = rowToLead(leadRow)
+
     if (lead.status === "converted") {
       return "already_converted"
+    }
+
+    if (!leadRow.studioId) {
+      return "not_found"
     }
 
     const existingClient = getDb()
@@ -2308,8 +2375,8 @@ export function convertLeadToClient(
         `INSERT INTO clients (
           id, name, company, email, phone, website, notes,
           convertedFromLeadId, isRetainer, retainerHours, retainerRate,
-          retainerCycleDay, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          retainerCycleDay, createdAt, updatedAt, studioId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         client.id,
@@ -2326,6 +2393,7 @@ export function convertLeadToClient(
         null,
         client.createdAt,
         client.updatedAt,
+        leadRow.studioId,
       )
 
     getDb()
@@ -2347,11 +2415,15 @@ export function revertClientToLead(
   clientId: string,
 ): Lead | "not_found" | "has_active_projects" {
   return withTransaction(() => {
-    const client = getClient(clientId)
+    const clientRow = getDb()
+      .prepare("SELECT * FROM clients WHERE id = ?")
+      .get(clientId) as ClientRow | undefined
 
-    if (!client) {
+    if (!clientRow) {
       return "not_found"
     }
+
+    const client = rowToClient(clientRow)
 
     if (countNonArchivedProjectsByClientId(clientId) > 0) {
       return "has_active_projects"
@@ -2388,6 +2460,7 @@ export function revertClientToLead(
       lead = getLead(originalLead.id)!
     } else {
       lead = createLead({
+        studioId: clientRow.studioId!,
         name: client.name,
         email: client.email,
         status: REVERTED_LEAD_STATUS,
@@ -2415,12 +2488,12 @@ function rowToService(row: ServiceRow): Service {
   }
 }
 
-export function listServices(): Service[] {
+export function listServices(studioId: string): Service[] {
   const rows = getDb()
     .prepare(
-      "SELECT * FROM services ORDER BY updatedAt DESC, createdAt DESC",
+      "SELECT * FROM services WHERE studioId = ? ORDER BY updatedAt DESC, createdAt DESC",
     )
-    .all() as ServiceRow[]
+    .all(studioId) as ServiceRow[]
 
   return rows.map(rowToService)
 }
@@ -2434,6 +2507,10 @@ export function getService(id: string): Service | undefined {
 }
 
 export function createService(input: CreateServiceInput): Service {
+  if (!input.studioId) {
+    throw new Error("studioId is required to create a service")
+  }
+
   return withTransaction(() => {
     const now = new Date().toISOString()
     const service: Service = {
@@ -2449,8 +2526,8 @@ export function createService(input: CreateServiceInput): Service {
     getDb()
       .prepare(
         `INSERT INTO services (
-          id, name, hourEstimate, hourlyRate, type, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          id, name, hourEstimate, hourlyRate, type, createdAt, updatedAt, studioId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         service.id,
@@ -2460,6 +2537,7 @@ export function createService(input: CreateServiceInput): Service {
         service.type,
         service.createdAt,
         service.updatedAt,
+        input.studioId,
       )
 
     return service
@@ -2630,6 +2708,7 @@ export function listProjectServices(
       type: row.type,
       createdAt: row.service_createdAt,
       updatedAt: row.service_updatedAt,
+      studioId: null,
     }),
   }))
 }
@@ -2922,8 +3001,20 @@ function buildClientLifetimeValueFromProjects(
   }, emptyClientLifetimeValue())
 }
 
+function listProjectsForClientInternal(clientId: string): Project[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM projects
+       WHERE clientId = ?
+       ORDER BY createdAt DESC`,
+    )
+    .all(clientId) as ProjectRow[]
+
+  return rows.map(rowToProject)
+}
+
 export function getClientLifetimeValue(clientId: string): ClientLifetimeValue {
-  return buildClientLifetimeValueFromProjects(listProjectsByClientId(clientId))
+  return buildClientLifetimeValueFromProjects(listProjectsForClientInternal(clientId))
 }
 
 function listClientLifetimeValuesByClientId(): Map<string, ClientLifetimeValue> {
@@ -2950,7 +3041,7 @@ function listClientLifetimeValuesByClientId(): Map<string, ClientLifetimeValue> 
 }
 
 export function getClientOutstandingBalance(clientId: string): number {
-  const projects = listProjectsByClientId(clientId)
+  const projects = listProjectsForClientInternal(clientId)
   return projects.reduce(
     (sum, project) => sum + getProjectOutstandingBalance(project.id),
     0,

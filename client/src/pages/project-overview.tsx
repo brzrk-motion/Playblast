@@ -84,6 +84,7 @@ import {
 } from "@/lib/review-feedback"
 import { cn } from "@/lib/utils"
 import { useProjectPageHeader } from "@/hooks/use-project-page-header"
+import { useSession } from "@/hooks/use-session"
 import type { DeliverableSummary } from "@/types/deliverable"
 import type { Milestone } from "@/types/milestone"
 import type { Task } from "@/types/task"
@@ -110,6 +111,8 @@ function formatDate(value?: string): string {
 
 export function ProjectOverviewPage() {
   const { projectId = "" } = useParams()
+  const { role } = useSession()
+  const isAdmin = role === "admin"
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = parseTab(searchParams.get(TAB_PARAM))
   const shouldEditName = searchParams.get(EDIT_NAME_PARAM) === "1"
@@ -610,32 +613,36 @@ export function ProjectOverviewPage() {
         }}
       />
 
-      <ProjectBudgetEstimatePanel
-        projectId={project.id}
-        projectServices={projectServices}
-        budget={project.budget}
-        loading={servicesLoading}
-        outstandingBalance={outstandingBalance}
-        currency={currency}
-        hasClient={project.client !== null}
-        onRequestClientLink={() => setClientLinkOpen(true)}
-        onInvoiceCreated={() => setInvoiceRefreshKey((key) => key + 1)}
-        hoursRefreshKey={hoursSummaryRefreshKey}
-      />
+      {isAdmin ? (
+        <ProjectBudgetEstimatePanel
+          projectId={project.id}
+          projectServices={projectServices}
+          budget={project.budget}
+          loading={servicesLoading}
+          outstandingBalance={outstandingBalance}
+          currency={currency}
+          hasClient={project.client !== null}
+          onRequestClientLink={() => setClientLinkOpen(true)}
+          onInvoiceCreated={() => setInvoiceRefreshKey((key) => key + 1)}
+          hoursRefreshKey={hoursSummaryRefreshKey}
+        />
+      ) : null}
 
-      <ProjectInvoicesSection
-        key={invoiceRefreshKey}
-        projectId={project.id}
-        currency={currency}
-        refreshKey={invoiceRefreshKey}
-        onOutstandingBalanceChange={setOutstandingBalance}
-      />
+      {isAdmin ? (
+        <ProjectInvoicesSection
+          key={invoiceRefreshKey}
+          projectId={project.id}
+          currency={currency}
+          refreshKey={invoiceRefreshKey}
+          onOutstandingBalanceChange={setOutstandingBalance}
+        />
+      ) : null}
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
-          <TabsTrigger value="milestones">Milestones</TabsTrigger>
+          {isAdmin ? <TabsTrigger value="milestones">Milestones</TabsTrigger> : null}
           <TabsTrigger value="deliverables">Deliverables</TabsTrigger>
-          <TabsTrigger value="services">Services</TabsTrigger>
+          {isAdmin ? <TabsTrigger value="services">Services</TabsTrigger> : null}
         </TabsList>
 
         <TabsContent

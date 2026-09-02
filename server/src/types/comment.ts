@@ -7,6 +7,8 @@ export interface Comment {
   timestamp: number
   body: string
   author: string
+  /** Server-derived authorship; null for legacy comments before Phase 5. */
+  authorUserId?: string | null
   createdAt: string
   resolved: boolean
   annotation?: FrameAnnotation
@@ -17,6 +19,7 @@ export interface CreateCommentInput {
   timestamp: number
   body: string
   author: string
+  authorUserId?: string
   annotation?: FrameAnnotation
 }
 

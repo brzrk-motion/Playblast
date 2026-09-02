@@ -23,6 +23,7 @@ export interface Client {
 }
 
 export interface CreateClientInput {
+  studioId: string
   name: string
   email: string
   company?: string

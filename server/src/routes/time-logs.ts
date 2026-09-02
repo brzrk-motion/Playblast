@@ -1,13 +1,14 @@
 import { Router } from "express"
+import { requireAdminOnly } from "../middleware/authorization.js"
 import {
   createTimeLog,
   deleteTimeLog,
-  getTask,
   getTimeLog,
   listTimeLogs,
   updateTimeLog,
 } from "../storage/index.js"
 import { getParam } from "../utils/params.js"
+import { requireTaskStudio, requireTimeLogStudio } from "./route-helpers.js"
 
 function getTaskIdParam(req: {
   params: { taskId?: string | string[] }
@@ -17,11 +18,12 @@ function getTaskIdParam(req: {
 
 const timeLogsRouter = Router({ mergeParams: true })
 
+timeLogsRouter.use(requireAdminOnly())
+
 timeLogsRouter.get("/", (req, res) => {
   const taskId = getTaskIdParam(req)
-
-  if (!getTask(taskId)) {
-    res.status(404).json({ error: "Task not found." })
+  const context = requireTaskStudio(req, res, taskId)
+  if (!context) {
     return
   }
 
@@ -30,9 +32,8 @@ timeLogsRouter.get("/", (req, res) => {
 
 timeLogsRouter.post("/", (req, res) => {
   const taskId = getTaskIdParam(req)
-
-  if (!getTask(taskId)) {
-    res.status(404).json({ error: "Task not found." })
+  const context = requireTaskStudio(req, res, taskId)
+  if (!context) {
     return
   }
 
@@ -69,8 +70,15 @@ timeLogsRouter.post("/", (req, res) => {
 
 const timeLogByIdRouter = Router()
 
+timeLogByIdRouter.use(requireAdminOnly())
+
 timeLogByIdRouter.delete("/:timeLogId", (req, res) => {
   const timeLogId = getParam(req.params.timeLogId)
+  const context = requireTimeLogStudio(req, res, timeLogId)
+  if (!context) {
+    return
+  }
+
   const existing = getTimeLog(timeLogId)
 
   if (!existing) {
@@ -84,6 +92,11 @@ timeLogByIdRouter.delete("/:timeLogId", (req, res) => {
 
 timeLogByIdRouter.patch("/:timeLogId", (req, res) => {
   const timeLogId = getParam(req.params.timeLogId)
+  const context = requireTimeLogStudio(req, res, timeLogId)
+  if (!context) {
+    return
+  }
+
   const existing = getTimeLog(timeLogId)
 
   if (!existing) {

@@ -31,31 +31,70 @@ function backfillExistingInstallations(db: Database.Database): void {
     db.prepare("SELECT COUNT(*) AS count FROM studios").get() as { count: number }
   ).count
 
+  let studioId: string | undefined
+
   if (studioCount > 0) {
+    studioId = (
+      db.prepare("SELECT id FROM studios ORDER BY created_at ASC LIMIT 1").get() as
+        | { id: string }
+        | undefined
+    )?.id
+  } else {
+    const projectTable = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'projects'")
+      .get() as { name: string } | undefined
+
+    if (!projectTable) {
+      return
+    }
+
+    const hasProofingData = (
+      db.prepare("SELECT COUNT(*) AS count FROM projects").get() as { count: number }
+    ).count
+
+    if (hasProofingData === 0) {
+      return
+    }
+
+    const now = new Date().toISOString()
+    studioId = "legacy-studio"
+    db.prepare(
+      `INSERT INTO studios (id, name, avatar_path, setup_status, created_at, updated_at)
+       VALUES (?, '', NULL, 'complete', ?, ?)`,
+    ).run(studioId, now, now)
+  }
+
+  if (!studioId) {
     return
   }
 
-  const projectTable = db
-    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'projects'")
-    .get() as { name: string } | undefined
+  backfillStudioOwnership(db, studioId)
+}
 
-  if (!projectTable) {
-    return
+function tableHasColumnLocal(
+  db: Database.Database,
+  table: string,
+  column: string,
+): boolean {
+  const columns = db
+    .pragma(`table_info(${table})`) as Array<{ name: string }>
+  return columns.some((entry) => entry.name === column)
+}
+
+function backfillStudioOwnership(db: Database.Database, studioId: string): void {
+  const tables = ["projects", "clients", "leads", "services"] as const
+
+  for (const table of tables) {
+    const tableExists = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
+      .get(table) as { name: string } | undefined
+
+    if (!tableExists || !tableHasColumnLocal(db, table, "studioId")) {
+      continue
+    }
+
+    db.prepare(`UPDATE ${table} SET studioId = ? WHERE studioId IS NULL`).run(studioId)
   }
-
-  const hasProofingData = (
-    db.prepare("SELECT COUNT(*) AS count FROM projects").get() as { count: number }
-  ).count
-
-  if (hasProofingData === 0) {
-    return
-  }
-
-  const now = new Date().toISOString()
-  db.prepare(
-    `INSERT INTO studios (id, name, avatar_path, setup_status, created_at, updated_at)
-     VALUES (?, '', NULL, 'complete', ?, ?)`,
-  ).run("legacy-studio", now, now)
 }
 
 /** @internal Test helper to run identity migrations on an existing connection. */

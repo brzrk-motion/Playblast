@@ -18,6 +18,7 @@ export interface Service {
 }
 
 export interface CreateServiceInput {
+  studioId: string
   name: string
   hourEstimate: number
   hourlyRate: number

@@ -1,16 +1,17 @@
 import { Router, type Response } from "express"
+import { requireAdminOnly } from "../middleware/authorization.js"
 import { generateInvoicePdf } from "../lib/invoice-pdf.js"
 import {
   createInvoice,
   createInvoicePayment,
   getInvoice,
   getInvoiceWithPayments,
-  getProject,
   listInvoicePayments,
   listInvoicesByProject,
   updateInvoice,
 } from "../storage/index.js"
 import { getParam, getProjectIdParam } from "../utils/params.js"
+import { requireInvoiceStudio, requireProjectStudio } from "./route-helpers.js"
 
 const projectInvoicesRouter = Router({ mergeParams: true })
 
@@ -41,11 +42,12 @@ function parseIsoDate(
   return { value: value.trim() }
 }
 
+projectInvoicesRouter.use(requireAdminOnly())
+
 projectInvoicesRouter.get("/", (req, res) => {
   const projectId = getProjectIdParam(req)
-
-  if (!getProject(projectId)) {
-    res.status(404).json({ error: "Project not found." })
+  const context = requireProjectStudio(req, res, projectId)
+  if (!context) {
     return
   }
 
@@ -54,6 +56,11 @@ projectInvoicesRouter.get("/", (req, res) => {
 
 projectInvoicesRouter.post("/", (req, res) => {
   const projectId = getProjectIdParam(req)
+  const context = requireProjectStudio(req, res, projectId)
+  if (!context) {
+    return
+  }
+
   const result = createInvoice(projectId)
 
   if (result === "project_not_found") {
@@ -80,8 +87,15 @@ projectInvoicesRouter.post("/", (req, res) => {
 
 const invoiceByIdRouter = Router()
 
+invoiceByIdRouter.use(requireAdminOnly())
+
 invoiceByIdRouter.get("/:invoiceId", (req, res) => {
   const invoiceId = getParam(req.params.invoiceId)
+  const context = requireInvoiceStudio(req, res, invoiceId)
+  if (!context) {
+    return
+  }
+
   const invoice = getInvoiceWithPayments(invoiceId)
 
   if (!invoice) {
@@ -94,6 +108,11 @@ invoiceByIdRouter.get("/:invoiceId", (req, res) => {
 
 invoiceByIdRouter.patch("/:invoiceId", (req, res) => {
   const invoiceId = getParam(req.params.invoiceId)
+  const context = requireInvoiceStudio(req, res, invoiceId)
+  if (!context) {
+    return
+  }
+
   const existing = getInvoice(invoiceId)
 
   if (!existing) {
@@ -118,9 +137,8 @@ invoiceByIdRouter.patch("/:invoiceId", (req, res) => {
 
 invoiceByIdRouter.get("/:invoiceId/payments", (req, res) => {
   const invoiceId = getParam(req.params.invoiceId)
-
-  if (!getInvoice(invoiceId)) {
-    res.status(404).json({ error: "Invoice not found." })
+  const context = requireInvoiceStudio(req, res, invoiceId)
+  if (!context) {
     return
   }
 
@@ -129,6 +147,10 @@ invoiceByIdRouter.get("/:invoiceId/payments", (req, res) => {
 
 invoiceByIdRouter.post("/:invoiceId/payments", (req, res) => {
   const invoiceId = getParam(req.params.invoiceId)
+  const context = requireInvoiceStudio(req, res, invoiceId)
+  if (!context) {
+    return
+  }
 
   const amountResult = parsePositiveNumber(req.body?.amount, "amount")
   if ("error" in amountResult) {
@@ -182,11 +204,23 @@ async function sendInvoicePdf(res: Response, invoiceId: string): Promise<void> {
 }
 
 invoiceByIdRouter.get("/:invoiceId/pdf", async (req, res) => {
-  await sendInvoicePdf(res, getParam(req.params.invoiceId))
+  const invoiceId = getParam(req.params.invoiceId)
+  const context = requireInvoiceStudio(req, res, invoiceId)
+  if (!context) {
+    return
+  }
+
+  await sendInvoicePdf(res, invoiceId)
 })
 
 invoiceByIdRouter.get("/:invoiceId/download", async (req, res) => {
-  await sendInvoicePdf(res, getParam(req.params.invoiceId))
+  const invoiceId = getParam(req.params.invoiceId)
+  const context = requireInvoiceStudio(req, res, invoiceId)
+  if (!context) {
+    return
+  }
+
+  await sendInvoicePdf(res, invoiceId)
 })
 
 export { invoiceByIdRouter }
