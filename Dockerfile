@@ -8,13 +8,15 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY client/package.json ./client/
 COPY server/package.json ./server/
+COPY shared/package.json ./shared/
 
 RUN npm ci
 
 COPY client ./client
 COPY server ./server
+COPY shared ./shared
 
-RUN npm run build -w client && npm run build -w server
+RUN npm run build -w shared && npm run build -w client && npm run build -w server
 
 # Stage 2: production runtime
 FROM node:20-alpine AS runner
@@ -30,6 +32,7 @@ ENV MAX_UPLOAD_SIZE=5000
 COPY package.json package-lock.json ./
 COPY client/package.json ./client/
 COPY server/package.json ./server/
+COPY shared/package.json ./shared/
 
 RUN apk add --no-cache python3 make g++ \
   && npm ci --omit=dev --workspace=server \
@@ -37,6 +40,7 @@ RUN apk add --no-cache python3 make g++ \
 
 COPY --from=builder /app/client/dist ./client/dist
 COPY --from=builder /app/server/dist ./server/dist
+COPY --from=builder /app/shared/dist ./shared/dist
 
 EXPOSE 3000
 
