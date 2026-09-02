@@ -1,7 +1,14 @@
 import { createApp } from "./app.js"
 import { config } from "./config/env.js"
 import { ensureUploadDir } from "./config/paths.js"
+import { validateStartup } from "./config/validate-startup.js"
 import { closeDatabase, initDatabase } from "./storage/db.js"
+
+const startup = validateStartup()
+if (!startup.ok) {
+  console.error(`Startup validation failed [${startup.code}]: ${startup.message}`)
+  process.exit(1)
+}
 
 const uploadDir = ensureUploadDir()
 initDatabase()

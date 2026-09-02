@@ -5,7 +5,7 @@ import {
   type AppRouteDefinition,
 } from "@playblast/shared"
 import { PageLoading } from "@/components/feedback/page-loading"
-import { PageError } from "@/components/feedback/page-error"
+import { DeploymentErrorPage } from "@/components/feedback/deployment-error-page"
 import { useSession } from "@/hooks/use-session"
 
 const PUBLIC_PATHS = new Set([
@@ -60,8 +60,7 @@ export function RouteGuard() {
 
   if (state.status === "unavailable") {
     return (
-      <PageError
-        title="Server unavailable"
+      <DeploymentErrorPage
         message={state.message}
         onRetry={() => window.location.reload()}
       />

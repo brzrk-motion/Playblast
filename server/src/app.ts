@@ -2,7 +2,9 @@ import fs from "node:fs"
 import cors from "cors"
 import express, { type NextFunction, type Request, type Response } from "express"
 import path from "node:path"
+import { config } from "./config/env.js"
 import { CLIENT_DIST } from "./config/paths.js"
+import { getDb } from "./storage/db.js"
 import { createAuthMiddleware } from "./middleware/auth.js"
 import {
   attachSessionContext,
@@ -21,11 +23,36 @@ export function createApp() {
   const app = express()
 
   app.get("/health", (_req, res) => {
-    res.json({
-      status: "ok",
-      uptime: process.uptime(),
-      timestamp: new Date().toISOString(),
-    })
+    try {
+      const integrity = getDb().pragma("integrity_check", { simple: true })
+      if (integrity !== "ok") {
+        res.status(503).json({
+          status: "degraded",
+          database: "integrity_check_failed",
+          uptime: process.uptime(),
+          timestamp: new Date().toISOString(),
+        })
+        return
+      }
+
+      res.json({
+        status: "ok",
+        database: "ok",
+        storage: {
+          uploadDir: config.uploadDir,
+          dbPath: config.dbPath,
+        },
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+      })
+    } catch {
+      res.status(503).json({
+        status: "degraded",
+        database: "unavailable",
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+      })
+    }
   })
 
   app.use(createAuthMiddleware())

@@ -613,20 +613,20 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Server/API and deployment
 
-- [ ] Upgrade the current Node 20 runtime to a supported Node LTS baseline before release.
-- [ ] Update Dockerfile, Compose, health checks, environment validation, and documented NAS/Linux installation.
-- [ ] Define application Admin versus host/operator responsibilities for Docker, NAS, networking, HTTPS/VPN, storage, backups, upgrades, and recovery.
-- [ ] Document Drizzle/legacy migration ordering, backup-before-migration, interrupted migration behavior, and unsupported downgrade behavior.
-- [ ] Verify backup/restore semantics for database, media, avatars, users, invites, setup state, and session revocation.
-- [ ] Document local secret permissions, rotation, missing-secret startup behavior, process exposure, and backup inclusion/exclusion.
+- [x] Upgrade the current Node 20 runtime to a supported Node LTS baseline before release.
+- [x] Update Dockerfile, Compose, health checks, environment validation, and documented NAS/Linux installation.
+- [x] Define application Admin versus host/operator responsibilities for Docker, NAS, networking, HTTPS/VPN, storage, backups, upgrades, and recovery.
+- [x] Document Drizzle/legacy migration ordering, backup-before-migration, interrupted migration behavior, and unsupported downgrade behavior.
+- [x] Verify backup/restore semantics for database, media, avatars, users, invites, setup state, and session revocation.
+- [x] Document local secret permissions, rotation, missing-secret startup behavior, process exposure, and backup inclusion/exclusion.
 
 #### Client/UI and documentation
 
-- [ ] Build the complete first-run wizard and onboarding guidance for install → Admin → studio → invite → role-specific login.
-- [ ] Add deployment/configuration error screens with safe remediation guidance.
-- [ ] Document role capabilities, SMTP setup, recovery, backup/restore, upgrade, rollback, and no-support boundaries.
-- [ ] Add screenshots or a walkthrough for Admin, Creative, and Proofing experiences.
-- [ ] Ensure README and public documentation do not describe obsolete Basic Auth/private-pilot behavior as the primary path.
+- [x] Build the complete first-run wizard and onboarding guidance for install → Admin → studio → invite → role-specific login.
+- [x] Add deployment/configuration error screens with safe remediation guidance.
+- [x] Document role capabilities, SMTP setup, recovery, backup/restore, upgrade, rollback, and no-support boundaries.
+- [x] Add screenshots or a walkthrough for Admin, Creative, and Proofing experiences.
+- [x] Ensure README and public documentation do not describe obsolete Basic Auth/private-pilot behavior as the primary path.
 
 #### Integration/verification
 
