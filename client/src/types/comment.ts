@@ -7,6 +7,7 @@ export interface Comment {
   timestamp: number
   body: string
   author: string
+  authorUserId?: string | null
   createdAt: string
   resolved: boolean
   /** Optional frame-level drawing annotation tied to this timestamp */

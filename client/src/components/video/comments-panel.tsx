@@ -31,19 +31,9 @@ import { cn } from "@/lib/utils"
 import type { Comment } from "@/types/comment"
 import type { FrameAnnotation } from "@/types/annotation"
 
-const AUTHOR_STORAGE_KEY = "playblast-comment-author"
-
-function getStoredAuthor() {
-  if (typeof window === "undefined") {
-    return "Reviewer"
-  }
-
-  return window.localStorage.getItem(AUTHOR_STORAGE_KEY) ?? "Reviewer"
-}
+const ACTIVE_COMMENT_THRESHOLD = 1
 
 type CommentFilter = "all" | "open" | "resolved"
-
-const ACTIVE_COMMENT_THRESHOLD = 1
 
 export interface CommentsPanelProps {
   comments: Comment[]
@@ -51,7 +41,6 @@ export interface CommentsPanelProps {
   onCreateComment?: (input: {
     timestamp: number
     body: string
-    author: string
     annotation?: FrameAnnotation
   }) => Promise<void>
   onResolveComment?: (commentId: string, resolved: boolean) => void
@@ -376,11 +365,7 @@ export function CommentsPanel({
   }
 
   const mentionCandidates = useMemo(
-    () =>
-      buildMentionCandidates(
-        comments.map((comment) => comment.author),
-        getStoredAuthor(),
-      ),
+    () => buildMentionCandidates(comments.map((comment) => comment.author)),
     [comments],
   )
 
@@ -446,7 +431,6 @@ export function CommentsPanel({
   function handleCreateComment(input: {
     timestamp: number
     body: string
-    author: string
     annotation?: FrameAnnotation
   }) {
     setReplyDraft(null)

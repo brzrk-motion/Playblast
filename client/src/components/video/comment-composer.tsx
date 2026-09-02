@@ -5,27 +5,17 @@ import { MessageSquarePlus, Pencil, X } from "lucide-react"
 import { MentionTextarea } from "@/components/video/mention-textarea"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { Input } from "@/components/ui/input"
 import { useVideoPlayer } from "@/hooks/use-video-player"
+import { useSession } from "@/hooks/use-session"
+import { getForbiddenMessage, redirectOnSessionExpired } from "@/lib/api"
 import { humanizeApiError, showErrorToast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import type { FrameAnnotation } from "@/types/annotation"
-
-const AUTHOR_STORAGE_KEY = "playblast-comment-author"
-
-function getStoredAuthor() {
-  if (typeof window === "undefined") {
-    return "Reviewer"
-  }
-
-  return window.localStorage.getItem(AUTHOR_STORAGE_KEY) ?? "Reviewer"
-}
 
 export interface CommentComposerProps {
   onSubmit: (input: {
     timestamp: number
     body: string
-    author: string
     annotation?: FrameAnnotation
   }) => Promise<void>
   mentionCandidates?: string[]
@@ -50,54 +40,47 @@ export function CommentComposerForm({
   initialBody?: string
   variant?: "inline" | "overlay"
 }) {
-  const authorRef = useRef<HTMLInputElement>(null)
+  const { state } = useSession()
+  const authorName =
+    state.status === "ready" && state.session
+      ? state.session.user.name
+      : "Signed-in reviewer"
+  const formRef = useRef<HTMLFormElement>(null)
   const [body, setBody] = useState(initialBody)
-  const [author, setAuthor] = useState(getStoredAuthor)
-  const [fieldErrors, setFieldErrors] = useState<{
-    body?: string
-    author?: string
-  }>({})
+  const [fieldErrors, setFieldErrors] = useState<{ body?: string }>({})
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const trimmedBody = body.trim()
-  const trimmedAuthor = author.trim()
-  const canSubmit = Boolean(trimmedBody && trimmedAuthor) && !submitting
+  const canSubmit = Boolean(trimmedBody) && !submitting
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
 
-    const nextFieldErrors: { body?: string; author?: string } = {}
     if (!trimmedBody) {
-      nextFieldErrors.body = "Comment can't be empty"
-    }
-    if (!trimmedAuthor) {
-      nextFieldErrors.author = "Name is required"
-    }
-
-    if (nextFieldErrors.body || nextFieldErrors.author) {
-      setFieldErrors(nextFieldErrors)
-      if (!nextFieldErrors.body) {
-        authorRef.current?.focus()
-      }
+      setFieldErrors({ body: "Comment can't be empty" })
       return
     }
 
     setFieldErrors({})
-    window.localStorage.setItem(AUTHOR_STORAGE_KEY, trimmedAuthor)
     setSubmitting(true)
 
     try {
       await onSubmit({
         timestamp,
         body: trimmedBody,
-        author: trimmedAuthor,
         annotation: draftAnnotation ?? undefined,
       })
       onClose({ resumePlayback: true })
     } catch (err) {
-      const message = humanizeApiError(err, "Failed to add comment")
+      if (redirectOnSessionExpired(err)) {
+        return
+      }
+
+      const forbiddenMessage = getForbiddenMessage(err)
+      const message =
+        forbiddenMessage ?? humanizeApiError(err, "Failed to add comment")
       setError(message)
       showErrorToast(message)
       setSubmitting(false)
@@ -108,6 +91,7 @@ export function CommentComposerForm({
 
   return (
     <form
+      ref={formRef}
       className={cn("space-y-2", isInline && "space-y-2")}
       onSubmit={(event) => void handleSubmit(event)}
     >
@@ -130,59 +114,37 @@ export function CommentComposerForm({
         </Button>
       </div>
 
-      <div className={cn("flex gap-2", isInline ? "flex-col sm:flex-row" : "flex-col")}>
-        <div className={cn("space-y-1", isInline && "sm:w-32")}>
-          <Input
-            ref={authorRef}
-            name="author"
-            value={author}
-            onChange={(event) => {
-              setAuthor(event.target.value)
-              if (fieldErrors.author) {
-                setFieldErrors((current) => ({ ...current, author: undefined }))
-              }
-            }}
-            placeholder="Your name"
-            aria-label="Author name"
-            aria-invalid={fieldErrors.author ? true : undefined}
-            disabled={submitting}
-          />
-          {fieldErrors.author ? (
-            <p role="alert" className="text-xs text-destructive">
-              {fieldErrors.author}
-            </p>
-          ) : null}
-        </div>
+      <p className="text-xs text-muted-foreground">
+        Posting as <span className="font-medium text-foreground">{authorName}</span>
+      </p>
 
-        <div className="min-w-0 flex-1 space-y-1">
-          <MentionTextarea
-            value={body}
-            onChange={(nextBody) => {
-              setBody(nextBody)
-              if (fieldErrors.body) {
-                setFieldErrors((current) => ({ ...current, body: undefined }))
-              }
-            }}
-            mentionCandidates={mentionCandidates}
-            autoFocus
-            placeholder="Leave feedback at this timestamp… Type @ to mention someone."
-            aria-label="Comment body"
-            aria-invalid={fieldErrors.body ? true : undefined}
-            rows={isInline ? 2 : 3}
-            className="w-full flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] duration-150 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:aria-invalid:ring-destructive/40"
-            disabled={submitting}
-            onEscape={() => onClose()}
-            onSubmit={() => {
-              const form = authorRef.current?.form
-              form?.requestSubmit()
-            }}
-          />
-          {fieldErrors.body ? (
-            <p role="alert" className="text-xs text-destructive">
-              {fieldErrors.body}
-            </p>
-          ) : null}
-        </div>
+      <div className="min-w-0 space-y-1">
+        <MentionTextarea
+          value={body}
+          onChange={(nextBody) => {
+            setBody(nextBody)
+            if (fieldErrors.body) {
+              setFieldErrors({})
+            }
+          }}
+          mentionCandidates={mentionCandidates}
+          autoFocus
+          placeholder="Leave feedback at this timestamp… Type @ to mention someone."
+          aria-label="Comment body"
+          aria-invalid={fieldErrors.body ? true : undefined}
+          rows={isInline ? 2 : 3}
+          className="w-full flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] duration-150 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:aria-invalid:ring-destructive/40"
+          disabled={submitting}
+          onEscape={() => onClose()}
+          onSubmit={() => {
+            formRef.current?.requestSubmit()
+          }}
+        />
+        {fieldErrors.body ? (
+          <p role="alert" className="text-xs text-destructive">
+            {fieldErrors.body}
+          </p>
+        ) : null}
       </div>
 
       {draftAnnotation ? (

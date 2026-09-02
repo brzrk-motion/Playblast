@@ -20,6 +20,7 @@ interface VersionCardProps {
   selected: boolean
   onSelect: (label: string) => void
   onStatusChange: (versionId: string, status: VersionStatus) => void
+  canChangeStatus?: boolean
   updating?: boolean
 }
 
@@ -37,6 +38,7 @@ export function VersionCard({
   selected,
   onSelect,
   onStatusChange,
+  canChangeStatus = false,
   updating = false,
 }: VersionCardProps) {
   return (
@@ -67,6 +69,7 @@ export function VersionCard({
           </p>
         </CardContent>
       </button>
+      {canChangeStatus ? (
       <CardContent className="space-y-3 pt-0">
 
         <DropdownMenu>
@@ -112,6 +115,7 @@ export function VersionCard({
           </DropdownMenuContent>
         </DropdownMenu>
       </CardContent>
+      ) : null}
     </Card>
   )
 }

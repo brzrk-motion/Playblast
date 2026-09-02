@@ -586,25 +586,25 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Server/API
 
-- [ ] Convert the existing proofing endpoints and repository operations to authenticated user/studio context.
-- [ ] Preserve version ordering, range playback, comments, annotations, approvals, comparison, downloads, and deletion semantics.
-- [ ] Ensure failed uploads leave no orphan metadata/files and all large-file operations remain outside long database transactions.
-- [ ] Add authenticated authorship and comment/annotation mutation policy enforcement.
+- [x] Convert the existing proofing endpoints and repository operations to authenticated user/studio context.
+- [x] Preserve version ordering, range playback, comments, annotations, approvals, comparison, downloads, and deletion semantics.
+- [x] Ensure failed uploads leave no orphan metadata/files and all large-file operations remain outside long database transactions.
+- [x] Add authenticated authorship and comment/annotation mutation policy enforcement.
 
 #### Client/UI
 
-- [ ] Connect the real authenticated session to dashboard, project, deliverable, review, compare, upload, comments, annotations, approval, and download screens.
-- [ ] Remove client-supplied author identity and show server-derived author names/roles.
-- [ ] Add role-specific upload/version/approval/delete controls and clear forbidden messaging.
-- [ ] Add loading, retry, upload progress, range-playback, empty, error, and expired-session states.
-- [ ] Ensure the complete review flow is usable at supported desktop breakpoints.
+- [x] Connect the real authenticated session to dashboard, project, deliverable, review, compare, upload, comments, annotations, approval, and download screens.
+- [x] Remove client-supplied author identity and show server-derived author names/roles.
+- [x] Add role-specific upload/version/approval/delete controls and clear forbidden messaging.
+- [x] Add loading, retry, upload progress, range-playback, empty, error, and expired-session states.
+- [x] Ensure the complete review flow is usable at supported desktop breakpoints.
 
 #### Integration/verification
 
-- [ ] Run Admin end-to-end proofing workflow.
-- [ ] Run Creative end-to-end upload/version/proofing workflow.
-- [ ] Run Proofing end-to-end view/comment/annotate/compare/download workflow.
-- [ ] Verify Proofing cannot mutate media, versions, structure, approval, or deletion through the UI or API.
+- [x] Run Admin end-to-end proofing workflow.
+- [x] Run Creative end-to-end upload/version/proofing workflow.
+- [x] Run Proofing end-to-end view/comment/annotate/compare/download workflow.
+- [x] Verify Proofing cannot mutate media, versions, structure, approval, or deletion through the UI or API.
 - [ ] Run a two-user browser walkthrough with authenticated authorship and a second-studio deny fixture.
 
 **Phase exit:** Admin, Creative, and Proofing users complete their permitted portions of the real proofing workflow without cross-studio access.
