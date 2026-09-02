@@ -35,7 +35,6 @@ export interface VideoReviewProps {
   onCreateComment?: (input: {
     timestamp: number
     body: string
-    author: string
     annotation?: FrameAnnotation
   }) => Promise<void>
   onResolveComment?: (commentId: string, resolved: boolean) => Promise<void>

@@ -22,6 +22,8 @@ import {
   getProject,
   listComments,
   listVersions,
+  redirectOnSessionExpired,
+  getForbiddenMessage,
   resolveComment,
   updateDeliverable,
   updateVersionStatus,
@@ -82,6 +84,14 @@ export function DeliverablePage() {
   const canCompare = useCapability("review.compare")
   const canComment = useCapability("comments.create")
 
+  function handleProofingError(err: unknown, fallback: string): string {
+    if (redirectOnSessionExpired(err)) {
+      return ""
+    }
+
+    return getForbiddenMessage(err) ?? humanizeApiError(err, fallback)
+  }
+
   const dismissOpenPanels = useCallback(() => {
     if (uploadOpen) {
       setUploadOpen(false)
@@ -128,7 +138,8 @@ export function DeliverablePage() {
       })
       setError(null)
     } catch (err) {
-      const message = humanizeApiError(err, "Failed to load deliverable")
+      const message = handleProofingError(err, "Failed to load deliverable")
+      if (!message) return
       setError(message)
       showErrorToast(message)
       setProject(null)
@@ -176,7 +187,8 @@ export function DeliverablePage() {
         setError(null)
       } catch (err) {
         if (!cancelled) {
-          const message = humanizeApiError(err, "Failed to load deliverable")
+          const message = handleProofingError(err, "Failed to load deliverable")
+          if (!message) return
           setError(message)
           showErrorToast(message)
           setProject(null)
@@ -212,7 +224,8 @@ export function DeliverablePage() {
       )
       showSuccessToast(resolved ? "Comment resolved" : "Comment reopened")
     } catch (err) {
-      const message = humanizeApiError(err, "Failed to update comment")
+      const message = handleProofingError(err, "Failed to update comment")
+      if (!message) return
       setActionError(message)
       showErrorToast(message)
     } finally {
@@ -229,7 +242,8 @@ export function DeliverablePage() {
       setComments((current) => current.filter((comment) => comment.id !== commentId))
       showSuccessToast("Comment deleted")
     } catch (err) {
-      const message = humanizeApiError(err, "Failed to delete comment")
+      const message = handleProofingError(err, "Failed to delete comment")
+      if (!message) return
       setActionError(message)
       showErrorToast(message)
     } finally {
@@ -275,7 +289,8 @@ export function DeliverablePage() {
         }
       }
     } catch (err) {
-      const message = humanizeApiError(err, "Failed to update version status")
+      const message = handleProofingError(err, "Failed to update version status")
+      if (!message) return
       setActionError(message)
       showErrorToast(message)
     } finally {
@@ -319,7 +334,8 @@ export function DeliverablePage() {
         if (!cancelled) {
           setComments([])
           setCommentsLabel(versionLabel)
-          const message = humanizeApiError(err, "Failed to load comments")
+          const message = handleProofingError(err, "Failed to load comments")
+          if (!message) return
           setActionError(message)
           showErrorToast(message)
         }
@@ -513,6 +529,7 @@ export function DeliverablePage() {
                 onStatusChange={(versionId, status) =>
                   void handleStatusChange(versionId, status)
                 }
+                canChangeStatus={canApprove}
                 updating={updatingStatusId === version.id}
               />
             ))}
@@ -549,7 +566,8 @@ export function DeliverablePage() {
                       )
                       showSuccessToast("Comment posted")
                     } catch (err) {
-                      const message = humanizeApiError(err, "Failed to post comment")
+                      const message = handleProofingError(err, "Failed to post comment")
+                      if (!message) return
                       showErrorToast(message)
                       throw err
                     }
@@ -580,6 +598,7 @@ export function DeliverablePage() {
             title={emptyVersions.title}
             description={emptyVersions.description}
             action={
+              canUpload ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -588,6 +607,7 @@ export function DeliverablePage() {
                 <Upload />
                 Upload video
               </Button>
+              ) : undefined
             }
           />
         )}

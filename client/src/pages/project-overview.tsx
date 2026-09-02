@@ -84,6 +84,7 @@ import {
 } from "@/lib/review-feedback"
 import { cn } from "@/lib/utils"
 import { useProjectPageHeader } from "@/hooks/use-project-page-header"
+import { useCapability } from "@/hooks/use-capability"
 import { useSession } from "@/hooks/use-session"
 import type { DeliverableSummary } from "@/types/deliverable"
 import type { Milestone } from "@/types/milestone"
@@ -95,9 +96,13 @@ const TAB_PARAM = "tab"
 const EDIT_NAME_PARAM = "editName"
 type ProjectOverviewTab = "milestones" | "deliverables" | "services"
 
-function parseTab(value: string | null): ProjectOverviewTab {
+function parseTab(
+  value: string | null,
+  isAdmin: boolean,
+): ProjectOverviewTab {
   if (value === "deliverables" || value === "services") return value
-  return "milestones"
+  if (value === "milestones") return isAdmin ? "milestones" : "deliverables"
+  return isAdmin ? "milestones" : "deliverables"
 }
 
 function formatDate(value?: string): string {
@@ -113,8 +118,10 @@ export function ProjectOverviewPage() {
   const { projectId = "" } = useParams()
   const { role } = useSession()
   const isAdmin = role === "admin"
+  const canMutateDeliverables = useCapability("projects.mutate")
+  const canDeleteDeliverables = useCapability("data.delete")
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab = parseTab(searchParams.get(TAB_PARAM))
+  const activeTab = parseTab(searchParams.get(TAB_PARAM), isAdmin)
   const shouldEditName = searchParams.get(EDIT_NAME_PARAM) === "1"
   const [project, setProject] = useState<ProjectDetail | null>(null)
   const [deliverables, setDeliverables] = useState<DeliverableSummary[]>([])
@@ -773,6 +780,12 @@ export function ProjectOverviewPage() {
                     setDeliverableError(null)
                     setDeliverableDialogOpen(true)
                   }}
+                  disabled={!canMutateDeliverables}
+                  title={
+                    canMutateDeliverables
+                      ? undefined
+                      : "Your role cannot create deliverables."
+                  }
                 >
                   <Plus />
                   New Deliverable
@@ -786,6 +799,7 @@ export function ProjectOverviewPage() {
                   icon={<Film className="size-8" />}
                   {...reviewEmptyCopy("no_deliverables")}
                   action={
+                    canMutateDeliverables ? (
                     <Button
                       onClick={() => {
                         setEditingDeliverable(null)
@@ -795,6 +809,7 @@ export function ProjectOverviewPage() {
                       <Plus />
                       New Deliverable
                     </Button>
+                    ) : undefined
                   }
                 />
               ) : (
@@ -835,6 +850,7 @@ export function ProjectOverviewPage() {
                         </CardContent>
                       </Link>
                       <CardContent className="flex justify-end gap-1 pt-0">
+                        {canMutateDeliverables ? (
                         <Button
                           variant="ghost"
                           size="icon-sm"
@@ -847,6 +863,8 @@ export function ProjectOverviewPage() {
                         >
                           <Pencil className="size-4" />
                         </Button>
+                        ) : null}
+                        {canDeleteDeliverables ? (
                         <Button
                           variant="ghost"
                           size="icon-sm"
@@ -855,6 +873,7 @@ export function ProjectOverviewPage() {
                         >
                           <Trash2 className="size-4" />
                         </Button>
+                        ) : null}
                       </CardContent>
                     </Card>
                   ))}

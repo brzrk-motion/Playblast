@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/feedback/empty-state"
 import { PageError } from "@/components/feedback/page-error"
 import { PageLoading } from "@/components/feedback/page-loading"
 import { SyncedVideoComparison } from "@/components/video/synced-video-comparison"
-import { getDeliverable, getProject, listVersions } from "@/lib/api"
+import { getDeliverable, getProject, listVersions, redirectOnSessionExpired } from "@/lib/api"
 import {
   resolveAsyncViewState,
   reviewEmptyCopy,
@@ -61,6 +61,9 @@ export function ComparePage() {
       setVersions(sortedVersions)
       setError(null)
     } catch (err) {
+      if (redirectOnSessionExpired(err)) {
+        return
+      }
       const message = humanizeApiError(err, "Failed to load deliverable")
       setError(message)
       showErrorToast(message)
@@ -92,6 +95,9 @@ export function ComparePage() {
         }
       } catch (err) {
         if (!cancelled) {
+          if (redirectOnSessionExpired(err)) {
+            return
+          }
           const message = humanizeApiError(err, "Failed to load deliverable")
           setError(message)
           showErrorToast(message)

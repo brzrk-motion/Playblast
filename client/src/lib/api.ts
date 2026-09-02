@@ -41,6 +41,15 @@ import type {
 } from "@/types/service"
 import type { UploadProgress, UploadResponse } from "@/types/upload"
 import type { Version, VersionStatus } from "@/types/version"
+import { isApiErrorEnvelope } from "@playblast/shared"
+import {
+  ApiError,
+  buildApiHeaders,
+  expectApiOk,
+  parseApiResponse,
+} from "@/lib/api-http"
+
+export { ApiError, isApiError, redirectOnSessionExpired, getForbiddenMessage } from "@/lib/api-http"
 
 export function getVideoUrl(
   projectId: string,
@@ -69,51 +78,6 @@ export function downloadVersion(versionId: string): void {
   document.body.removeChild(link)
 }
 
-function humanizeHttpError(status: number, serverMessage?: string): string {
-  if (serverMessage) {
-    return serverMessage
-  }
-
-  switch (status) {
-    case 400:
-      return "Invalid request."
-    case 401:
-      return "Sign in required."
-    case 403:
-      return "You don't have permission to do that."
-    case 404:
-      return "Not found."
-    case 409:
-      return "This action conflicts with existing data."
-    case 413:
-      return "File is too large."
-    case 500:
-      return "Something went wrong on our end."
-    default:
-      return "Something went wrong. Please try again."
-  }
-}
-
-async function parseJsonResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      error?: string
-    } | null
-    throw new Error(humanizeHttpError(response.status, body?.error))
-  }
-
-  return response.json() as Promise<T>
-}
-
-async function expectOk(response: Response): Promise<void> {
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      error?: string
-    } | null
-    throw new Error(humanizeHttpError(response.status, body?.error))
-  }
-}
-
 // --- Projects ---------------------------------------------------------------
 
 export async function listProjects(options?: {
@@ -135,12 +99,12 @@ export async function listProjects(options?: {
   const response = await fetch(
     `/api/projects${query ? `?${query}` : ""}`,
   )
-  return parseJsonResponse<ProjectSummary[]>(response)
+  return parseApiResponse<ProjectSummary[]>(response)
 }
 
 export async function getProject(id: string): Promise<ProjectDetail> {
   const response = await fetch(`/api/projects/${encodeURIComponent(id)}`)
-  return parseJsonResponse<ProjectDetail>(response)
+  return parseApiResponse<ProjectDetail>(response)
 }
 
 export interface CreateProjectInput {
@@ -158,10 +122,10 @@ export interface CreateProjectInput {
 export async function createProject(body: CreateProjectInput): Promise<Project> {
   const response = await fetch("/api/projects", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: buildApiHeaders(), credentials: "include",
     body: JSON.stringify(body),
   })
-  return parseJsonResponse<Project>(response)
+  return parseApiResponse<Project>(response)
 }
 
 export interface UpdateProjectInput {
@@ -182,41 +146,41 @@ export async function updateProject(
 ): Promise<Project> {
   const response = await fetch(`/api/projects/${encodeURIComponent(id)}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: buildApiHeaders(), credentials: "include",
     body: JSON.stringify(input),
   })
-  return parseJsonResponse<Project>(response)
+  return parseApiResponse<Project>(response)
 }
 
 export async function deleteProject(id: string): Promise<void> {
   const response = await fetch(`/api/projects/${encodeURIComponent(id)}`, {
     method: "DELETE",
   })
-  await expectOk(response)
+  await expectApiOk(response)
 }
 
 export async function archiveProject(id: string): Promise<Project> {
   const response = await fetch(
     `/api/projects/${encodeURIComponent(id)}/archive`,
-    { method: "POST" },
+    { method: "POST", headers: buildApiHeaders(false), credentials: "include" },
   )
-  return parseJsonResponse<Project>(response)
+  return parseApiResponse<Project>(response)
 }
 
 export async function unarchiveProject(id: string): Promise<Project> {
   const response = await fetch(
     `/api/projects/${encodeURIComponent(id)}/unarchive`,
-    { method: "POST" },
+    { method: "POST", headers: buildApiHeaders(false), credentials: "include" },
   )
-  return parseJsonResponse<Project>(response)
+  return parseApiResponse<Project>(response)
 }
 
 export async function duplicateProject(id: string): Promise<Project> {
   const response = await fetch(
     `/api/projects/${encodeURIComponent(id)}/duplicate`,
-    { method: "POST" },
+    { method: "POST", headers: buildApiHeaders(false), credentials: "include" },
   )
-  return parseJsonResponse<Project>(response)
+  return parseApiResponse<Project>(response)
 }
 
 // --- Deliverables -----------------------------------------------------------
@@ -227,7 +191,7 @@ export async function listDeliverables(
   const response = await fetch(
     `/api/projects/${encodeURIComponent(projectId)}/deliverables`,
   )
-  return parseJsonResponse<DeliverableSummary[]>(response)
+  return parseApiResponse<DeliverableSummary[]>(response)
 }
 
 export async function getDeliverable(
@@ -236,7 +200,7 @@ export async function getDeliverable(
   const response = await fetch(
     `/api/deliverables/${encodeURIComponent(deliverableId)}`,
   )
-  return parseJsonResponse<Deliverable>(response)
+  return parseApiResponse<Deliverable>(response)
 }
 
 export async function createDeliverable(
@@ -247,11 +211,11 @@ export async function createDeliverable(
     `/api/projects/${encodeURIComponent(projectId)}/deliverables`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify(input),
     },
   )
-  return parseJsonResponse<Deliverable>(response)
+  return parseApiResponse<Deliverable>(response)
 }
 
 export async function updateDeliverable(
@@ -267,11 +231,11 @@ export async function updateDeliverable(
     `/api/deliverables/${encodeURIComponent(deliverableId)}`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify(input),
     },
   )
-  return parseJsonResponse<Deliverable>(response)
+  return parseApiResponse<Deliverable>(response)
 }
 
 export async function updateDeliverableStatus(
@@ -282,19 +246,19 @@ export async function updateDeliverableStatus(
     `/api/deliverables/${encodeURIComponent(deliverableId)}/status`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify({ status }),
     },
   )
-  return parseJsonResponse<Deliverable>(response)
+  return parseApiResponse<Deliverable>(response)
 }
 
 export async function deleteDeliverable(deliverableId: string): Promise<void> {
   const response = await fetch(
     `/api/deliverables/${encodeURIComponent(deliverableId)}`,
-    { method: "DELETE" },
+    { method: "DELETE", headers: buildApiHeaders(false), credentials: "include" },
   )
-  await expectOk(response)
+  await expectApiOk(response)
 }
 
 // --- Milestones -------------------------------------------------------------
@@ -303,7 +267,7 @@ export async function listMilestones(projectId: string): Promise<Milestone[]> {
   const response = await fetch(
     `/api/projects/${encodeURIComponent(projectId)}/milestones`,
   )
-  return parseJsonResponse<Milestone[]>(response)
+  return parseApiResponse<Milestone[]>(response)
 }
 
 export async function createMilestone(
@@ -314,11 +278,11 @@ export async function createMilestone(
     `/api/projects/${encodeURIComponent(projectId)}/milestones`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify(input),
     },
   )
-  return parseJsonResponse<Milestone>(response)
+  return parseApiResponse<Milestone>(response)
 }
 
 export async function updateMilestone(
@@ -329,19 +293,19 @@ export async function updateMilestone(
     `/api/milestones/${encodeURIComponent(milestoneId)}`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify(input),
     },
   )
-  return parseJsonResponse<Milestone>(response)
+  return parseApiResponse<Milestone>(response)
 }
 
 export async function deleteMilestone(milestoneId: string): Promise<void> {
   const response = await fetch(
     `/api/milestones/${encodeURIComponent(milestoneId)}`,
-    { method: "DELETE" },
+    { method: "DELETE", headers: buildApiHeaders(false), credentials: "include" },
   )
-  await expectOk(response)
+  await expectApiOk(response)
 }
 
 // --- Tasks ------------------------------------------------------------------
@@ -350,7 +314,7 @@ export async function listProjectTasks(projectId: string): Promise<Task[]> {
   const response = await fetch(
     `/api/projects/${encodeURIComponent(projectId)}/tasks`,
   )
-  return parseJsonResponse<Task[]>(response)
+  return parseApiResponse<Task[]>(response)
 }
 
 export async function createTask(
@@ -361,11 +325,11 @@ export async function createTask(
     `/api/milestones/${encodeURIComponent(milestoneId)}/tasks`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify(input),
     },
   )
-  return parseJsonResponse<Task>(response)
+  return parseApiResponse<Task>(response)
 }
 
 export async function updateTask(
@@ -374,17 +338,17 @@ export async function updateTask(
 ): Promise<Task> {
   const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: buildApiHeaders(), credentials: "include",
     body: JSON.stringify(input),
   })
-  return parseJsonResponse<Task>(response)
+  return parseApiResponse<Task>(response)
 }
 
 export async function deleteTask(taskId: string): Promise<void> {
   const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
     method: "DELETE",
   })
-  await expectOk(response)
+  await expectApiOk(response)
 }
 
 // --- Time logs --------------------------------------------------------------
@@ -393,7 +357,7 @@ export async function listTimeLogs(taskId: string): Promise<TimeLog[]> {
   const response = await fetch(
     `/api/tasks/${encodeURIComponent(taskId)}/time-logs`,
   )
-  return parseJsonResponse<TimeLog[]>(response)
+  return parseApiResponse<TimeLog[]>(response)
 }
 
 export async function createTimeLog(
@@ -404,19 +368,19 @@ export async function createTimeLog(
     `/api/tasks/${encodeURIComponent(taskId)}/time-logs`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify(input),
     },
   )
-  return parseJsonResponse<TimeLog>(response)
+  return parseApiResponse<TimeLog>(response)
 }
 
 export async function deleteTimeLog(timeLogId: string): Promise<void> {
   const response = await fetch(
     `/api/time-logs/${encodeURIComponent(timeLogId)}`,
-    { method: "DELETE" },
+    { method: "DELETE", headers: buildApiHeaders(false), credentials: "include" },
   )
-  await expectOk(response)
+  await expectApiOk(response)
 }
 
 export async function updateTimeLog(
@@ -431,11 +395,11 @@ export async function updateTimeLog(
     `/api/time-logs/${encodeURIComponent(timeLogId)}`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify(input),
     },
   )
-  return parseJsonResponse<TimeLog>(response)
+  return parseApiResponse<TimeLog>(response)
 }
 
 export async function getWeeklyTimesheet(
@@ -445,7 +409,7 @@ export async function getWeeklyTimesheet(
     ? `?weekStart=${encodeURIComponent(weekStart)}`
     : ""
   const response = await fetch(`/api/timesheet${query}`)
-  return parseJsonResponse<TimesheetWeek>(response)
+  return parseApiResponse<TimesheetWeek>(response)
 }
 
 export async function getProjectHoursSummary(
@@ -454,7 +418,7 @@ export async function getProjectHoursSummary(
   const response = await fetch(
     `/api/projects/${encodeURIComponent(projectId)}/hours-summary`,
   )
-  return parseJsonResponse<ProjectHoursSummary>(response)
+  return parseApiResponse<ProjectHoursSummary>(response)
 }
 
 // --- Versions ---------------------------------------------------------------
@@ -463,7 +427,7 @@ export async function listVersions(deliverableId: string): Promise<Version[]> {
   const response = await fetch(
     `/api/deliverables/${encodeURIComponent(deliverableId)}/versions`,
   )
-  return parseJsonResponse<Version[]>(response)
+  return parseApiResponse<Version[]>(response)
 }
 
 export async function listComments(
@@ -473,7 +437,7 @@ export async function listComments(
   const response = await fetch(
     `/api/deliverables/${encodeURIComponent(deliverableId)}/versions/${encodeURIComponent(versionLabel)}/comments`,
   )
-  return parseJsonResponse<Comment[]>(response)
+  return parseApiResponse<Comment[]>(response)
 }
 
 export async function listCommentsByVersionId(
@@ -482,22 +446,23 @@ export async function listCommentsByVersionId(
   const response = await fetch(
     `/api/comments?versionId=${encodeURIComponent(versionId)}`,
   )
-  return parseJsonResponse<Comment[]>(response)
+  return parseApiResponse<Comment[]>(response)
 }
 
 export async function createComment(input: {
   versionId: string
   timestamp: number
   body: string
-  author?: string
   annotation?: FrameAnnotation
 }): Promise<Comment> {
+  const { versionId, timestamp, body, annotation } = input
   const response = await fetch("/api/comments", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
+    headers: buildApiHeaders(),
+    credentials: "include",
+    body: JSON.stringify({ versionId, timestamp, body, annotation }),
   })
-  return parseJsonResponse<Comment>(response)
+  return parseApiResponse<Comment>(response)
 }
 
 export async function resolveComment(
@@ -508,19 +473,23 @@ export async function resolveComment(
     `/api/comments/${encodeURIComponent(commentId)}/resolve`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify({ resolved }),
     },
   )
-  return parseJsonResponse<Comment>(response)
+  return parseApiResponse<Comment>(response)
 }
 
 export async function deleteComment(commentId: string): Promise<void> {
   const response = await fetch(
     `/api/comments/${encodeURIComponent(commentId)}`,
-    { method: "DELETE" },
+    {
+      method: "DELETE",
+      headers: buildApiHeaders(false),
+      credentials: "include",
+    },
   )
-  await expectOk(response)
+  await expectApiOk(response)
 }
 
 export async function createCommentForVersion(
@@ -529,7 +498,6 @@ export async function createCommentForVersion(
   input: {
     timestamp: number
     body: string
-    author?: string
     annotation?: FrameAnnotation
   },
 ): Promise<Comment> {
@@ -537,11 +505,11 @@ export async function createCommentForVersion(
     `/api/deliverables/${encodeURIComponent(deliverableId)}/versions/${encodeURIComponent(versionLabel)}/comments`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify(input),
     },
   )
-  return parseJsonResponse<Comment>(response)
+  return parseApiResponse<Comment>(response)
 }
 
 export async function updateVersionLabel(
@@ -552,11 +520,11 @@ export async function updateVersionLabel(
     `/api/versions/${encodeURIComponent(versionId)}/label`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify({ label }),
     },
   )
-  return parseJsonResponse<Version>(response)
+  return parseApiResponse<Version>(response)
 }
 
 export async function updateVersionStatus(
@@ -567,11 +535,11 @@ export async function updateVersionStatus(
     `/api/versions/${encodeURIComponent(versionId)}/status`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify({ status }),
     },
   )
-  return parseJsonResponse<Version>(response)
+  return parseApiResponse<Version>(response)
 }
 
 export function uploadVersion(
@@ -602,10 +570,16 @@ export function uploadVersion(
       }
 
       try {
-        const body = JSON.parse(xhr.responseText) as { error?: string }
-        reject(new Error(humanizeHttpError(xhr.status, body.error)))
+        const body = JSON.parse(xhr.responseText) as unknown
+        if (isApiErrorEnvelope(body)) {
+          reject(new ApiError(xhr.status, body))
+          return
+        }
+
+        const fallback = (body as { error?: string } | null)?.error
+        reject(new Error(fallback ?? "Upload failed."))
       } catch {
-        reject(new Error(humanizeHttpError(xhr.status)))
+        reject(new Error("Upload failed."))
       }
     })
 
@@ -621,6 +595,11 @@ export function uploadVersion(
       "POST",
       `/api/deliverables/${encodeURIComponent(deliverableId)}/versions/${encodeURIComponent(label)}/upload`,
     )
+    xhr.withCredentials = true
+    const headers = buildApiHeaders(false) as Record<string, string>
+    for (const [key, value] of Object.entries(headers)) {
+      xhr.setRequestHeader(key, value)
+    }
     xhr.send(formData)
   })
 }
@@ -645,19 +624,19 @@ export async function listLeads(
 
   const query = params.toString()
   const response = await fetch(`/api/leads${query ? `?${query}` : ""}`)
-  return parseJsonResponse<Lead[]>(response)
+  return parseApiResponse<Lead[]>(response)
 }
 
 export async function getLead(id: string): Promise<LeadWithContactLog> {
   const response = await fetch(`/api/leads/${encodeURIComponent(id)}`)
-  return parseJsonResponse<LeadWithContactLog>(response)
+  return parseApiResponse<LeadWithContactLog>(response)
 }
 
 export async function listContactLog(leadId: string): Promise<ContactLog[]> {
   const response = await fetch(
     `/api/leads/${encodeURIComponent(leadId)}/log`,
   )
-  return parseJsonResponse<ContactLog[]>(response)
+  return parseApiResponse<ContactLog[]>(response)
 }
 
 export async function createContactLog(
@@ -668,11 +647,11 @@ export async function createContactLog(
     `/api/leads/${encodeURIComponent(leadId)}/log`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify(body),
     },
   )
-  return parseJsonResponse<ContactLog>(response)
+  return parseApiResponse<ContactLog>(response)
 }
 
 export async function deleteContactLog(
@@ -681,18 +660,18 @@ export async function deleteContactLog(
 ): Promise<void> {
   const response = await fetch(
     `/api/leads/${encodeURIComponent(leadId)}/log/${encodeURIComponent(logId)}`,
-    { method: "DELETE" },
+    { method: "DELETE", headers: buildApiHeaders(false), credentials: "include" },
   )
-  await expectOk(response)
+  await expectApiOk(response)
 }
 
 export async function createLead(body: CreateLeadInput): Promise<Lead> {
   const response = await fetch("/api/leads", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: buildApiHeaders(), credentials: "include",
     body: JSON.stringify(body),
   })
-  return parseJsonResponse<Lead>(response)
+  return parseApiResponse<Lead>(response)
 }
 
 export async function updateLead(
@@ -701,17 +680,17 @@ export async function updateLead(
 ): Promise<Lead> {
   const response = await fetch(`/api/leads/${encodeURIComponent(id)}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: buildApiHeaders(), credentials: "include",
     body: JSON.stringify(body),
   })
-  return parseJsonResponse<Lead>(response)
+  return parseApiResponse<Lead>(response)
 }
 
 export async function deleteLead(id: string): Promise<void> {
   const response = await fetch(`/api/leads/${encodeURIComponent(id)}`, {
     method: "DELETE",
   })
-  await expectOk(response)
+  await expectApiOk(response)
 }
 
 export interface ConvertLeadInput {
@@ -726,32 +705,32 @@ export async function convertLeadToClient(
     `/api/leads/${encodeURIComponent(id)}/convert`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify(body ?? {}),
     },
   )
-  return parseJsonResponse<Client>(response)
+  return parseApiResponse<Client>(response)
 }
 
 // --- Clients ----------------------------------------------------------------
 
 export async function listClients(): Promise<ClientListItem[]> {
   const response = await fetch("/api/clients")
-  return parseJsonResponse<ClientListItem[]>(response)
+  return parseApiResponse<ClientListItem[]>(response)
 }
 
 export async function getClient(id: string): Promise<ClientWithProjects> {
   const response = await fetch(`/api/clients/${encodeURIComponent(id)}`)
-  return parseJsonResponse<ClientWithProjects>(response)
+  return parseApiResponse<ClientWithProjects>(response)
 }
 
 export async function createClient(body: CreateClientInput): Promise<Client> {
   const response = await fetch("/api/clients", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: buildApiHeaders(), credentials: "include",
     body: JSON.stringify(body),
   })
-  return parseJsonResponse<Client>(response)
+  return parseApiResponse<Client>(response)
 }
 
 export async function updateClient(
@@ -760,10 +739,10 @@ export async function updateClient(
 ): Promise<Client> {
   const response = await fetch(`/api/clients/${encodeURIComponent(id)}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: buildApiHeaders(), credentials: "include",
     body: JSON.stringify(body),
   })
-  return parseJsonResponse<Client>(response)
+  return parseApiResponse<Client>(response)
 }
 
 export async function updateRetainerHours(
@@ -774,33 +753,33 @@ export async function updateRetainerHours(
     `/api/clients/${encodeURIComponent(id)}/retainer-hours`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify({ hoursLogged }),
     },
   )
-  return parseJsonResponse<ClientWithProjects>(response)
+  return parseApiResponse<ClientWithProjects>(response)
 }
 
 export async function deleteClient(id: string): Promise<void> {
   const response = await fetch(`/api/clients/${encodeURIComponent(id)}`, {
     method: "DELETE",
   })
-  await expectOk(response)
+  await expectApiOk(response)
 }
 
 export async function revertClientToLead(id: string): Promise<Lead> {
   const response = await fetch(
     `/api/clients/${encodeURIComponent(id)}/revert-to-lead`,
-    { method: "POST" },
+    { method: "POST", headers: buildApiHeaders(false), credentials: "include" },
   )
-  return parseJsonResponse<Lead>(response)
+  return parseApiResponse<Lead>(response)
 }
 
 // --- Services ---------------------------------------------------------------
 
 export async function listServices(): Promise<Service[]> {
   const response = await fetch("/api/services")
-  return parseJsonResponse<Service[]>(response)
+  return parseApiResponse<Service[]>(response)
 }
 
 export async function createService(
@@ -808,10 +787,10 @@ export async function createService(
 ): Promise<Service> {
   const response = await fetch("/api/services", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: buildApiHeaders(), credentials: "include",
     body: JSON.stringify(body),
   })
-  return parseJsonResponse<Service>(response)
+  return parseApiResponse<Service>(response)
 }
 
 export async function updateService(
@@ -820,17 +799,17 @@ export async function updateService(
 ): Promise<Service> {
   const response = await fetch(`/api/services/${encodeURIComponent(id)}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: buildApiHeaders(), credentials: "include",
     body: JSON.stringify(body),
   })
-  return parseJsonResponse<Service>(response)
+  return parseApiResponse<Service>(response)
 }
 
 export async function deleteService(id: string): Promise<void> {
   const response = await fetch(`/api/services/${encodeURIComponent(id)}`, {
     method: "DELETE",
   })
-  await expectOk(response)
+  await expectApiOk(response)
 }
 
 export async function getServiceProjectUsage(
@@ -839,7 +818,7 @@ export async function getServiceProjectUsage(
   const response = await fetch(
     `/api/services/${encodeURIComponent(id)}/usage`,
   )
-  return parseJsonResponse<ServiceProjectUsage>(response)
+  return parseApiResponse<ServiceProjectUsage>(response)
 }
 
 // --- Project services -------------------------------------------------------
@@ -850,7 +829,7 @@ export async function listProjectServices(
   const response = await fetch(
     `/api/projects/${encodeURIComponent(projectId)}/services`,
   )
-  return parseJsonResponse<ProjectServiceWithDetails[]>(response)
+  return parseApiResponse<ProjectServiceWithDetails[]>(response)
 }
 
 export async function addProjectService(
@@ -861,11 +840,11 @@ export async function addProjectService(
     `/api/projects/${encodeURIComponent(projectId)}/services`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify(input),
     },
   )
-  return parseJsonResponse<ProjectServiceWithDetails>(response)
+  return parseApiResponse<ProjectServiceWithDetails>(response)
 }
 
 export async function removeProjectService(
@@ -874,9 +853,9 @@ export async function removeProjectService(
 ): Promise<void> {
   const response = await fetch(
     `/api/projects/${encodeURIComponent(projectId)}/services/${encodeURIComponent(serviceId)}`,
-    { method: "DELETE" },
+    { method: "DELETE", headers: buildApiHeaders(false), credentials: "include" },
   )
-  await expectOk(response)
+  await expectApiOk(response)
 }
 
 export async function updateProjectService(
@@ -888,11 +867,11 @@ export async function updateProjectService(
     `/api/projects/${encodeURIComponent(projectId)}/services/${encodeURIComponent(serviceId)}`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify(input),
     },
   )
-  return parseJsonResponse<ProjectServiceWithDetails>(response)
+  return parseApiResponse<ProjectServiceWithDetails>(response)
 }
 
 // --- Invoices ---------------------------------------------------------------
@@ -903,20 +882,20 @@ export async function listProjectInvoices(
   const response = await fetch(
     `/api/projects/${encodeURIComponent(projectId)}/invoices`,
   )
-  return parseJsonResponse<InvoiceSummary[]>(response)
+  return parseApiResponse<InvoiceSummary[]>(response)
 }
 
 export async function createInvoice(projectId: string): Promise<InvoiceSummary> {
   const response = await fetch(
     `/api/projects/${encodeURIComponent(projectId)}/invoices`,
-    { method: "POST" },
+    { method: "POST", headers: buildApiHeaders(false), credentials: "include" },
   )
-  return parseJsonResponse<InvoiceSummary>(response)
+  return parseApiResponse<InvoiceSummary>(response)
 }
 
 export async function getInvoice(id: string): Promise<InvoiceWithPayments> {
   const response = await fetch(`/api/invoices/${encodeURIComponent(id)}`)
-  return parseJsonResponse<InvoiceWithPayments>(response)
+  return parseApiResponse<InvoiceWithPayments>(response)
 }
 
 export async function createInvoicePayment(
@@ -927,11 +906,11 @@ export async function createInvoicePayment(
     `/api/invoices/${encodeURIComponent(invoiceId)}/payments`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders(), credentials: "include",
       body: JSON.stringify(body),
     },
   )
-  return parseJsonResponse<CreateInvoicePaymentResponse>(response)
+  return parseApiResponse<CreateInvoicePaymentResponse>(response)
 }
 
 export function getInvoicePdfUrl(invoiceId: string): string {
@@ -939,12 +918,12 @@ export function getInvoicePdfUrl(invoiceId: string): string {
 }
 
 export async function downloadInvoicePdf(invoiceId: string): Promise<void> {
-  const response = await fetch(getInvoicePdfUrl(invoiceId))
+  const response = await fetch(getInvoicePdfUrl(invoiceId), {
+    credentials: "include",
+  })
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      error?: string
-    } | null
-    throw new Error(humanizeHttpError(response.status, body?.error))
+    await expectApiOk(response)
+    return
   }
 
   const blob = await response.blob()

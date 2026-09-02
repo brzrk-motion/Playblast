@@ -53,6 +53,7 @@ import {
   type ProjectSortField,
 } from "@/lib/projects"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { useCapability } from "@/hooks/use-capability"
 import type { Client } from "@/types/client"
 import type { ProjectSummary } from "@/types/project"
 
@@ -155,6 +156,8 @@ function ProjectCard({
 }
 
 export function ProjectsPage() {
+  const canCreateProjects = useCapability("projects.mutate")
+  const canArchiveProjects = useCapability("data.delete")
   const [searchParams, setSearchParams] = useSearchParams()
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [clients, setClients] = useState<Client[]>([])
@@ -320,10 +323,12 @@ export function ProjectsPage() {
             Every engagement, its budget, timeline, and deliverables.
           </p>
         </div>
+        {canCreateProjects ? (
         <Button onClick={() => setSheetOpen(true)}>
           <Plus />
           New Project
         </Button>
+        ) : null}
       </div>
 
       <Card>
@@ -414,10 +419,12 @@ export function ProjectsPage() {
                   Create your first project to start planning and reviewing work.
                 </p>
               </div>
+              {canCreateProjects ? (
               <Button onClick={() => setSheetOpen(true)}>
                 <Plus />
                 New Project
               </Button>
+              ) : null}
             </div>
           ) : filteredProjects.length === 0 ? (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-8 text-center">
@@ -455,12 +462,15 @@ export function ProjectsPage() {
                   onClientClick={setViewClientId}
                   showArchivedBadge={showingArchived || isProjectArchived(project)}
                   onArchive={
-                    showingArchived || isProjectArchived(project)
-                      ? undefined
-                      : setArchiveTarget
+                    canArchiveProjects &&
+                    !showingArchived &&
+                    !isProjectArchived(project)
+                      ? setArchiveTarget
+                      : undefined
                   }
                   onUnarchive={
-                    showingArchived || isProjectArchived(project)
+                    canArchiveProjects &&
+                    (showingArchived || isProjectArchived(project))
                       ? handleUnarchive
                       : undefined
                   }

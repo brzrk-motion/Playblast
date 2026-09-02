@@ -179,7 +179,10 @@ commentByIdRouter.post("/", requireCapability("comments.create"), (req, res) => 
   res.status(201).json(comment)
 })
 
-commentByIdRouter.patch("/:commentId/resolve", (req, res) => {
+commentByIdRouter.patch(
+  "/:commentId/resolve",
+  requireCapability("approval.mutate"),
+  (req, res) => {
   const commentId = getParam(req.params.commentId)
   const context = requireCommentStudio(req, res, commentId)
   if (!context) {
@@ -209,9 +212,10 @@ commentByIdRouter.patch("/:commentId/resolve", (req, res) => {
 
   const comment = updateComment(commentId, { resolved: req.body.resolved })
   res.json(comment)
-})
+  },
+)
 
-commentByIdRouter.patch("/:commentId", (req, res) => {
+commentByIdRouter.patch("/:commentId", requireCapability("comments.create"), (req, res) => {
   const commentId = getParam(req.params.commentId)
   const context = requireCommentStudio(req, res, commentId)
   if (!context) {
@@ -263,7 +267,7 @@ commentByIdRouter.patch("/:commentId", (req, res) => {
   res.json(comment)
 })
 
-commentByIdRouter.delete("/:commentId", (req, res) => {
+commentByIdRouter.delete("/:commentId", requireCapability("comments.create"), (req, res) => {
   const commentId = getParam(req.params.commentId)
   const context = requireCommentStudio(req, res, commentId)
   if (!context) {
