@@ -1,0 +1,6 @@
+export const BROWSER_QA_ADMIN_EMAIL = "admin@browser-qa.fixture"
+export const BROWSER_QA_ADMIN_PASSWORD = "browser qa admin password 99"
+export const BROWSER_QA_CREATIVE_EMAIL = "creative@browser-qa.fixture"
+export const BROWSER_QA_CREATIVE_PASSWORD = "browser qa creative password 99"
+export const BROWSER_QA_PROOFING_EMAIL = "proofing@browser-qa.fixture"
+export const BROWSER_QA_PROOFING_PASSWORD = "browser qa proofing password 99"

@@ -65,4 +65,13 @@ pass "secrets documentation exists"
 [[ -f docs/deployment/onboarding-walkthrough.md ]] || fail "onboarding walkthrough is missing"
 pass "onboarding walkthrough exists"
 
+[[ -f CHANGELOG.md ]] || fail "CHANGELOG.md is missing"
+pass "CHANGELOG.md exists"
+
+[[ -f SECURITY.md ]] || fail "SECURITY.md is missing"
+pass "SECURITY.md exists"
+
+[[ -f docs/release/README.md ]] || fail "docs/release/README.md is missing"
+pass "release documentation exists"
+
 echo "Deployment configuration validation passed."

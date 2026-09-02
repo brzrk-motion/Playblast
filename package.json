@@ -15,15 +15,20 @@
     "build": "npm run build -w shared && npm run build -w client && npm run build -w server",
     "lint": "npm run lint -w client",
     "test": "npm run test -w shared && npm run test -w server && npm run test -w client",
+    "audit:prod": "npm audit --omit=dev --audit-level=high",
     "build:deploy": "bash scripts/build-deploy.sh",
     "verify:backup-restore": "bash scripts/validate-backup-restore.sh",
     "verify:pilot-browser": "bash scripts/verify-pilot-browser.sh",
     "verify:deployment-config": "bash scripts/validate-deployment-config.sh",
     "verify:docker-compose": "bash scripts/validate-docker-compose.sh",
     "verify:docker-deployment": "bash scripts/verify-docker-deployment.sh",
+    "verify:secrets": "bash scripts/verify-secrets-in-repo.sh",
+    "verify:browser-qa": "bash scripts/verify-browser-qa.sh",
+    "verify:release-candidate": "bash scripts/verify-release-candidate.sh",
     "migrate": "npm run migrate -w server"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "concurrently": "^9.2.1"
   }
 }
