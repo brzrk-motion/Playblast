@@ -6,9 +6,10 @@
 **Commit:** `26e0fbe` (`chore: add pilot auth-boundary verification harness`)
 **Working tree:** clean at audit start
 
-## Implementation status correction (2026-09-02)
+## Implementation status correction (2026-09-03)
 
-**Branch:** `final-cleanup` (merged `development-mvp`)
+**Branch:** `development-mvp` (`c6eaa2e`, `chore: remove dead code and reconcile docs (#110)`)
+**Working tree:** clean
 
 Sections through **Repository evidence reviewed** below describe the **pre-MVP baseline** captured at audit start (shared-credential Basic Auth, no application accounts). Phases 1–8 on `development-mvp` delivered application sessions, first-run setup, studio profile, invitations/SMTP, role authorization, and self-hosted release hardening. Emergency bootstrap Basic Auth (`PLAYBLAST_EMERGENCY_BASIC_AUTH`) remains optional only before setup completes; normal access uses Playblast login sessions. See checked Phase tasks from Phase 1 onward for delivered behavior. Open integration gates (manual clean-install, cross-browser QA, adoption evidence) remain intentionally unchecked.
 
