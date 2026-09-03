@@ -1,20 +1,17 @@
 /**
- * Deterministic browser QA fallback when Playwright cannot launch (missing OS libs).
- * Validates production client artifacts and three-role session flows via fetch.
+ * Deterministic non-browser QA fallback (fetch + production bundle markers).
+ * Exposed separately via npm run verify:browser-qa:fallback — never masks Playwright failures.
  */
 import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import {
-  BROWSER_QA_ADMIN_EMAIL,
-  BROWSER_QA_ADMIN_PASSWORD,
-  BROWSER_QA_CREATIVE_EMAIL,
-  BROWSER_QA_CREATIVE_PASSWORD,
-  BROWSER_QA_PROOFING_EMAIL,
-  BROWSER_QA_PROOFING_PASSWORD,
+  E2E_ADMIN,
+  E2E_CREATIVE,
+  E2E_PROOFING,
 } from "./credentials.js"
 
-const baseUrl = process.env.PLAYBLAST_BASE_URL ?? "http://127.0.0.1:3099"
+const baseUrl = process.env.PLAYBLAST_BASE_URL ?? "http://127.0.0.1:3098"
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 
 function collectSetCookies(response: Response): string[] {
@@ -48,29 +45,31 @@ async function login(email: string, password: string) {
   }
 }
 
-async function expectSpaShell(path: string) {
-  const response = await fetch(`${baseUrl}${path}`)
+async function expectSpaShell(pathName: string) {
+  const response = await fetch(`${baseUrl}${pathName}`)
   if (!response.ok) {
-    throw new Error(`${path} returned ${response.status}`)
+    throw new Error(`${pathName} returned ${response.status}`)
   }
 
   const html = await response.text()
   if (!html.includes('<div id="root">') && !html.includes('id="root"')) {
-    throw new Error(`${path} did not return the Playblast SPA shell`)
+    throw new Error(`${pathName} did not return the Playblast SPA shell`)
   }
 }
 
 function expectClientBundleContains(needle: string) {
   const assetsDir = path.join(repoRoot, "client/dist/assets")
   const bundles = fs.readdirSync(assetsDir).filter((name) => name.endsWith(".js"))
-  const found = bundles.some((name) => fs.readFileSync(path.join(assetsDir, name), "utf8").includes(needle))
+  const found = bundles.some((name) =>
+    fs.readFileSync(path.join(assetsDir, name), "utf8").includes(needle),
+  )
   if (!found) {
     throw new Error(`client bundle missing expected marker: ${needle}`)
   }
 }
 
 async function expectApiStatus(
-  path: string,
+  pathName: string,
   cookies: string[],
   csrfToken: string,
   expected: number,
@@ -84,13 +83,13 @@ async function expectApiStatus(
     headers["Content-Type"] = "application/json"
   }
 
-  const response = await fetch(`${baseUrl}${path}`, {
+  const response = await fetch(`${baseUrl}${pathName}`, {
     method,
     headers,
     body: method === "GET" || method === "DELETE" ? undefined : JSON.stringify({ name: "QA Project" }),
   })
   if (response.status !== expected) {
-    throw new Error(`${method} ${path} returned ${response.status}, expected ${expected}`)
+    throw new Error(`${method} ${pathName} returned ${response.status}, expected ${expected}`)
   }
 }
 
@@ -100,13 +99,13 @@ async function main() {
   expectClientBundleContains("login-email")
   expectClientBundleContains("Permission denied")
 
-  const admin = await login(BROWSER_QA_ADMIN_EMAIL, BROWSER_QA_ADMIN_PASSWORD)
+  const admin = await login(E2E_ADMIN.email, E2E_ADMIN.password)
   await expectApiStatus("/api/users", admin.cookies, admin.csrfToken, 200)
 
-  const creative = await login(BROWSER_QA_CREATIVE_EMAIL, BROWSER_QA_CREATIVE_PASSWORD)
+  const creative = await login(E2E_CREATIVE.email, E2E_CREATIVE.password)
   await expectApiStatus("/api/users", creative.cookies, creative.csrfToken, 403)
 
-  const proofing = await login(BROWSER_QA_PROOFING_EMAIL, BROWSER_QA_PROOFING_PASSWORD)
+  const proofing = await login(E2E_PROOFING.email, E2E_PROOFING.password)
   await expectApiStatus("/api/clients", proofing.cookies, proofing.csrfToken, 403)
   await expectApiStatus("/api/projects", proofing.cookies, proofing.csrfToken, 403, "POST")
 

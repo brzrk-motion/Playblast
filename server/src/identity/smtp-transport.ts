@@ -1,4 +1,8 @@
+import fs from "node:fs"
+import path from "node:path"
+import { randomUUID } from "node:crypto"
 import type { SmtpTlsMode } from "@playblast/shared"
+import { isE2ETestRuntime } from "../e2e-runtime.js"
 
 export interface OutboundEmail {
   to: string
@@ -41,9 +45,41 @@ export function setSmtpTransport(transport: SmtpTransport | null): void {
   activeTransport = transport
 }
 
+/** E2E-only transport. The explicit test-mode guard prevents production misconfiguration. */
+function createCaptureTransport(captureDir: string): SmtpTransport {
+  const resolved = path.resolve(captureDir)
+  return {
+    async send(_config, message) {
+      fs.mkdirSync(resolved, { recursive: true })
+      const filename = `${Date.now()}-${randomUUID()}.json`
+      fs.writeFileSync(
+        path.join(resolved, filename),
+        JSON.stringify(
+          {
+            ...message,
+            capturedAt: new Date().toISOString(),
+          },
+          null,
+          2,
+        ),
+      )
+      return { accepted: true }
+    },
+  }
+}
+
 export function getSmtpTransport(): SmtpTransport {
   if (activeTransport) {
     return activeTransport
+  }
+
+  const captureDir = process.env.PLAYBLAST_SMTP_CAPTURE_DIR?.trim()
+  if (
+    captureDir &&
+    isE2ETestRuntime() &&
+    process.env.PLAYBLAST_E2E_TEST_MODE === "1"
+  ) {
+    return createCaptureTransport(captureDir)
   }
 
   return nodemailerTransport

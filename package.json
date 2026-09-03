@@ -24,6 +24,9 @@
     "verify:docker-deployment": "bash scripts/verify-docker-deployment.sh",
     "verify:secrets": "bash scripts/verify-secrets-in-repo.sh",
     "verify:browser-qa": "bash scripts/verify-browser-qa.sh",
+    "verify:browser-qa:fallback": "bash scripts/verify-browser-qa-fallback.sh",
+    "install:e2e": "playwright install chromium --with-deps",
+    "test:e2e": "bash scripts/run-e2e.sh",
     "verify:release-candidate": "bash scripts/verify-release-candidate.sh",
     "migrate": "npm run migrate -w server"
   },

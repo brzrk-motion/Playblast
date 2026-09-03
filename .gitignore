@@ -15,6 +15,7 @@ server/data/*
 deploy
 test-results
 playwright-report
+e2e/.runtime
 
 # Logs
 logs

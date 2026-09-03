@@ -1,19 +1,16 @@
 /**
- * Seeds a fresh Playblast instance for browser QA via API + local SQLite insert.
+ * Seeds a fresh Playblast instance for non-browser QA fallback via API + SQLite insert.
  * Uses fixture credentials only; never logs secret values.
  */
 import Database from "better-sqlite3"
 import { randomUUID } from "node:crypto"
 import {
-  BROWSER_QA_ADMIN_EMAIL,
-  BROWSER_QA_ADMIN_PASSWORD,
-  BROWSER_QA_CREATIVE_EMAIL,
-  BROWSER_QA_CREATIVE_PASSWORD,
-  BROWSER_QA_PROOFING_EMAIL,
-  BROWSER_QA_PROOFING_PASSWORD,
+  E2E_ADMIN,
+  E2E_CREATIVE,
+  E2E_PROOFING,
 } from "./credentials.js"
 
-const baseUrl = process.env.PLAYBLAST_BASE_URL ?? "http://127.0.0.1:3099"
+const baseUrl = process.env.PLAYBLAST_BASE_URL ?? "http://127.0.0.1:3098"
 const dbPath = process.env.DB_PATH
 
 function collectSetCookies(response: Response): string[] {
@@ -55,10 +52,10 @@ async function bootstrapAdmin() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      name: "Browser QA Admin",
-      email: BROWSER_QA_ADMIN_EMAIL,
-      password: BROWSER_QA_ADMIN_PASSWORD,
-      confirmPassword: BROWSER_QA_ADMIN_PASSWORD,
+      name: E2E_ADMIN.name,
+      email: E2E_ADMIN.email,
+      password: E2E_ADMIN.password,
+      confirmPassword: E2E_ADMIN.password,
     }),
   })
 
@@ -133,16 +130,16 @@ async function main() {
   await insertRoleUser(
     admin.studioId,
     "creative",
-    BROWSER_QA_CREATIVE_EMAIL,
-    BROWSER_QA_CREATIVE_PASSWORD,
-    "Browser QA Creative",
+    E2E_CREATIVE.email,
+    E2E_CREATIVE.password,
+    E2E_CREATIVE.name,
   )
   await insertRoleUser(
     admin.studioId,
     "proofing",
-    BROWSER_QA_PROOFING_EMAIL,
-    BROWSER_QA_PROOFING_PASSWORD,
-    "Browser QA Proofing",
+    E2E_PROOFING.email,
+    E2E_PROOFING.password,
+    E2E_PROOFING.name,
   )
 
   console.log("Browser QA fixture ready.")

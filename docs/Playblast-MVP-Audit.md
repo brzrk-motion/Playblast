@@ -497,7 +497,7 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Integration/verification
 
-- [ ] Complete fresh deployment → setup → login → logout → login again through the real browser UI.
+- [x] Complete fresh deployment → setup → login → logout → login again through the real browser UI.
 - [x] Verify Admin recovery works with and without SMTP and invalidates affected sessions.
 - [x] Verify concurrent setup attempts produce exactly one Admin and one successful setup state.
 - [x] Verify all role-restricted screens redirect or render safe forbidden states without leaking data.
@@ -653,7 +653,7 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Client/UI
 
-- [x] Run browser QA on supported desktop browsers for all three roles.
+- [ ] Run browser QA on supported desktop browsers for all three roles.
 - [ ] Verify responsive setup, login, Team, profile, review, upload, comparison, and error states.
 - [x] Verify no role can access hidden functionality through direct URLs or stale client state.
 - [x] Verify accessible labels, keyboard navigation, focus handling, and destructive-action confirmations on the MVP surfaces.
