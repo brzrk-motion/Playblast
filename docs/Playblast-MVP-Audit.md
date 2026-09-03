@@ -14,16 +14,14 @@ Sections through **Repository evidence reviewed** below describe the **pre-MVP b
 
 ## Executive summary
 
-Playblast is a technically substantial internal alpha with a working video-proofing loop. It is **not yet an MVP that can be released in front of studios**.
+Playblast now has the core studio-facing MVP implementation: application sessions, first-run setup, studio profile, invitations and SMTP configuration, server-enforced roles, studio ownership, the proofing workflow, and self-hosted deployment documentation.
 
-The current repository can create projects and deliverables, upload and stream video, add timestamped comments and frame annotations, compare versions, approve versions, download files, and manage a wider internal studio-operations surface. The current hardening branch also has deployment-wide HTTP Basic Auth, upload-path remediation, backup/restore verification, and an authenticated API smoke test.
-
-The central MVP gap is identity and studio ownership. Basic Auth protects the whole deployment with one shared credential; it is not an application account system. There is no first-run setup, studio profile, user table, password hashing, session management, invitation flow, email delivery, role/permission model, or studio-level data isolation. The UI still displays hard-coded `BRZRK Studio` and `admin@brzrk.com` values, and the profile route is a placeholder.
+The remaining release work is verification rather than the original identity vertical slice. Open gates include a clean-machine operator walkthrough, Docker/NAS checks, recovery and SMTP delivery checks, and independent adoption evidence. The broader CRM and studio-operations surfaces remain Admin-only deferred functionality.
 
 **Practical status:**
 
-- **Engineering readiness:** core proofing and persistence are substantially implemented; security/deployment hardening exists on this branch.
-- **MVP/release readiness:** blocked by application identity, studio onboarding, authorization/data isolation, invitation email, and self-hosted release UX/documentation.
+- **Engineering readiness:** core proofing, identity, authorization, persistence, and deployment hardening are implemented and covered by automated checks.
+- **MVP/release readiness:** pending the unchecked integration and independent-operator gates listed in Phases 7 and 8.
 - **Commercial validation:** none recorded in the repository. Passing tests are not evidence that studios want or will adopt Playblast.
 
 ## Scope of this MVP
@@ -82,7 +80,7 @@ The precise permission matrix must be explicit before implementation. “Read-on
 
 ## Repository evidence reviewed
 
-### Product and UI surface
+### Product and UI surface (baseline captured before Phases 1–8)
 
 - React 19/Vite client with routes for dashboard, projects, project overview, deliverable review, comparison, clients, services, timesheet, pipeline, capacity, and settings.
 - The `/profile` route renders a coming-soon placeholder.
@@ -90,7 +88,7 @@ The precise permission matrix must be explicit before implementation. “Read-on
 - Settings currently covers local browser preferences such as internal hourly cost and weekly capacity; it has no account, studio, team, password, invite, or email settings.
 - The client API wrapper contains project, deliverable, version, comment, client, lead, service, milestone, task, timesheet, and invoice operations. It has no auth, studio, user, invite, session, or profile API.
 
-### Server and persistence
+### Server and persistence (baseline captured before Phases 1–8)
 
 - Express serves the API and built client from one process.
 - SQLite via direct `better-sqlite3` access stores projects, deliverables, milestones, tasks, time logs, versions, comments, leads, clients, services, invoices, payments, and related data.
@@ -101,22 +99,13 @@ The precise permission matrix must be explicit before implementation. “Read-on
 - Video and download routes authorize only through the deployment-wide middleware; they do not check studio ownership or user permissions.
 - Project deletion recursively removes project data and its upload directory, but there is no studio-level deletion/export workflow.
 
-### Current authentication
+### Authentication baseline and delivered implementation
 
-`server/src/middleware/auth.ts` implements optional production HTTP Basic Auth using `PLAYBLAST_AUTH_USER` and `PLAYBLAST_AUTH_PASSWORD` environment variables.
+The baseline used optional production HTTP Basic Auth using `PLAYBLAST_AUTH_USER` and `PLAYBLAST_AUTH_PASSWORD`. The delivered implementation uses application sessions and first-run setup; `PLAYBLAST_EMERGENCY_BASIC_AUTH` remains an optional bootstrap-only boundary before setup completes.
 
 This is useful as a temporary private-deployment boundary, but it does not meet the MVP onboarding requirement:
 
-- one credential is shared by the whole studio;
-- there is no user identity inside the application;
-- there is no first-run account creation;
-- there is no password hashing or password-change flow;
-- there is no session lifecycle or logout;
-- there are no roles or permissions;
-- there is no invitation email or password creation link;
-- comments cannot reliably identify their author;
-- all authenticated users can reach all global API data;
-- browsers receive a Basic Auth prompt rather than a Playblast login screen.
+- These limitations describe the pre-MVP baseline, not the current implementation.
 
 The MVP should replace Basic Auth for normal application access with application accounts and secure sessions. Basic Auth may remain as a documented emergency/bootstrap control only if it does not create a second confusing credential system.
 
@@ -189,14 +178,13 @@ Sources: [Node.js SQLite documentation](https://nodejs.org/api/sqlite.html), [No
 
 ## Deployment and operations
 
-- Dockerfile builds client and server into a single Node 20 Alpine image.
+- Dockerfile builds client and server into a single Node 22 Alpine image.
 - `docker-compose.yml` persists `/app/uploads` and `/app/data` using named volumes.
 - README documents Synology Container Manager deployment and a bind-mount variation.
 - `/health` is public; application/static/API/video routes are protected by Basic Auth when production credentials are configured.
 - Database and upload backup/restore script exists and passed its filesystem gate.
 - Container-volume/NAS restore was not verified here because Docker is unavailable in the audit environment.
-- SMTP/email delivery is not configured or documented.
-- There is no first-run setup state in the deployment, no admin recovery procedure, and no documented secret/session key configuration.
+- SMTP/email delivery, first-run setup, admin recovery, and secret/session configuration are documented and implemented; independent deployment verification remains open.
 
 ## Email delivery strategy
 
@@ -216,7 +204,7 @@ This preserves the self-hosted model: each studio owns its email transport just 
 1. Let the studio use its existing SMTP service where possible: Google Workspace, Microsoft 365, a company mail server, or its business email provider.
 2. Support generic SMTP configuration rather than a provider-specific API integration.
 3. Require the admin to test SMTP delivery before enabling user invitations.
-4. Store SMTP credentials only in the studio’s deployment configuration or an explicitly local secret store; never send them to brzrk or commit them to the repository.
+4. Store SMTP credentials encrypted in the local SQLite database; never send them to brzrk or commit them to the repository.
 5. Make the sender identity and instance/base URL explicit so invite links are usable.
 6. Treat delivery failure as a visible configuration/error state rather than reporting a successful invite.
 7. Keep Mailpit as the local development and automated-test transport; it captures mail and does not deliver production email.
@@ -259,7 +247,7 @@ Playblast is responsible for:
 - displaying delivery success/failure accurately;
 - providing documentation and a test-email action.
 
-The initial MVP must not promise that James will configure SMTP, troubleshoot provider accounts, repair deliverability, resend failed mail manually, or provide an alternate support channel.
+The initial MVP must not promise that project maintainers will configure SMTP, troubleshoot provider accounts, repair deliverability, resend failed mail manually, or provide an alternate support channel.
 
 ### Onboarding implications
 
@@ -271,7 +259,7 @@ The first-run flow does not need email to create the initial admin or studio pro
 4. The Team invite action becomes available only after a successful test, unless the admin explicitly chooses to defer invitations.
 5. Each invite email includes the studio name, recipient identity, instance URL, one-time acceptance link, expiration, and a statement that the studio operates its own Playblast instance.
 
-If SMTP is not configured, the instance may still be used by the initial admin and existing members, but it must not silently claim that invitations were sent. A copyable invite-link fallback should be considered only if it does not weaken token security or turn James into the delivery mechanism.
+If SMTP is not configured, the instance may still be used by the initial admin and existing members, but it must not silently claim that invitations were sent. A copyable invite-link fallback should be considered only if it does not weaken token security or turn maintainers into the delivery mechanism.
 
 ### Email MVP acceptance criteria
 
@@ -315,25 +303,27 @@ All commands were run from `/workspace/playblast` on the audited branch.
 - No visual QA, clean-machine installation, email delivery test, account onboarding test, invite acceptance test, multi-user authorization test, or external studio workflow was performed.
 - The branch is `feat/playblast-pilot-hardening`, not `main`; the audit describes this branch’s state.
 
-## MVP gap assessment
+## MVP gap assessment (historical baseline)
+
+The following blockers describe the pre-MVP baseline and are retained as an implementation record. Phases 1–8 below record which work was subsequently delivered; the remaining release gates are listed there.
 
 ### Critical blockers
 
-1. **Application identity and first-run bootstrap do not exist.**
-2. **Studio entity/profile does not exist.**
-3. **Users, password credentials, sessions, logout, and recovery do not exist.**
-4. **Invitation tokens, email delivery, invite acceptance, and password creation do not exist.**
-5. **Studio-level ownership and authorization do not exist.** Existing routes expose one global data set to any deployment-authenticated request.
-6. **The requested self-hosted onboarding flow is absent.** There is only a technical deployment guide followed by a shared Basic Auth prompt.
+1. **Application identity and first-run bootstrap did not exist.**
+2. **Studio entity/profile did not exist.**
+3. **Users, password credentials, sessions, logout, and recovery did not exist.**
+4. **Invitation tokens, email delivery, invite acceptance, and password creation did not exist.**
+5. **Studio-level ownership and authorization did not exist.** Existing routes exposed one global data set to any deployment-authenticated request.
+6. **The requested self-hosted onboarding flow was absent.** There was only a technical deployment guide followed by a shared Basic Auth prompt.
 
 ### High-priority blockers
 
-7. **Existing data model has no studio ownership columns or migration strategy.** Every project, client, lead, service, invoice, task, version, comment, and upload path must be assigned to the studio boundary.
-8. **Role authorization is not implemented.** The audit now defines `admin`, `creative`, and `proofing`, but the repository has no persisted roles or server-enforced permission matrix yet. The two policy decisions still requiring explicit confirmation are Creative approval rights and Proofing downloads.
-9. **Email configuration and delivery are absent.** Production invites require SMTP/provider configuration, safe secret handling, delivery errors, and a development/test transport.
-10. **Client identity is not authoritative.** Comment author names are client-provided; comments need authenticated user identity while preserving an optional display name/history policy.
-11. **Account and studio UI are absent.** The app has no login, setup wizard, team management, invite status, profile, or logout surfaces.
-12. **Release documentation describes Basic Auth/private pilot behavior.** It needs to describe first-run setup, application accounts, email prerequisites, recovery, and the no-support boundary.
+7. **Existing data model had no studio ownership columns or migration strategy.**
+8. **Role authorization was not implemented.**
+9. **Email configuration and delivery were absent.**
+10. **Client identity was not authoritative.**
+11. **Account and studio UI were absent.**
+12. **Release documentation described Basic Auth/private pilot behavior.**
 
 ### Medium-priority MVP hardening
 
@@ -351,7 +341,7 @@ All commands were run from `/workspace/playblast` on the audited branch.
 
 ## Target onboarding experience
 
-This is the required Home Assistant-like self-hosted flow. It should work from a fresh deployment without James or a developer performing setup.
+This is the required Home Assistant-like self-hosted flow. It should work from a fresh deployment without a project maintainer or developer performing setup.
 
 ### A. Install and open
 
@@ -619,7 +609,7 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Server/API and deployment
 
-- [x] Upgrade the current Node 20 runtime to a supported Node LTS baseline before release.
+- [x] Upgrade the pre-MVP Node 20 runtime to a supported Node LTS baseline before release.
 - [x] Update Dockerfile, Compose, health checks, environment validation, and documented NAS/Linux installation.
 - [x] Define application Admin versus host/operator responsibilities for Docker, NAS, networking, HTTPS/VPN, storage, backups, upgrades, and recovery.
 - [x] Document Drizzle/legacy migration ordering, backup-before-migration, interrupted migration behavior, and unsupported downgrade behavior.
@@ -636,12 +626,12 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Integration/verification
 
-- [ ] Complete a clean-machine operator walkthrough using only public documentation and no James/developer intervention.
+- [ ] Complete a clean-machine operator walkthrough using only public documentation and no maintainer/developer intervention.
 - [ ] Run Docker Compose and documented Synology/Linux installation checks.
 - [ ] Run clean install, upgrade, backup, restore, recovery, SMTP capture/delivery, and media tests.
 - [ ] Verify no centralized brzrk network dependency or credential is required in an offline/self-hosted run.
 
-**Phase exit:** a technically capable studio can install, configure, onboard, operate, recover, and restore Playblast independently.
+**Phase exit:** a technically capable studio can install, configure, onboard, operate, recover, and restore Playblast independently. The remaining unchecked verification tasks are the evidence required to close this gate.
 
 ### Phase 8 — Release candidate, adoption, and funding gate
 
@@ -686,10 +676,10 @@ Do not start by building SaaS tenancy, billing, support tooling, or more studio-
 
 *(Reflects audit-start baseline; Phases 1–8 delivery supersede the gaps above. See implementation status correction and checked Phase tasks.)*
 
-Playblast is closer to a **feature-rich proofing alpha with deployment hardening** than to a studio-ready MVP. The proofing mechanics are a credible foundation, and the current automated checks are strong. The remaining work is not primarily more proofing features; it is converting a shared-credential single-instance tool into a self-hosted studio application with a first-run experience, named users, invitations, authorization, and release-grade operational documentation.
+Playblast is a **self-hosted MVP release candidate** with a credible proofing workflow, named users, invitations, server-enforced authorization, and operational documentation. The remaining work is independent verification of the documented install, recovery, delivery, and adoption paths.
 
-The next engineering milestone is a vertical slice of the requested onboarding flow:
+The key release-candidate validation flow is:
 
 > fresh Docker data → first-run admin account → login → studio name/avatar → invite one member email → member creates password → member logs in → both complete one isolated proofing review cycle.
 
-Until that slice passes on a clean instance and the two-studio deny-path tests pass, Playblast should remain an internal alpha rather than being presented to studios as an MVP.
+The two-studio deny-path tests pass. Playblast can be presented as a release candidate while the clean-install, deployment, and adoption gates remain open.

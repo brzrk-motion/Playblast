@@ -27,7 +27,7 @@ Source of truth: `@playblast/shared` (`RESPONSIVE_BREAKPOINTS` in `ui-states.ts`
 - Below breakpoint: stack players vertically with shared transport controls.
 - Comment panel collapses to drawer below player on tablet.
 
-### Team (Phase 4)
+### Team
 
 - Full table at `teamTableMinWidth` and above.
 - Below: card list per member/invite with role badge and status.

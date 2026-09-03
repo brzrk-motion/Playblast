@@ -122,7 +122,3 @@ export const API_ROUTES: ApiRouteDefinition[] = [
   { method: "GET", path: "/api/invoices/:invoiceId/pdf", access: "admin", requiredCapabilities: ["projects.view"] },
   { method: "GET", path: "/api/invoices/:invoiceId/download", access: "admin", requiredCapabilities: ["downloads.read"] },
 ]
-
-export function getApiRoutes(): ApiRouteDefinition[] {
-  return API_ROUTES
-}

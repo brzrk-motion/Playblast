@@ -1,6 +1,6 @@
 # Phase 0 — Scope, contracts, and design system
 
-Phase 0 establishes the executable contracts and documentation that Phase 1+ implementation must follow. No application auth, setup screens, or route guards ship in this phase.
+Phase 0 establishes the executable contracts and documentation that later implementation follows. The phase description is historical; application auth, setup screens, and route guards were delivered in later phases.
 
 ## Artifacts
 

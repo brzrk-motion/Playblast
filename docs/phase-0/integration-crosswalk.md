@@ -1,6 +1,6 @@
 # Integration crosswalk
 
-Verifies server capability contract, client route map, and navigation matrix agree before Phase 1.
+Verifies that the server capability contract, client route map, and navigation matrix remain aligned after implementation.
 
 ## Automated checks
 
@@ -20,10 +20,10 @@ Run: `npm run test`
 | `projects.view` | `/`, `/projects`, project overview |
 | `review.play` | deliverable review |
 | `review.compare` | compare |
-| `projects.mutate` | project/deliverable create/edit (Phase 5 enforcement) |
-| `media.upload` | upload endpoints and UI (Phase 5) |
-| `team.manage` | `/team` (Phase 4) |
-| `setup.complete` | `/setup*` (Phase 2) |
+| `projects.mutate` | project/deliverable create/edit (server-enforced) |
+| `media.upload` | upload endpoints and UI (server-enforced) |
+| `team.manage` | `/team` (Admin-only) |
+| `setup.complete` | `/setup*` (setup lifecycle) |
 
 ## Navigation ↔ route alignment
 
@@ -31,6 +31,6 @@ Every `visible` nav item maps to an `APP_ROUTES` entry with equal or broader acc
 
 ## Fixtures
 
-`FIXTURE_USERS`, `FIXTURE_SESSIONS`, and `FIXTURE_INVITATIONS` in `@playblast/shared` provide Admin, Creative, and Proofing identities for Phase 1+ tests.
+`FIXTURE_USERS`, `FIXTURE_SESSIONS`, and `FIXTURE_INVITATIONS` in `@playblast/shared` document the contract fixtures for Admin, Creative, and Proofing identities. Runtime E2E setup creates isolated database fixtures independently.
 
 Test matrices: `buildCapabilityTestMatrix()`, `buildRouteTestMatrix()`, `buildNavTestMatrix()`.

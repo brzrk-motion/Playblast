@@ -42,4 +42,4 @@ All MVP auth, setup, team, and invitation endpoints return:
 
 ## Legacy routes
 
-Existing proofing routes continue returning `{ error: string }` until Phase 5 migration. New identity/setup routes adopt the full envelope from Phase 1.
+Legacy proofing routes may retain `{ error: string }` for compatibility. New and identity/setup routes use the canonical error envelope.

@@ -164,6 +164,8 @@ The `projects` table already stores proofing metadata (`name`, `status`, `budget
 | Dev seed data | `server/data/seed-client-management.sql` |
 | Seed loader script | `scripts/seed-client-management.js` |
 
+Later client-management migrations extend this foundation for services, project services, service details and overrides, tasks, time logs, and studio ownership. See `server/src/storage/migrations/` for the complete ordered set.
+
 ### Applying migrations
 
 Migrations run automatically on server startup via `initDatabase()`. For manual application against an existing database:
@@ -191,4 +193,4 @@ Lead (status: new → … → negotiating)
         3. Optionally set projects.clientId on new/existing projects
 ```
 
-Repository functions and HTTP routes for leads/clients are out of scope for this schema issue and will be added in follow-up work.
+Repository functions and HTTP routes for leads, clients, services, and timesheets are implemented under `server/src/routes/` and covered by the server data-model tests. The migration files and tests are the authoritative record for schema evolution beyond this foundational reference.
