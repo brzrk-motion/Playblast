@@ -93,7 +93,6 @@ npm run start -w server    # Run compiled server (after build)
 - `Dockerfile` builds both workspaces on Node 22 Alpine and runs a single Node process on port `3000`.
 - `docker-compose.yml` requires `SESSION_SECRET`; see `docker-compose.env.example`.
 - Operator guides live under `docs/deployment/`.
-- `scripts/validate-upload-volume.sh` smoke-tests Docker volume persistence (requires Docker).
 - `scripts/validate-backup-restore.sh` (`npm run verify:backup-restore`) verifies filesystem backup → wipe → restore of `data/` + `uploads/` without Docker; does not exercise Hyper Backup or container volumes.
 - `scripts/validate-deployment-config.sh` (`npm run verify:deployment-config`) static Dockerfile/Compose/docs checks.
 - `scripts/validate-docker-compose.sh` (`npm run verify:docker-compose`) renders Compose config (skipped without Docker).

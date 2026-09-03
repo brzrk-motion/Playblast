@@ -17,7 +17,7 @@ Confirmed: the following have **no required client or server surface** in the MV
 The repository contains CRM/finance routes (`/clients`, `/pipeline`, `/services`, `/timesheet`, `/capacity`) from the internal alpha. For MVP:
 
 - **Decision:** Admin-only; hidden from Creative and Proofing navigation.
-- **Enforcement:** Server authorization in Phase 5; navigation hidden in Phase 0 contract.
+- **Enforcement:** Server authorization and navigation restrictions are implemented; this document records the MVP policy.
 - Creative and Proofing users access proofing through Projects only.
 
 ## Basic Auth (historical pilot boundary)

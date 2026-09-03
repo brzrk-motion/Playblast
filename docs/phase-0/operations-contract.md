@@ -8,7 +8,7 @@ The studio owns:
 
 - SQLite database file
 - Uploaded media and studio avatars
-- SMTP credentials in local deployment configuration
+- SMTP credentials encrypted in the local SQLite database
 - Session and invitation token hashes
 
 Playblast does not host studio media, plaintext passwords, invite tokens, or SMTP secrets centrally.

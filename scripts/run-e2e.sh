@@ -19,7 +19,6 @@ export PLAYBLAST_E2E_PORT="${PLAYBLAST_E2E_PORT:-3199}"
 export PLAYBLAST_BASE_URL="http://127.0.0.1:${PLAYBLAST_E2E_PORT}"
 
 step "Build production artifacts"
-npm run build -w shared
 npm run build
 
 step "Type-check Playwright suite"

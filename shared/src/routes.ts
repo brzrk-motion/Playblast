@@ -47,10 +47,6 @@ export const APP_ROUTES: AppRouteDefinition[] = [
   { path: "/session-expired", name: "Session expired", access: "public", requiredCapabilities: [], implemented: true },
 ]
 
-export function getRouteDefinition(path: string): AppRouteDefinition | undefined {
-  return APP_ROUTES.find((route) => route.path === path)
-}
-
 export function getClientRoutes(): AppRouteDefinition[] {
   return APP_ROUTES.filter((route) => route.path !== "/health")
 }
@@ -70,22 +66,5 @@ export function canRoleAccessRoute(role: UserRole, route: AppRouteDefinition): b
       return role === "admin" || role === "creative" || role === "proofing"
     default:
       return false
-  }
-}
-
-export function getMinimumRoleForRoute(route: AppRouteDefinition): UserRole | "public" {
-  switch (route.access) {
-    case "public":
-    case "setup":
-      return "public"
-    case "admin":
-      return "admin"
-    case "creative":
-      return "creative"
-    case "proofing":
-    case "authenticated":
-      return "proofing"
-    default:
-      return "public"
   }
 }
