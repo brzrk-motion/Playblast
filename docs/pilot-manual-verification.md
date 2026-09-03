@@ -69,7 +69,7 @@ npm run verify:deployment-config
 **Manual / external gates** (documented in [docs/release/README.md](release/README.md)):
 
 - [ ] Cross-browser desktop QA (Firefox, Safari, Edge) on a clean instance.
-- [ ] Clean-machine install from [deployment docs](deployment/README.md) only.
+- [ ] Clean-machine install from [deployment docs](deployment/index.md) only.
 - [ ] Live SMTP invitation delivery to a real mailbox (operator relay).
 
 ---

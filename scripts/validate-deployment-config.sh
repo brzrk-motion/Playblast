@@ -63,7 +63,7 @@ if (!pkg.engines.node.includes('22')) {
 " || fail "package.json engines.node must require Node 22+"
 pass "package.json engines.node requires Node 22+"
 
-[[ -f docs/deployment/README.md ]] || fail "docs/deployment/README.md is missing"
+[[ -f docs/deployment/index.md ]] || fail "docs/deployment/index.md is missing"
 pass "deployment documentation index exists"
 
 [[ -f docs/deployment/operator-responsibilities.md ]] || fail "operator responsibilities doc is missing"

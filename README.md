@@ -39,7 +39,7 @@ docker compose up -d --build
 
 Open `http://<host>:3000` and complete first-run setup (admin account → studio profile → team invites).
 
-**Full guides:** [docs/deployment/README.md](docs/deployment/README.md)
+**Full guides:** [docs/deployment/index.md](docs/deployment/index.md)
 
 | Topic | Document |
 |-------|----------|
