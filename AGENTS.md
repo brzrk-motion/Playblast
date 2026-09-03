@@ -4,6 +4,15 @@
 
 Playblast is an internal video proofing tool for BRZRK — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work.
 
+## Documentation site
+
+The documentation site lives in `docs-site/` and is built with VitePress. Its public Markdown source lives in `docs/`; `docs-site/` contains the site configuration and publishing toolchain.
+
+- When a code, configuration, deployment, API, workflow, or user-facing behavior change affects the documentation, update the relevant files under `docs/` in the same task.
+- Run `npm run docs:build` after documentation changes to verify the site builds successfully.
+- Use `npm run docs:dev` for local documentation development and `npm run docs:preview` to preview the production build.
+- The documentation site is published independently to GitHub Pages and is not included in the Playblast Docker image.
+
 ## MVP north star and source of truth
 
 `docs/Playblast-MVP-Audit.md` is the authoritative product and implementation brief for the studio-facing MVP. Treat it as the project Bible and north star when planning, implementing, reviewing, or sequencing work.
