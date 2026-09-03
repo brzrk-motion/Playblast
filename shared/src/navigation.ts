@@ -78,7 +78,7 @@ export const NAV_ITEMS: NavItemDefinition[] = [
     url: "/team",
     section: "main",
     visibility: { admin: "visible", creative: "hidden", proofing: "hidden" },
-    notes: "Phase 4 screen; Admin-only.",
+    notes: "Admin-only; includes SMTP configuration.",
   },
   {
     id: "settings",
@@ -86,7 +86,7 @@ export const NAV_ITEMS: NavItemDefinition[] = [
     url: "/settings",
     section: "secondary",
     visibility: { admin: "visible", creative: "visible", proofing: "visible" },
-    notes: "Personal/browser prefs; studio SMTP is Admin-only when implemented.",
+    notes: "Personal/browser prefs; studio SMTP is on Team (Admin-only).",
   },
   {
     id: "profile",

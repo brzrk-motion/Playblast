@@ -6,6 +6,12 @@
 **Commit:** `26e0fbe` (`chore: add pilot auth-boundary verification harness`)
 **Working tree:** clean at audit start
 
+## Implementation status correction (2026-09-02)
+
+**Branch:** `final-cleanup` (merged `development-mvp`)
+
+Sections through **Repository evidence reviewed** below describe the **pre-MVP baseline** captured at audit start (shared-credential Basic Auth, no application accounts). Phases 1–8 on `development-mvp` delivered application sessions, first-run setup, studio profile, invitations/SMTP, role authorization, and self-hosted release hardening. Emergency bootstrap Basic Auth (`PLAYBLAST_EMERGENCY_BASIC_AUTH`) remains optional only before setup completes; normal access uses Playblast login sessions. See checked Phase tasks from Phase 1 onward for delivered behavior. Open integration gates (manual clean-install, cross-browser QA, adoption evidence) remain intentionally unchecked.
+
 ## Executive summary
 
 Playblast is a technically substantial internal alpha with a working video-proofing loop. It is **not yet an MVP that can be released in front of studios**.
@@ -677,6 +683,8 @@ The following execution view is the implementation order for the detailed backlo
 Do not start by building SaaS tenancy, billing, support tooling, or more studio-management features. The MVP’s hard problem is making one self-hosted studio instance safe, understandable, and usable by multiple named accounts without founder intervention.
 
 ## Audit conclusion
+
+*(Reflects audit-start baseline; Phases 1–8 delivery supersede the gaps above. See implementation status correction and checked Phase tasks.)*
 
 Playblast is closer to a **feature-rich proofing alpha with deployment hardening** than to a studio-ready MVP. The proofing mechanics are a credible foundation, and the current automated checks are strong. The remaining work is not primarily more proofing features; it is converting a shared-credential single-instance tool into a self-hosted studio application with a first-run experience, named users, invitations, authorization, and release-grade operational documentation.
 

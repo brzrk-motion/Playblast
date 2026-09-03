@@ -22,10 +22,7 @@ export interface AppRouteDefinition {
   notes?: string
 }
 
-/**
- * Canonical route map covering current routes and planned MVP auth/setup surfaces.
- * `implemented: false` routes are contract placeholders for Phase 1+ work.
- */
+/** Canonical client route map and access classification for the MVP shell. */
 export const APP_ROUTES: AppRouteDefinition[] = [
   { path: "/health", name: "Health check", access: "public", requiredCapabilities: [], implemented: true, notes: "Server-only; not a client route." },
   { path: "/login", name: "Login", access: "public", requiredCapabilities: [], implemented: true },
@@ -39,7 +36,7 @@ export const APP_ROUTES: AppRouteDefinition[] = [
   { path: "/projects/:projectId/deliverables/:deliverableId", name: "Deliverable review", access: "authenticated", requiredCapabilities: ["review.play"], implemented: true },
   { path: "/projects/:projectId/deliverables/:deliverableId/compare", name: "Version compare", access: "authenticated", requiredCapabilities: ["review.compare"], implemented: true },
   { path: "/team", name: "Team", access: "admin", requiredCapabilities: ["team.manage"], implemented: true },
-  { path: "/settings", name: "Settings", access: "authenticated", requiredCapabilities: ["studio.view"], implemented: true, notes: "Browser-local prefs today; studio SMTP moves to Admin settings in Phase 4." },
+  { path: "/settings", name: "Settings", access: "authenticated", requiredCapabilities: ["studio.view"], implemented: true, notes: "Browser-local prefs; studio SMTP is on Team (Admin-only)." },
   { path: "/profile", name: "Profile", access: "authenticated", requiredCapabilities: ["studio.view"], implemented: true },
   { path: "/clients", name: "Clients", access: "admin", requiredCapabilities: ["projects.view"], implemented: true, notes: "Deferred CRM surface; Admin-only in MVP." },
   { path: "/pipeline", name: "Pipeline", access: "admin", requiredCapabilities: ["projects.view"], implemented: true, notes: "Deferred CRM surface; Admin-only in MVP." },

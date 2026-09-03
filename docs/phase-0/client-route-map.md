@@ -13,15 +13,21 @@ Source of truth: `@playblast/shared` (`routes.ts`).
 | `creative` | Admin or Creative |
 | `proofing` | All roles (review surfaces) |
 
-## Implemented routes (current branch)
+## Routes
 
 | Path | Access | Capabilities |
 |------|--------|--------------|
+| `/login` | public | — |
+| `/setup` | setup | `setup.complete` |
+| `/setup/studio` | setup | `setup.complete`, `studio.manage` |
+| `/setup/complete` | setup | `setup.complete` |
+| `/invite/:token` | public | — |
 | `/` | authenticated | `projects.view` |
 | `/projects` | authenticated | `projects.view` |
 | `/projects/:projectId` | authenticated | `projects.view` |
 | `/projects/:projectId/deliverables/:deliverableId` | authenticated | `review.play` |
 | `/projects/:projectId/deliverables/:deliverableId/compare` | authenticated | `review.compare` |
+| `/team` | admin | `team.manage` |
 | `/settings` | authenticated | `studio.view` |
 | `/profile` | authenticated | `studio.view` |
 | `/clients` | admin | `projects.view` |
@@ -29,18 +35,7 @@ Source of truth: `@playblast/shared` (`routes.ts`).
 | `/services` | admin | `projects.view` |
 | `/timesheet` | admin | `projects.view` |
 | `/capacity` | admin | `projects.view` |
+| `/forbidden` | public | — |
+| `/session-expired` | public | — |
 
-## Planned routes (Phase 1+)
-
-| Path | Access |
-|------|--------|
-| `/login` | public |
-| `/setup` | setup |
-| `/setup/studio` | setup |
-| `/setup/complete` | setup |
-| `/invite/:token` | public |
-| `/team` | admin |
-| `/forbidden` | public |
-| `/session-expired` | public |
-
-Route guards and screens are implemented in Phase 1–4; this document is the contract they must follow.
+Route guards and screens implement this contract; navigation visibility for CRM surfaces is Admin-only per `navigation.ts`.

@@ -4,9 +4,9 @@
  */
 export const PLATFORM_BOUNDARIES = {
   node: {
-    minimum: "20.19.0",
-    dockerImage: "node:20-alpine",
-    releaseTarget: "Upgrade to supported Node LTS before Phase 7 release.",
+    minimum: "22.12.0",
+    dockerImage: "node:22-alpine",
+    releaseTarget: "Node 22 LTS (see package.json engines and Dockerfile).",
   },
   docker: {
     required: true,
