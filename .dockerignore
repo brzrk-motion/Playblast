@@ -30,3 +30,4 @@ docker-compose.yml
 *.local
 AGENTS.md
 client/eslint.config.js
+docs-site

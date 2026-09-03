@@ -28,7 +28,10 @@
     "install:e2e": "playwright install chromium --with-deps",
     "test:e2e": "bash scripts/run-e2e.sh",
     "verify:release-candidate": "bash scripts/verify-release-candidate.sh",
-    "migrate": "npm run migrate -w server"
+    "migrate": "npm run migrate -w server",
+    "docs:dev": "npm --prefix docs-site run dev",
+    "docs:build": "npm --prefix docs-site run build",
+    "docs:preview": "npm --prefix docs-site run preview"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",

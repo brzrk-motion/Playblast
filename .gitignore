@@ -44,3 +44,7 @@ lerna-debug.log*
 
 # Vite
 *.local
+
+# Documentation site build output
+docs-site/.vitepress/cache
+docs-site/.vitepress/dist
