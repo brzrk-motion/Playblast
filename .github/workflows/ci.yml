@@ -198,7 +198,7 @@ jobs:
         run: npm run verify:backup-restore
 
   browser-qa:
-    name: Browser QA (Chromium)
+    name: Browser / Playwright E2E
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -215,8 +215,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run browser QA
-        run: npm run verify:browser-qa
+      - name: Install Playwright Chromium with OS deps
+        run: npx playwright install chromium --with-deps
+
+      - name: Run full E2E suite
+        run: npm run test:e2e
+        env:
+          CI: "true"
 
   docker-build:
     name: Docker image build

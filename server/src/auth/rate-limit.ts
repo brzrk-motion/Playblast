@@ -1,4 +1,5 @@
 import type { Request } from "express"
+import { isE2ETestRuntime } from "../e2e-runtime.js"
 
 interface RateLimitBucket {
   count: number
@@ -44,6 +45,14 @@ export function checkRateLimit(
   request: Request,
   rule: RateLimitRule,
 ): { allowed: true } | { allowed: false; retryAfterSeconds: number } {
+  if (
+    isE2ETestRuntime() &&
+    process.env.PLAYBLAST_E2E_TEST_MODE === "1" &&
+    process.env.PLAYBLAST_E2E_RELAX_RATE_LIMITS === "1"
+  ) {
+    return { allowed: true }
+  }
+
   const key = `${rule.keyPrefix}:${getClientKey(request)}`
   const now = Date.now()
   const existing = buckets.get(key)

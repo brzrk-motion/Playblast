@@ -71,6 +71,7 @@ Run from the repository root:
 | `npm run build` | Build client (`tsc -b` + Vite) and server (`tsc`) |
 | `npm run lint` | Lint the client (`eslint`) |
 | `npm run test` | Run server and client tests |
+| `npm run test:e2e` | Full Playwright E2E (isolated temp DB/uploads; Docker bootstrap when available) |
 
 Workspace-specific scripts:
 
