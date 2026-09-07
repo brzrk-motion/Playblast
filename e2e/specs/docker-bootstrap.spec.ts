@@ -282,6 +282,13 @@ services:
       expect(persistedSetup.status).toBe(200)
       expect(((await persistedSetup.json()) as { status: string }).status).toBe("complete")
 
+      // Reuse the pre-restart browser session before testing a fresh login.
+      // This verifies Docker restart preserves the session contract, not only
+      // the database and setup state.
+      await page.goto(`${baseUrl}/projects`)
+      await expect(page).not.toHaveURL(/\/login/)
+      await expect(page.getByText("Docker E2E Studio").first()).toBeVisible()
+
       await page.context().clearCookies()
       await page.goto(`${baseUrl}/login`)
       await page.getByLabel("Email").fill(`docker-${E2E_ADMIN.email}`)
