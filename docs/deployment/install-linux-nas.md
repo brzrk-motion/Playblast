@@ -89,6 +89,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3000"
+      HOST: "0.0.0.0"
       UPLOAD_DIR: /app/uploads
       DB_PATH: /app/data/playblast.db
       MAX_UPLOAD_SIZE: "5000"
