@@ -36,10 +36,12 @@ docker compose up -d --build
 5. Verify health:
 
 ```bash
-curl -fsS http://localhost:3000/health
+curl -fsS http://127.0.0.1:3000/health
 ```
 
 A healthy instance returns `"status":"ok"` and `"database":"ok"`.
+
+On dual-stack hosts, prefer `127.0.0.1` over `localhost` in operator curl examples: `localhost` may resolve to `::1` while Docker publishes the mapped port on IPv4 only.
 
 ## Build and ship to a remote host
 
