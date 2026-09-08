@@ -11,7 +11,7 @@ MIT-licensed, one studio per instance. Playblast is sponsorship-first open sourc
 - **Own your pipeline** — Docker/NAS deploy with local SQLite and uploads; no hosted SaaS or centralized studio media
 - **Proofing built for motion** — versions, timestamped comments, side-by-side compare, and approval workflows for CGI and motion review
 - **Roles that match the floor** — server-side admin, creative, and proofing permissions
-- **Operator-friendly** — first-run setup, invite flows, and deploy docs aimed at studio operators, not a managed service
+- **Built for operators** — first-run setup, invite flows, and deploy docs you run yourself — not a managed service
 
 ## Stack
 
