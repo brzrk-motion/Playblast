@@ -13,8 +13,8 @@ Playblast ships as a **self-hosted release candidate** for studio operators who 
 
 | Artifact | Location |
 |----------|----------|
-| Release notes | [CHANGELOG.md](../../CHANGELOG.md) |
-| Security reporting | [SECURITY.md](../../SECURITY.md) |
+| Release notes | [CHANGELOG.md](https://github.com/brzrk-motion/Playblast/blob/development-mvp/CHANGELOG.md) |
+| Security reporting | [SECURITY.md](https://github.com/brzrk-motion/Playblast/blob/development-mvp/SECURITY.md) |
 | Upgrade path | [../deployment/upgrade-rollback.md](../deployment/upgrade-rollback.md) |
 | Migrations | [../deployment/migrations.md](../deployment/migrations.md) |
 
@@ -92,5 +92,5 @@ Do **not** mark adoption/funding audit tasks complete without real evidence from
 ## Issue and support boundary
 
 - Defects: public GitHub issues for non-security bugs.
-- Security: private advisories per [SECURITY.md](../../SECURITY.md).
+- Security: private advisories per [SECURITY.md](https://github.com/brzrk-motion/Playblast/blob/development-mvp/SECURITY.md).
 - Operations: [../deployment/operator-responsibilities.md](../deployment/operator-responsibilities.md) — no remote hands or paid support commitments.
