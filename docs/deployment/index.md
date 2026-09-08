@@ -7,6 +7,7 @@ Self-hosted release and operations guides for one Playblast instance per studio.
 | Guide | Audience | Purpose |
 |-------|----------|---------|
 | [Install on Linux or Synology NAS](./install-linux-nas.md) | Host operator | Build, ship, and run the Docker image |
+| [Image tags and publish / load](./image-publish.md) | Host operator | Canonical `playblast:latest`, tar load, optional GHCR |
 | [First-run onboarding walkthrough](./onboarding-walkthrough.md) | Admin + team | Install → admin → studio → invite → role login |
 | [Operator vs application Admin](./operator-responsibilities.md) | Host operator + Admin | Who owns Docker, HTTPS, backups, and in-app setup |
 | [Roles, SMTP, and recovery](./roles-smtp-recovery.md) | Admin | Capabilities, email, and credential recovery |

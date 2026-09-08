@@ -4,7 +4,7 @@
 
 1. Read release notes for migration changes ([migrations](./migrations.md)).
 2. Back up `data/` and `uploads/` ([backup and restore](./backup-restore.md)).
-3. Build or load the new image (`npm run build:deploy` or `docker compose build`).
+3. Build or load the new image (`npm run build:deploy` or `docker compose build`). See [image tags and publish / load](./image-publish.md) for the canonical `playblast:latest` tag and tar vs registry options.
 4. Stop the running container.
 5. Start the new image against the **same** volumes.
 6. Watch logs for migration completion.

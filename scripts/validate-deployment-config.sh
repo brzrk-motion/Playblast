@@ -63,8 +63,19 @@ if (!pkg.engines.node.includes('22')) {
 " || fail "package.json engines.node must require Node 22+"
 pass "package.json engines.node requires Node 22+"
 
+[[ -f scripts/build-deploy.sh ]] || fail "scripts/build-deploy.sh is missing"
+grep -q 'IMAGE_NAME="\${IMAGE_NAME:-playblast:latest}"' scripts/build-deploy.sh \
+  || fail "build-deploy.sh must default IMAGE_NAME to playblast:latest"
+if grep -q 'brzrk/playblast:latest' scripts/build-deploy.sh; then
+  fail "build-deploy.sh must not default to brzrk/playblast:latest"
+fi
+pass "build-deploy.sh defaults IMAGE_NAME to playblast:latest"
+
 [[ -f docs/deployment/index.md ]] || fail "docs/deployment/index.md is missing"
 pass "deployment documentation index exists"
+
+[[ -f docs/deployment/image-publish.md ]] || fail "image publish documentation is missing"
+pass "image publish documentation exists"
 
 [[ -f docs/deployment/operator-responsibilities.md ]] || fail "operator responsibilities doc is missing"
 pass "operator responsibilities documentation exists"
