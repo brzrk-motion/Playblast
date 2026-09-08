@@ -1,0 +1,39 @@
+# Optional TLS reverse-proxy overlay for Playblast.
+# Usage:
+#   cp docker-compose.env.example .env   # set SESSION_SECRET
+#   export PLAYBLAST_DOMAIN=playblast.example.com
+#   docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d --build
+#
+# This overlay:
+# - adds Caddy on 80/443
+# - removes the host publish of playblast:3000 (app stays on the compose network)
+# - terminates TLS; Playblast still listens on HTTP inside the network
+#
+# Operator owns DNS and certificate issuance. See docs/deployment/tls-proxy.md.
+
+services:
+  playblast:
+    # Requires Docker Compose v2.24+ (!reset). Older engines: delete the
+    # `ports:` block from docker-compose.yml manually so WAN cannot bypass Caddy.
+    ports: !reset []
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PLAYBLAST_DOMAIN: ${PLAYBLAST_DOMAIN:-localhost}
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - playblast
+
+volumes:
+  caddy_data:
+  caddy_config:
