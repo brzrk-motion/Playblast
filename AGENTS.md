@@ -2,14 +2,18 @@
 
 ## Cursor Cloud specific instructions
 
-Playblast is an internal video proofing tool for BRZRK — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work.
+Playblast is a free, open-source, self-hosted video proofing tool for motion design studios — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work.
 
 ## Documentation site
 
-The documentation site lives in `docs-site/` and is built with VitePress. Its public Markdown source lives in `docs/`; `docs-site/` contains the site configuration and publishing toolchain.
+The documentation site lives in `docs-site/` and is built with VitePress. Its public Markdown source lives in `docs/`; `docs-site/` contains the site configuration and publishing toolchain. GitHub Pages deploys from `development-mvp` and `main` when `docs/**` or `docs-site/**` change.
 
-- When a code, configuration, deployment, API, workflow, or user-facing behavior change affects the documentation, update the relevant files under `docs/` in the same task.
-- Run `npm run docs:build` after documentation changes to verify the site builds successfully.
+**Required with every relevant PR (no exceptions for "docs later"):**
+
+- When a code, configuration, deployment, API, workflow, or user-facing behavior change affects documentation, update the relevant Markdown under `docs/` **in the same PR**.
+- When you **add or rename** a public docs page, update `docs-site/.vitepress/config.ts` (sidebar and nav) in the same PR so the page is reachable on the site — a file under `docs/` that is missing from the sidebar is considered incomplete.
+- Update `docs/index.md` or `docs/deployment/index.md` indexes when adding operator-facing guides.
+- Run `npm run docs:build` after documentation changes and fix dead links before merge.
 - Use `npm run docs:dev` for local documentation development and `npm run docs:preview` to preview the production build.
 - The documentation site is published independently to GitHub Pages and is not included in the Playblast Docker image.
 
