@@ -41,7 +41,7 @@ curl -fsS http://127.0.0.1:3000/health
 
 A healthy instance returns `"status":"ok"` and `"database":"ok"`.
 
-On dual-stack hosts, prefer `127.0.0.1` over `localhost` in operator curl examples: `localhost` may resolve to `::1` while Docker publishes the mapped port on IPv4 only.
+On dual-stack hosts, prefer `127.0.0.1` over `localhost` in operator curl examples: `localhost` may resolve to `::1` while Docker publishes the mapped port on IPv4 only. Keep container `HOST=0.0.0.0` (Compose default); `HOST=127.0.0.1` inside the container breaks published-port access from the host.
 
 ## Build and ship to a remote host
 
