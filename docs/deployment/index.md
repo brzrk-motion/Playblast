@@ -36,6 +36,8 @@ Run from the repository root after `npm install`. The full release-candidate com
 
 If Docker or browser dependencies are unavailable, record those gates as environment-blocked rather than treating the remaining checks as release sign-off. See the [release candidate guide](https://github.com/brzrk-motion/Playblast/blob/development-mvp/docs/release/README.md) for the manual cross-browser, clean-machine, SMTP, NAS, and adoption gates.
 
+**Known limitation:** on box-local / agent-computer hosts without a usable `docker.sock`, `npm run verify:docker-deployment` is **SKIPPED**. CI run **34183858263** (Docker deployment smoke success, 2026-09-08 ~03:34Z UTC on PR #113) is the dated host-health signal until a daemon-capable host re-runs. Do **not** claim Gate 1 closed from a local skip.
+
 ## Support boundary
 
 Playblast is free, open-source, and self-hosted. There is no hosted SaaS, no founder-installed deployment service, and no paid support commitment. Studios operate their own Docker host, networking, HTTPS/VPN, SMTP deliverability, backups, and restore drills. Report bugs through the project's public issue tracker.
