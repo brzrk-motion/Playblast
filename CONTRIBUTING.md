@@ -22,7 +22,7 @@ See the README quick start. Node.js 22 LTS is required.
 1. Open an issue first for non-trivial changes so maintainers can confirm scope.
 2. Keep PRs focused; prefer one concern per PR.
 3. Do not commit secrets, private studio media, or production config with keys.
-4. Update docs under `docs/` when behavior or deploy steps change.
+4. Update docs under `docs/` when behavior or deploy steps change. If you add or rename a public guide, also update `docs-site/.vitepress/config.ts` (sidebar/nav) and relevant indexes (`docs/index.md`, `docs/deployment/index.md`) in the same PR, then run `npm run docs:build`.
 5. Add or update tests when fixing bugs or changing API/auth behavior.
 6. Follow existing TypeScript, Express, and React patterns in `client/`, `server/`, and `shared/`.
 

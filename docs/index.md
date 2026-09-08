@@ -22,7 +22,7 @@ features:
 
 ## Find your path
 
-- **Host operator:** start with [installation](./deployment/install-linux-nas) and [operator responsibilities](./deployment/operator-responsibilities).
+- **Host operator:** start with [installation](./deployment/install-linux-nas), [TLS / reverse proxy](./deployment/tls-proxy), and [operator responsibilities](./deployment/operator-responsibilities).
 - **Studio Admin:** follow the [first-run onboarding](./deployment/onboarding-walkthrough), then configure [roles, SMTP, and recovery](./deployment/roles-smtp-recovery).
 - **Creative or Proofing user:** ask your studio Admin for an invitation, then use the in-app workflow guide provided by your team.
 
