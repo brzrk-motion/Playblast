@@ -36,7 +36,6 @@ export default defineConfig({
         items: [
           { text: 'Deployment guide', link: '/deployment/' },
           { text: 'Install on Linux or Synology', link: '/deployment/install-linux-nas' },
-          { text: 'Image tags and publish / load', link: '/deployment/image-publish' },
           { text: 'First-run onboarding', link: '/deployment/onboarding-walkthrough' },
           { text: 'Operator vs Admin', link: '/deployment/operator-responsibilities' },
           { text: 'TLS / reverse proxy', link: '/deployment/tls-proxy' }
@@ -49,6 +48,7 @@ export default defineConfig({
           { text: 'Backup and restore', link: '/deployment/backup-restore' },
           { text: 'Migrations', link: '/deployment/migrations' },
           { text: 'Secrets and permissions', link: '/deployment/secrets' },
+          { text: 'Image publish (tar / GHCR)', link: '/deployment/image-publish' },
           { text: 'Upgrade and rollback', link: '/deployment/upgrade-rollback' }
         ]
       }
