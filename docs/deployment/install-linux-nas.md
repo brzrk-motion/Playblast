@@ -51,7 +51,7 @@ From the repository root:
 npm run build:deploy
 ```
 
-This builds for `linux/amd64` by default and writes `deploy/playblast.tar.gz`. Transfer and load on the target host:
+This builds `playblast:latest` for `linux/amd64` by default and writes `deploy/playblast.tar.gz`. Transfer and load on the target host:
 
 ```bash
 scp deploy/playblast.tar.gz admin@<host>:/path/to/playblast/
@@ -59,7 +59,7 @@ ssh admin@<host>
 sudo docker load < /path/to/playblast/playblast.tar.gz
 ```
 
-Set `PLATFORM=linux/arm64` for ARM-based NAS models.
+Set `PLATFORM=linux/arm64` for ARM-based NAS models. For registry overrides and the full tag matrix, see [image tags and publish / load](./image-publish.md).
 
 ## Synology Container Manager
 
@@ -148,4 +148,4 @@ Normal access uses Playblast login sessions, not deployment-wide Basic Auth.
 | `exec format error` | Rebuild image with matching `PLATFORM` (`linux/amd64` vs `linux/arm64`). |
 | Setup page unreachable | Ensure `/api/setup/status` is reachable; emergency Basic Auth (if enabled) allows setup paths. |
 
-See also [secrets](./secrets.md), [migrations](./migrations.md), and [upgrade/rollback](./upgrade-rollback.md).
+See also [image tags and publish / load](./image-publish.md), [secrets](./secrets.md), [migrations](./migrations.md), and [upgrade/rollback](./upgrade-rollback.md).
