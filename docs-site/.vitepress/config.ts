@@ -36,8 +36,10 @@ export default defineConfig({
         items: [
           { text: 'Deployment guide', link: '/deployment/' },
           { text: 'Install on Linux or Synology', link: '/deployment/install-linux-nas' },
+          { text: 'Image tags and publish / load', link: '/deployment/image-publish' },
           { text: 'First-run onboarding', link: '/deployment/onboarding-walkthrough' },
-          { text: 'Operator vs Admin', link: '/deployment/operator-responsibilities' }
+          { text: 'Operator vs Admin', link: '/deployment/operator-responsibilities' },
+          { text: 'TLS / reverse proxy', link: '/deployment/tls-proxy' }
         ]
       },
       {
