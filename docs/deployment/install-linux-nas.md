@@ -121,7 +121,7 @@ If port 3000 is taken, change the host side of the mapping (e.g. `"3001:3000"`).
 ## Environment variables
 
 | Variable | Required | Default | Purpose |
-|----------|----------|---------|
+|----------|----------|---------|---------|
 | `SESSION_SECRET` | Yes (production) | — | Session signing secret (32+ chars) |
 | `SESSION_TTL_HOURS` | No | `168` | Session lifetime in hours |
 | `PLAYBLAST_ADMIN_RECOVERY_TOKEN` | No | — | Operator recovery for lost admin credentials |
