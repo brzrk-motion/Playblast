@@ -4,6 +4,13 @@
 
 Playblast is a free, open-source, self-hosted video proofing tool for motion design studios — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work.
 
+## Design and implementation skills
+
+Standing rule (James Abels, 2026-09-08):
+
+- **Front-end / UI / visual design:** always use the **impeccable** skill (OKLCH, intentional type/layout/motion; follow impeccable setup).
+- **Coding functionality:** always use the **Superpowers** skills (`using-superpowers`, `brainstorming`, TDD, `systematic-debugging`, writing/executing plans, `verification-before-completion` as applicable). Do not skip for small features or quick fixes.
+
 ## Documentation site
 
 The documentation site lives in `docs-site/` and is built with VitePress. Its public Markdown source lives in `docs/`; `docs-site/` contains the site configuration and publishing toolchain. GitHub Pages deploys from `development-mvp` and `main` when `docs/**` or `docs-site/**` change.
