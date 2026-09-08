@@ -30,8 +30,8 @@ Files in this repository:
 
 | File | Purpose |
 |------|---------|
-| [`docker-compose.proxy.yml`](https://github.com/brzrk-motion/Playblast/blob/development-mvp/docker-compose.proxy.yml) | Adds Caddy; un-publishes host `:3000`; sets `PROXY_HOPS=1` |
-| [`deploy/caddy/Caddyfile`](https://github.com/brzrk-motion/Playblast/blob/development-mvp/deploy/caddy/Caddyfile) | TLS site block + large upload limits |
+| [`docker-compose.proxy.yml`](../../docker-compose.proxy.yml) | Adds Caddy; un-publishes host `:3000`; sets `PROXY_HOPS=1` |
+| [`deploy/caddy/Caddyfile`](../../deploy/caddy/Caddyfile) | TLS site block + large upload limits |
 
 ### Public hostname (Let's Encrypt)
 
@@ -90,6 +90,7 @@ Do not put this server on the public internet without valid certificates and a m
 ## Synology notes
 
 - Prefer Synology’s reverse proxy / certificate UI **or** the Caddy overlay if you run Compose projects with multiple services.
+- If you terminate TLS with DSM reverse proxy (not the Compose overlay), set  in the Playblast service environment so Express trusts the single forward hop.
 - Keep Hyper Backup on `data/` + `uploads/` regardless of TLS path ([backup-restore.md](./backup-restore.md)).
 
 ## `PROXY_HOPS` and Express trust proxy
@@ -101,7 +102,7 @@ Playblast sets Express `trust proxy` from `PROXY_HOPS` (default **0** for safety
 | Base Compose (host publishes `:3000`) | `0` (default) | Do not trust `X-Forwarded-*` from clients. |
 | `docker-compose.proxy.yml` (Caddy/nginx on the compose network) | `1` (set by overlay) | Caddy is the only trusted forwarder; the app is not WAN-published. |
 
-Caddy (and the nginx snippet below) send `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Real-IP`, and `X-Forwarded-For`. With `PROXY_HOPS=1`, Express uses those headers for `req.ip`, `req.protocol`, and `req.secure`.
+Caddy (and the nginx snippet above) send `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Real-IP`, and `X-Forwarded-For`. With `PROXY_HOPS=1`, Express uses those headers for `req.ip`, `req.protocol`, and `req.secure`.
 
 **Do not** raise hops above the number of trusted proxies you control. Spoofed `X-Forwarded-For` from the open internet must never reach the app without a trusted hop stripping/overwriting it.
 
