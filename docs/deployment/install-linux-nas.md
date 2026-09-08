@@ -36,10 +36,12 @@ docker compose up -d --build
 5. Verify health:
 
 ```bash
-curl -fsS http://localhost:3000/health
+curl -fsS http://127.0.0.1:3000/health
 ```
 
 A healthy instance returns `"status":"ok"` and `"database":"ok"`.
+
+On dual-stack hosts, prefer `127.0.0.1` over `localhost` in operator curl examples: `localhost` may resolve to `::1` while Docker publishes the mapped port on IPv4 only.
 
 ## Build and ship to a remote host
 
@@ -129,6 +131,7 @@ If port 3000 is taken, change the host side of the mapping (e.g. `"3001:3000"`).
 | `DB_PATH` | No | `/app/data/playblast.db` | SQLite database file |
 | `MAX_UPLOAD_SIZE` | No | `5000` | Max upload size in MB |
 | `PORT` | No | `3000` | HTTP listen port |
+| `HOST` | No | `0.0.0.0` | HTTP listen address (use `0.0.0.0` so Docker port publish works) |
 
 Normal access uses Playblast login sessions, not deployment-wide Basic Auth.
 
@@ -139,7 +142,7 @@ Normal access uses Playblast login sessions, not deployment-wide Basic Auth.
 | Container restarts in a loop | Check logs. Common: missing `SESSION_SECRET`, unwritable `data/` or `uploads/`, or invalid env values. |
 | `SESSION_SECRET is required in production` | Set `SESSION_SECRET` in `.env` (32+ characters). |
 | `EACCES` on uploads or data | Fix host folder permissions for the container user. |
-| Can't reach the web UI | Confirm host port, firewall, and LAN IP. |
+| Can't reach the web UI | Confirm host port, firewall, and LAN IP. If `curl localhost` fails but `curl 127.0.0.1` works, use IPv4 explicitly. |
 | Uploads fail for large files | Increase `MAX_UPLOAD_SIZE`; raise reverse-proxy body limits if fronting the app. |
 | `exec format error` | Rebuild image with matching `PLATFORM` (`linux/amd64` vs `linux/arm64`). |
 | Setup page unreachable | Ensure `/api/setup/status` is reachable; emergency Basic Auth (if enabled) allows setup paths. |

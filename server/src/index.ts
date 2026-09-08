@@ -14,8 +14,9 @@ const uploadDir = ensureUploadDir()
 initDatabase()
 const app = createApp()
 
-const server = app.listen(config.port, () => {
-  console.log(`Playblast server listening on http://localhost:${config.port}`)
+const server = app.listen(config.port, config.host, () => {
+  const displayHost = config.host === "0.0.0.0" || config.host === "::" ? "127.0.0.1" : config.host
+  console.log(`Playblast server listening on ${config.host}:${config.port} (try http://${displayHost}:${config.port})`)
   console.log(`Upload directory: ${uploadDir}`)
   console.log(`Database: ${config.dbPath}`)
 })
