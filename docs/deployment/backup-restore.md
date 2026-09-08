@@ -2,6 +2,8 @@
 
 All application state for one studio lives on the filesystem. There is no separate database server.
 
+For the short maintenance-day sequence (backup → upgrade → verify → rollback), see the [operator checklist](./operator-checklist.md).
+
 ## What to back up
 
 | Location | Contents | Required |

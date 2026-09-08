@@ -1,5 +1,7 @@
 # Upgrade and rollback
 
+For a single maintenance-day sequence, use the [operator checklist](./operator-checklist.md).
+
 ## Upgrade
 
 1. Read release notes for migration changes ([migrations](./migrations.md)).
@@ -15,6 +17,8 @@ curl -fsS http://<host>:3000/health
 ```
 
 Migrations run automatically on startup. For large instances, plan a short maintenance window.
+
+If you terminate TLS at Caddy/nginx, keep `PROXY_HOPS` aligned with your hop count (overlay sets `1`; base default is `0`) — see [TLS / reverse proxy](./tls-proxy.md).
 
 ## Rollback (unsupported downgrade)
 

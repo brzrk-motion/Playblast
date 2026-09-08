@@ -78,6 +78,9 @@ pass "deployment documentation index exists"
 [[ -f docs/deployment/image-publish.md ]] || fail "image publish documentation is missing"
 pass "image publish documentation exists"
 
+[[ -f docs/deployment/operator-checklist.md ]] || fail "operator checklist documentation is missing"
+pass "operator checklist documentation exists"
+
 [[ -f docs/deployment/operator-responsibilities.md ]] || fail "operator responsibilities doc is missing"
 pass "operator responsibilities documentation exists"
 
@@ -108,7 +111,9 @@ grep -q "link: '/deployment/image-publish'" docs-site/.vitepress/config.ts \
   || fail "docs-site sidebar must include image-publish"
 grep -q "link: '/deployment/tls-proxy'" docs-site/.vitepress/config.ts \
   || fail "docs-site sidebar must include tls-proxy"
-pass "docs-site sidebar includes image-publish and tls-proxy"
+grep -q "link: '/deployment/operator-checklist'" docs-site/.vitepress/config.ts \
+  || fail "docs-site sidebar must include operator-checklist"
+pass "docs-site sidebar includes image-publish, tls-proxy, and operator-checklist"
 
 [[ -f CHANGELOG.md ]] || fail "CHANGELOG.md is missing"
 pass "CHANGELOG.md exists"
