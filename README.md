@@ -1,8 +1,17 @@
 # Playblast
 
-Self-hosted video proofing for one studio per instance — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work.
+**Self-hosted video proofing for motion studios** — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work.
 
-Free, open-source, and self-hosted. No hosted SaaS or centralized studio data.
+MIT-licensed, one studio per instance. Playblast is sponsorship-first open source from Brzrk Interactive: studios run free self-hosted deployments while sponsors fund maintenance, docs, and roadmap work.
+
+> Looking to fund the project? See [SPONSORS.md](SPONSORS.md). The GitHub Sponsors button appears after Sponsors is enabled on the brzrk-motion org and [`.github/FUNDING.yml`](.github/FUNDING.yml) is present.
+
+## Why studios choose Playblast
+
+- **Own your pipeline** — Docker/NAS deploy with local SQLite and uploads; no hosted SaaS or centralized studio media
+- **Proofing built for motion** — versions, timestamped comments, side-by-side compare, and approval workflows for CGI and motion review
+- **Roles that match the floor** — server-side admin, creative, and proofing permissions
+- **Operator-friendly** — first-run setup, invite flows, and deploy docs aimed at studio operators, not a managed service
 
 ## Stack
 
@@ -87,3 +96,11 @@ Self-hosted operators own Docker, networking, HTTPS/VPN, backups, and SMTP deliv
 ## MVP reference
 
 Implementation phases and acceptance criteria: [docs/Playblast-MVP-Audit.md](docs/Playblast-MVP-Audit.md)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Security reports: [SECURITY.md](SECURITY.md). Direction and non-goals: [ROADMAP.md](ROADMAP.md). MVP phases: [docs/Playblast-MVP-Audit.md](docs/Playblast-MVP-Audit.md).
+
+## License
+
+[MIT](LICENSE)

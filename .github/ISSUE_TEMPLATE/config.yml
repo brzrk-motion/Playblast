@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/brzrk-motion/Playblast/security/advisories/new
+    about: Report exploitable security issues privately — do not file a public issue.
+  - name: Deployment / operator docs
+    url: https://github.com/brzrk-motion/Playblast/blob/main/docs/deployment/index.md
+    about: Self-hosted Docker and Synology install guides.
