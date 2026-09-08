@@ -10,6 +10,7 @@ Self-hosted release and operations guides for one Playblast instance per studio.
 | [Image tags and publish / load](./image-publish.md) | Host operator | Canonical `playblast:latest`, tar load, optional GHCR |
 | [First-run onboarding walkthrough](./onboarding-walkthrough.md) | Admin + team | Install → admin → studio → invite → role login |
 | [Operator vs application Admin](./operator-responsibilities.md) | Host operator + Admin | Who owns Docker, HTTPS, backups, and in-app setup |
+| [TLS / reverse proxy](./tls-proxy.md) | Host operator | LAN/VPN-only stance, Caddy overlay, nginx snippet |
 | [Roles, SMTP, and recovery](./roles-smtp-recovery.md) | Admin | Capabilities, email, and credential recovery |
 | [Backup and restore](./backup-restore.md) | Host operator | What to back up, restore drills, session effects |
 | [Migrations](./migrations.md) | Host operator | Legacy SQL + Drizzle ordering, upgrade safety |

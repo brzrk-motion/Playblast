@@ -92,6 +92,15 @@ pass "secrets documentation exists"
 [[ -f docs/deployment/onboarding-walkthrough.md ]] || fail "onboarding walkthrough is missing"
 pass "onboarding walkthrough exists"
 
+[[ -f docs/deployment/tls-proxy.md ]] || fail "TLS/reverse-proxy documentation is missing"
+pass "TLS/reverse-proxy documentation exists"
+
+[[ -f docker-compose.proxy.yml ]] || fail "docker-compose.proxy.yml overlay is missing"
+pass "docker-compose.proxy.yml overlay exists"
+
+[[ -f deploy/caddy/Caddyfile ]] || fail "deploy/caddy/Caddyfile is missing"
+pass "Caddyfile for TLS overlay exists"
+
 [[ -f CHANGELOG.md ]] || fail "CHANGELOG.md is missing"
 pass "CHANGELOG.md exists"
 
