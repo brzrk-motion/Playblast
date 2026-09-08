@@ -30,8 +30,8 @@ Files in this repository:
 
 | File | Purpose |
 |------|---------|
-| [`docker-compose.proxy.yml`](../../docker-compose.proxy.yml) | Adds Caddy; un-publishes host `:3000`; sets `PROXY_HOPS=1` |
-| [`deploy/caddy/Caddyfile`](../../deploy/caddy/Caddyfile) | TLS site block + large upload limits |
+| [`docker-compose.proxy.yml`](https://github.com/brzrk-motion/Playblast/blob/development-mvp/docker-compose.proxy.yml) | Adds Caddy; un-publishes host `:3000`; sets `PROXY_HOPS=1` |
+| [`deploy/caddy/Caddyfile`](https://github.com/brzrk-motion/Playblast/blob/development-mvp/deploy/caddy/Caddyfile) | TLS site block + large upload limits |
 
 ### Public hostname (Let's Encrypt)
 
