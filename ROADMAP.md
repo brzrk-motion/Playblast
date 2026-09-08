@@ -21,7 +21,7 @@ Detailed phase checklists live in docs/Playblast-MVP-Audit.md.
 
 ## Next (post-MVP)
 
-- Playback and annotation refinements guided by real studio pilots
+- Playback and annotation refinements guided by real studio review cycles
 - Export / archive helpers for finished deliverable reviews
 - Optional reverse-proxy and HTTPS examples without owning studio networking
 - Dependency and Node LTS currency

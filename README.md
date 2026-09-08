@@ -6,7 +6,7 @@ MIT-licensed, one studio per instance. Playblast is sponsorship-first open sourc
 
 > Looking to fund the project? See [SPONSORS.md](SPONSORS.md). The GitHub Sponsors button appears after Sponsors is enabled on the brzrk-motion org and [`.github/FUNDING.yml`](.github/FUNDING.yml) is present.
 
-## Why studios choose Playblast
+## Why self-host Playblast
 
 - **Own your pipeline** — Docker/NAS deploy with local SQLite and uploads; no hosted SaaS or centralized studio media
 - **Proofing built for motion** — versions, timestamped comments, side-by-side compare, and approval workflows for CGI and motion review
