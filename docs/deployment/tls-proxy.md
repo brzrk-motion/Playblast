@@ -15,7 +15,7 @@ Both stances are operator-owned. Playblast will not obtain certificates, configu
 
 - Production cookies use the `Secure` flag (`server/src/auth/cookies.ts`). Plain public HTTP breaks login/session in modern browsers.
 - Uploads can be large (`MAX_UPLOAD_SIZE`, default 5000 MB). Proxies must allow large request bodies and long timeouts.
-- Auth rate limiting may read `X-Forwarded-For`. Only trust forwarded headers from **your** proxy on a private Docker network—never from the open internet without a trusted hop.
+- Auth rate limiting uses Express `req.ip`, which honors `X-Forwarded-For` **only** when `PROXY_HOPS` > 0. Default is `0` (ignore client-supplied forwarded headers).
 
 ## LAN / VPN-only checklist
 
@@ -30,8 +30,8 @@ Files in this repository:
 
 | File | Purpose |
 |------|---------|
-| [`docker-compose.proxy.yml`](../../docker-compose.proxy.yml) | Adds Caddy; un-publishes host `:3000` |
-| [`deploy/caddy/Caddyfile`](../../deploy/caddy/Caddyfile) | TLS site block + large upload limits |
+| [`docker-compose.proxy.yml`](https://github.com/brzrk-motion/Playblast/blob/development-mvp/docker-compose.proxy.yml) | Adds Caddy; un-publishes host `:3000`; sets `PROXY_HOPS=1` |
+| [`deploy/caddy/Caddyfile`](https://github.com/brzrk-motion/Playblast/blob/development-mvp/deploy/caddy/Caddyfile) | TLS site block + large upload limits |
 
 ### Public hostname (Let's Encrypt)
 
@@ -92,11 +92,22 @@ Do not put this server on the public internet without valid certificates and a m
 - Prefer Synology’s reverse proxy / certificate UI **or** the Caddy overlay if you run Compose projects with multiple services.
 - Keep Hyper Backup on `data/` + `uploads/` regardless of TLS path ([backup-restore.md](./backup-restore.md)).
 
-## App / engineering follow-ups
+## `PROXY_HOPS` and Express trust proxy
 
-- Cookies already require HTTPS in production (`Secure`).
-- Rate limiting already inspects `X-Forwarded-For`. If you front Playblast with a proxy, ensure only the proxy can reach the app network.
-- Explicit Express `trust proxy` / CSRF assumptions behind HTTPS may still be tightened by engineering—report issues via the public tracker.
+Playblast sets Express `trust proxy` from `PROXY_HOPS` (default **0** for safety when no proxy is in front).
+
+| Topology | `PROXY_HOPS` | Notes |
+|----------|--------------|-------|
+| Base Compose (host publishes `:3000`) | `0` (default) | Do not trust `X-Forwarded-*` from clients. |
+| `docker-compose.proxy.yml` (Caddy/nginx on the compose network) | `1` (set by overlay) | Caddy is the only trusted forwarder; the app is not WAN-published. |
+
+Caddy (and the nginx snippet below) send `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Real-IP`, and `X-Forwarded-For`. With `PROXY_HOPS=1`, Express uses those headers for `req.ip`, `req.protocol`, and `req.secure`.
+
+**Do not** raise hops above the number of trusted proxies you control. Spoofed `X-Forwarded-For` from the open internet must never reach the app without a trusted hop stripping/overwriting it.
+
+### Cookies and Secure
+
+Production session cookies stay `Secure` whenever `NODE_ENV=production`. That flag is **not** disabled for plain HTTP on a LAN—use HTTPS at the proxy (or `tls internal` on LAN) so browsers will send cookies.
 
 ## No-support boundary
 

@@ -32,13 +32,20 @@ export const AUTH_RATE_LIMITS = {
   smtpTest: { keyPrefix: "smtp-test", maxAttempts: 5, windowMs: 15 * 60 * 1000 },
 } as const satisfies Record<string, RateLimitRule>
 
+/**
+ * Client key for rate limiting.
+ * Uses Express `request.ip`, which only honors X-Forwarded-For when
+ * `app.set('trust proxy', hops)` is enabled (PROXY_HOPS > 0).
+ * Never read X-Forwarded-For directly — that would trust client spoofing
+ * when the app is not behind a configured proxy.
+ */
 function getClientKey(request: Request): string {
-  const forwarded = request.header("x-forwarded-for")
-  if (forwarded) {
-    return forwarded.split(",")[0]?.trim() || request.ip || "unknown"
-  }
-
   return request.ip || "unknown"
+}
+
+/** @internal Expose client key derivation for unit tests. */
+export function __testOnly_getClientKey(request: Request): string {
+  return getClientKey(request)
 }
 
 export function checkRateLimit(
