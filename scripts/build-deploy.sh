@@ -4,7 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-IMAGE_NAME="${IMAGE_NAME:-brzrk/playblast:latest}"
+# Canonical local tag matches docker-compose.yml / Synology sample (playblast:latest).
+# Override for a registry path, e.g. IMAGE_NAME=ghcr.io/brzrk-motion/playblast:0.1.0-rc.1
+IMAGE_NAME="${IMAGE_NAME:-playblast:latest}"
 PLATFORM="${PLATFORM:-linux/amd64}"
 DEPLOY_DIR="$ROOT_DIR/deploy"
 OUTPUT_FILE="$DEPLOY_DIR/playblast.tar.gz"
