@@ -101,6 +101,13 @@ pass "docker-compose.proxy.yml overlay exists"
 [[ -f deploy/caddy/Caddyfile ]] || fail "deploy/caddy/Caddyfile is missing"
 pass "Caddyfile for TLS overlay exists"
 
+[[ -f docs-site/.vitepress/config.ts ]] || fail "docs-site VitePress config is missing"
+grep -q "link: '/deployment/image-publish'" docs-site/.vitepress/config.ts \
+  || fail "docs-site sidebar must include image-publish"
+grep -q "link: '/deployment/tls-proxy'" docs-site/.vitepress/config.ts \
+  || fail "docs-site sidebar must include tls-proxy"
+pass "docs-site sidebar includes image-publish and tls-proxy"
+
 [[ -f CHANGELOG.md ]] || fail "CHANGELOG.md is missing"
 pass "CHANGELOG.md exists"
 
