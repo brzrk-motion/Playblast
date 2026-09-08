@@ -8,6 +8,7 @@ const REPO_ROOT = path.resolve(__dirname, "../../..")
 dotenv.config({ path: path.join(REPO_ROOT, ".env") })
 
 const DEFAULT_PORT = 3000
+const DEFAULT_HOST = "0.0.0.0"
 const DEFAULT_UPLOAD_DIR = "/app/uploads"
 const DEFAULT_DB_PATH = "/app/data/playblast.db"
 const DEFAULT_MAX_UPLOAD_SIZE_MB = 5000
@@ -38,6 +39,20 @@ function parseMaxUploadSizeMb(value: string | undefined, fallback: number): numb
   return sizeMb
 }
 
+
+function parseHost(value: string | undefined, fallback: string): string {
+  if (value === undefined || value === "") {
+    return fallback
+  }
+
+  const host = value.trim()
+  if (host.length === 0) {
+    throw new Error(`Invalid HOST value: ${value}`)
+  }
+
+  return host
+}
+
 function parseNodeEnv(value: string | undefined): "production" | "development" {
   if (value === undefined || value === "") {
     return "development"
@@ -53,6 +68,9 @@ function parseNodeEnv(value: string | undefined): "production" | "development" {
 export const config = {
   get port(): number {
     return parsePort(process.env.PORT, DEFAULT_PORT)
+  },
+  get host(): string {
+    return parseHost(process.env.HOST, DEFAULT_HOST)
   },
   get uploadDir(): string {
     return path.resolve(process.env.UPLOAD_DIR ?? DEFAULT_UPLOAD_DIR)
