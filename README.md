@@ -1,5 +1,7 @@
 # Playblast
 
+[![CI](https://github.com/brzrk-motion/Playblast/actions/workflows/ci.yml/badge.svg?branch=development-mvp)](https://github.com/brzrk-motion/Playblast/actions/workflows/ci.yml?query=branch%3Adevelopment-mvp) [![Docs](https://github.com/brzrk-motion/Playblast/actions/workflows/deploy-docs.yml/badge.svg?branch=development-mvp)](https://github.com/brzrk-motion/Playblast/actions/workflows/deploy-docs.yml?query=branch%3Adevelopment-mvp) [![License: MIT](https://img.shields.io/github/license/brzrk-motion/Playblast)](LICENSE) [![Node.js 22](https://img.shields.io/badge/node-%3E%3D22.12.0-339933?logo=node.js&logoColor=white)](package.json) [![status: release candidate](https://img.shields.io/badge/status-release%20candidate-orange)]
+
 **Self-hosted video proofing for motion studios** — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work.
 
 MIT-licensed, one studio per instance. Playblast is sponsorship-first open source from Brzrk Interactive: studios run free self-hosted deployments; optional donations and company sponsorships fund general maintenance and development — not a support SLA or managed service.
