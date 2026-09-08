@@ -44,6 +44,7 @@ export default defineConfig({
       {
         text: 'Operate Playblast',
         items: [
+          { text: 'Operator checklist (backup / upgrade)', link: '/deployment/operator-checklist' },
           { text: 'Roles, SMTP, and recovery', link: '/deployment/roles-smtp-recovery' },
           { text: 'Backup and restore', link: '/deployment/backup-restore' },
           { text: 'Migrations', link: '/deployment/migrations' },
