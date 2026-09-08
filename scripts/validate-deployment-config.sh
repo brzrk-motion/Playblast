@@ -37,6 +37,7 @@ grep -q 'SESSION_SECRET' .env.example || fail ".env.example must document SESSIO
 for var in \
   PORT \
   NODE_ENV \
+  PROXY_HOPS \
   UPLOAD_DIR \
   DB_PATH \
   MAX_UPLOAD_SIZE \
@@ -96,7 +97,8 @@ pass "onboarding walkthrough exists"
 pass "TLS/reverse-proxy documentation exists"
 
 [[ -f docker-compose.proxy.yml ]] || fail "docker-compose.proxy.yml overlay is missing"
-pass "docker-compose.proxy.yml overlay exists"
+grep -q 'PROXY_HOPS' docker-compose.proxy.yml || fail "docker-compose.proxy.yml must set PROXY_HOPS"
+pass "docker-compose.proxy.yml overlay exists and sets PROXY_HOPS"
 
 [[ -f deploy/caddy/Caddyfile ]] || fail "deploy/caddy/Caddyfile is missing"
 pass "Caddyfile for TLS overlay exists"

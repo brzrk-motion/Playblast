@@ -22,6 +22,13 @@ import videoRouter from "./routes/video.js"
 export function createApp() {
   const app = express()
 
+  // Trust X-Forwarded-* only for the configured hop count (default 0).
+  // docker-compose.proxy.yml sets PROXY_HOPS=1 for Caddy/nginx on the compose network.
+  const proxyHops = config.proxyHops
+  if (proxyHops > 0) {
+    app.set("trust proxy", proxyHops)
+  }
+
   app.get("/health", (_req, res) => {
     try {
       const integrity = getDb().pragma("integrity_check", { simple: true })

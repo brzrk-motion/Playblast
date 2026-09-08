@@ -39,7 +39,6 @@ function parseMaxUploadSizeMb(value: string | undefined, fallback: number): numb
   return sizeMb
 }
 
-
 function parseHost(value: string | undefined, fallback: string): string {
   if (value === undefined || value === "") {
     return fallback
@@ -51,6 +50,19 @@ function parseHost(value: string | undefined, fallback: string): string {
   }
 
   return host
+}
+
+function parseProxyHops(value: string | undefined, fallback: number): number {
+  if (value === undefined || value === "") {
+    return fallback
+  }
+
+  const hops = Number(value)
+  if (!Number.isInteger(hops) || hops < 0 || hops > 32) {
+    throw new Error(`Invalid PROXY_HOPS value: ${value}`)
+  }
+
+  return hops
 }
 
 function parseNodeEnv(value: string | undefined): "production" | "development" {
@@ -86,6 +98,14 @@ export const config = {
   },
   get nodeEnv(): "production" | "development" {
     return parseNodeEnv(process.env.NODE_ENV)
+  },
+  /**
+   * Number of trusted reverse-proxy hops in front of Express.
+   * Default 0 (do not trust X-Forwarded-* from clients).
+   * Use 1 with docker-compose.proxy.yml (Caddy/nginx on the compose network).
+   */
+  get proxyHops(): number {
+    return parseProxyHops(process.env.PROXY_HOPS, 0)
   },
 }
 

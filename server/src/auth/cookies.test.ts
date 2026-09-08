@@ -17,4 +17,33 @@ describe("session cookies", () => {
     assert.match(serialized, /SameSite=Strict/)
     assert.match(serialized, /Path=\//)
   })
+
+  it("keeps Secure gated on production NODE_ENV (not weakened for plain HTTP)", () => {
+    const withSecure = __testOnly_serializeCookie("playblast_session", "token", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+      path: "/",
+    })
+    const withoutSecure = __testOnly_serializeCookie("playblast_session", "token", {
+      httpOnly: true,
+      secure: false,
+      sameSite: "strict",
+      path: "/",
+    })
+
+    assert.match(withSecure, /Secure/)
+    assert.doesNotMatch(withoutSecure, /Secure/)
+    // Contract: production uses Secure via isProduction(); never force-off for LAN HTTP.
+    if (isProduction()) {
+      assert.match(
+        __testOnly_serializeCookie("c", "v", {
+          httpOnly: true,
+          secure: isProduction(),
+          sameSite: "strict",
+        }),
+        /Secure/,
+      )
+    }
+  })
 })

@@ -17,6 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ### Changed
 
+- Express honors `PROXY_HOPS` for trusted reverse-proxy hops (default `0`; proxy overlay sets `1`). Rate limiting uses Express `req.ip` so `X-Forwarded-For` is trusted only when hops are configured. Production cookie `Secure` remains `NODE_ENV`-gated.
 - CI now runs production build, lint, shared tests, dependency audit, secret scan, and browser QA gates.
 - Canonical API route inventory aligns task and hours-summary routes with authenticated capability enforcement.
 
