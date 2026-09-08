@@ -1,0 +1,31 @@
+# Playblast reverse proxy (TLS termination).
+# Copy/adapt beside docker-compose.proxy.yml. Operator owns DNS + certificates.
+#
+# Public hostname (Let's Encrypt when ports 80/443 are reachable):
+#   {$PLAYBLAST_DOMAIN:localhost}
+#
+# For LAN-only self-signed / internal CA, replace the site block with:
+#   {$PLAYBLAST_DOMAIN:playblast.lan} {
+#     tls internal
+#     ...
+#   }
+
+{$PLAYBLAST_DOMAIN:localhost} {
+	encode gzip
+
+	# Video uploads can be multi-GB; align with Playblast MAX_UPLOAD_SIZE (default 5000 MB).
+	request_body {
+		max_size 6GB
+	}
+
+	reverse_proxy playblast:3000 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		header_up X-Real-IP {remote_host}
+		# Large / long uploads
+		transport http {
+			read_timeout 3600s
+			write_timeout 3600s
+		}
+	}
+}

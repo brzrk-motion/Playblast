@@ -10,7 +10,7 @@ You own the machine, container runtime, and network path to Playblast.
 |------|---------------------------|
 | Docker / NAS | Install Container Manager or Docker, build or load the image, create compose projects, set restart policies |
 | Networking | DNS, reverse proxy, firewall rules, LAN/VPN access |
-| HTTPS / TLS | Terminate TLS at a reverse proxy or VPN; Playblast does not ship built-in HTTPS |
+| HTTPS / TLS | Terminate TLS at a reverse proxy or VPN; Playblast does not ship built-in HTTPS. See [TLS / reverse proxy](./tls-proxy.md) |
 | Storage | Provision persistent volumes or bind mounts for `/app/data` and `/app/uploads` |
 | Backups | Schedule filesystem backups of `data/` and `uploads/`; test restore drills |
 | Upgrades | Pull/build new images, stop/start containers, read release notes |

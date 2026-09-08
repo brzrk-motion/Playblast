@@ -116,7 +116,7 @@ Compiling native modules (`better-sqlite3`) during `npm ci` is memory-intensive.
 
 ### Port and firewall
 
-If port 3000 is taken, change the host side of the mapping (e.g. `"3001:3000"`). Allow the chosen port in DSM firewall rules. Prefer HTTPS or VPN for remote access — see [operator responsibilities](./operator-responsibilities.md).
+If port 3000 is taken, change the host side of the mapping (e.g. `"3001:3000"`). Allow the chosen port in DSM firewall rules. Prefer HTTPS or VPN for remote access — see [operator responsibilities](./operator-responsibilities.md) and [TLS / reverse proxy](./tls-proxy.md) (LAN/VPN-only stance + optional Caddy overlay).
 
 ## Environment variables
 

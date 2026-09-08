@@ -9,6 +9,7 @@ Self-hosted release and operations guides for one Playblast instance per studio.
 | [Install on Linux or Synology NAS](./install-linux-nas.md) | Host operator | Build, ship, and run the Docker image |
 | [First-run onboarding walkthrough](./onboarding-walkthrough.md) | Admin + team | Install → admin → studio → invite → role login |
 | [Operator vs application Admin](./operator-responsibilities.md) | Host operator + Admin | Who owns Docker, HTTPS, backups, and in-app setup |
+| [TLS / reverse proxy](./tls-proxy.md) | Host operator | LAN/VPN-only stance, Caddy overlay, nginx snippet |
 | [Roles, SMTP, and recovery](./roles-smtp-recovery.md) | Admin | Capabilities, email, and credential recovery |
 | [Backup and restore](./backup-restore.md) | Host operator | What to back up, restore drills, session effects |
 | [Migrations](./migrations.md) | Host operator | Legacy SQL + Drizzle ordering, upgrade safety |
