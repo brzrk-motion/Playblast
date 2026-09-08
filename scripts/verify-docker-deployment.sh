@@ -37,18 +37,27 @@ cleanup() {
 }
 trap cleanup EXIT
 
+SMOKE_BASE_URL="http://127.0.0.1:3000"
+case "$SMOKE_BASE_URL" in
+  http://127.0.0.1:*|https://127.0.0.1:*) ;;
+  *)
+    echo "error: Docker smoke must use 127.0.0.1 (not localhost) to avoid dual-stack ::1 misses" >&2
+    exit 1
+    ;;
+esac
+
 echo "Building and starting Playblast via Docker Compose..."
 $COMPOSE up -d --build
 
 echo "Waiting for /health..."
 for _ in $(seq 1 60); do
-  if curl -fsS "http://127.0.0.1:3000/health" 2>/dev/null | grep -q '"status":"ok"'; then
+  if curl -fsS "${SMOKE_BASE_URL}/health" 2>/dev/null | grep -q '"status":"ok"'; then
     break
   fi
   sleep 1
 done
 
-HEALTH_BODY="$(curl -fsS "http://127.0.0.1:3000/health")"
+HEALTH_BODY="$(curl -fsS "${SMOKE_BASE_URL}/health")"
 echo "$HEALTH_BODY" | grep -q '"status":"ok"' || {
   echo "error: /health did not report ok" >&2
   exit 1
@@ -59,7 +68,7 @@ echo "$HEALTH_BODY" | grep -q '"database":"ok"' || {
 }
 
 echo "Checking clean-install setup status..."
-SETUP_BODY="$(curl -fsS "http://127.0.0.1:3000/api/setup/status")"
+SETUP_BODY="$(curl -fsS "${SMOKE_BASE_URL}/api/setup/status")"
 echo "$SETUP_BODY" | grep -q '"status":"pending"' || {
   echo "error: fresh instance should report setup status pending" >&2
   exit 1

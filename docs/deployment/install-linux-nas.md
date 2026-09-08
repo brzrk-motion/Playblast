@@ -41,7 +41,7 @@ curl -fsS http://127.0.0.1:3000/health
 
 A healthy instance returns `"status":"ok"` and `"database":"ok"`.
 
-On dual-stack hosts, prefer `127.0.0.1` over `localhost` in operator curl examples: `localhost` may resolve to `::1` while Docker publishes the mapped port on IPv4 only.
+On dual-stack hosts, prefer `127.0.0.1` over `localhost` in operator curl examples: `localhost` may resolve to `::1` while Docker publishes the mapped port on IPv4 only. Keep container `HOST=0.0.0.0` (Compose default); `HOST=127.0.0.1` inside the container breaks published-port access from the host.
 
 ## Build and ship to a remote host
 
@@ -89,6 +89,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3000"
+      HOST: "0.0.0.0"
       UPLOAD_DIR: /app/uploads
       DB_PATH: /app/data/playblast.db
       MAX_UPLOAD_SIZE: "5000"
@@ -127,6 +128,7 @@ If port 3000 is taken, change the host side of the mapping (e.g. `"3001:3000"`).
 | `PLAYBLAST_EMERGENCY_BASIC_AUTH` | No | `false` | Optional bootstrap-only Basic Auth before setup completes |
 | `PLAYBLAST_AUTH_USER` | Only if emergency auth enabled | — | Emergency Basic Auth username |
 | `PLAYBLAST_AUTH_PASSWORD` | Only if emergency auth enabled | — | Emergency Basic Auth password |
+| `HOST` | No | `0.0.0.0` | HTTP listen address (use `0.0.0.0` so Docker port publish works) |
 | `UPLOAD_DIR` | No | `/app/uploads` | Upload and avatar storage |
 | `DB_PATH` | No | `/app/data/playblast.db` | SQLite database file |
 | `MAX_UPLOAD_SIZE` | No | `5000` | Max upload size in MB |
@@ -141,7 +143,7 @@ Normal access uses Playblast login sessions, not deployment-wide Basic Auth.
 | Container restarts in a loop | Check logs. Common: missing `SESSION_SECRET`, unwritable `data/` or `uploads/`, or invalid env values. |
 | `SESSION_SECRET is required in production` | Set `SESSION_SECRET` in `.env` (32+ characters). |
 | `EACCES` on uploads or data | Fix host folder permissions for the container user. |
-| Can't reach the web UI | Confirm host port, firewall, and LAN IP. |
+| Can't reach the web UI | Confirm host port, firewall, and LAN IP. If `curl localhost` fails but `curl 127.0.0.1` works, use IPv4 explicitly. |
 | Uploads fail for large files | Increase `MAX_UPLOAD_SIZE`; raise reverse-proxy body limits if fronting the app. |
 | `exec format error` | Rebuild image with matching `PLATFORM` (`linux/amd64` vs `linux/arm64`). |
 | Setup page unreachable | Ensure `/api/setup/status` is reachable; emergency Basic Auth (if enabled) allows setup paths. |
