@@ -90,7 +90,7 @@ Do not put this server on the public internet without valid certificates and a m
 ## Synology notes
 
 - Prefer Synology’s reverse proxy / certificate UI **or** the Caddy overlay if you run Compose projects with multiple services.
-- If you terminate TLS with DSM reverse proxy (not the Compose overlay), set  in the Playblast service environment so Express trusts the single forward hop.
+- If you terminate TLS with DSM reverse proxy (not the Compose overlay), set `PROXY_HOPS=1` in the Playblast service environment so Express trusts the single forward hop.
 - Keep Hyper Backup on `data/` + `uploads/` regardless of TLS path ([backup-restore.md](./backup-restore.md)).
 
 ## `PROXY_HOPS` and Express trust proxy
