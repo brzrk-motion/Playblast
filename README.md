@@ -2,7 +2,7 @@
 
 **Self-hosted video proofing for motion studios** — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work.
 
-MIT-licensed, one studio per instance. Playblast is sponsorship-first open source from Brzrk Interactive: studios run free self-hosted deployments while sponsors fund maintenance, docs, and roadmap work.
+MIT-licensed, one studio per instance. Playblast is sponsorship-first open source from Brzrk Interactive: studios run free self-hosted deployments; optional donations and company sponsorships fund general maintenance and development — not a support SLA or managed service.
 
 > Looking to fund the project? See [SPONSORS.md](SPONSORS.md). The GitHub Sponsors button appears after Sponsors is enabled on the brzrk-motion org and [`.github/FUNDING.yml`](.github/FUNDING.yml) is present.
 

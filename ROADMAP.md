@@ -36,7 +36,7 @@ Detailed phase checklists live in docs/Playblast-MVP-Audit.md.
 ## How to influence the roadmap
 
 - File feature requests with studio context (role, workflow pain)
-- Sponsor work via SPONSORS.md
 - Contribute docs and focused PRs per CONTRIBUTING.md
+- Optional sponsorship funds general development — it does **not** buy roadmap control or private support (see SPONSORS.md)
 
-Roadmap items may reorder based on pilot feedback and sponsor priorities.
+Roadmap items may reorder based on pilot feedback and maintainer capacity.
