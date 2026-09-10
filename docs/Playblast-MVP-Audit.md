@@ -15,9 +15,9 @@ Sections through **Repository evidence reviewed** below describe the **pre-MVP b
 
 ## Executive summary
 
-Playblast now has the core studio-facing MVP implementation: application sessions, first-run setup, studio profile, invitations and SMTP configuration, server-enforced roles, studio ownership, the proofing workflow, and self-hosted deployment documentation.
+Playblast now has the core studio-facing MVP implementation: application sessions, first-run setup, studio profile, invitations and SMTP configuration, server-enforced roles, studio ownership, the proofing workflow, Admin-only CRM and finance surfaces, and self-hosted deployment documentation.
 
-The remaining release work is verification rather than the original identity vertical slice. Open gates include a clean-machine operator walkthrough, Docker/NAS checks, recovery and SMTP delivery checks, and independent adoption evidence. The broader CRM and studio-operations surfaces remain Admin-only deferred functionality.
+The remaining release work is verification rather than the original identity vertical slice. Open gates include a clean-machine operator walkthrough, Docker/NAS checks, recovery and SMTP delivery checks, and independent adoption evidence. CRM and studio-operations surfaces (clients, pipeline, services, timesheet, capacity, invoicing) ship as Admin-only product capabilities; Creative and Proofing roles use proofing routes only.
 
 **Practical status:**
 
@@ -27,7 +27,7 @@ The remaining release work is verification rather than the original identity ver
 
 ## Scope of this MVP
 
-The first studio-facing MVP is a focused proofing product, not a complete studio operating system.
+The first studio-facing MVP centers on proofing plus Admin-only CRM and finance; it is not a complete studio operating system.
 
 ### In scope
 
@@ -40,6 +40,7 @@ The first studio-facing MVP is a focused proofing product, not a complete studio
 - Invite recipient creates a password and logs in.
 - Authenticated studio members can access the studio’s projects and proofing workflow.
 - Projects, deliverables, video versions, playback, timestamped comments, frame annotations, comparison, review states, approvals, and downloads.
+- Admin CRM and finance: clients and leads, sales pipeline, services catalog, timesheet, capacity planning, and project invoicing (Admin role only).
 - Docker-based installation with persistent SQLite and media storage.
 - Documented backup, restore, upgrade, rollback, data ownership, and deletion boundaries.
 - Public documentation and issue tracking rather than founder support.
@@ -76,7 +77,7 @@ The precise permission matrix must be explicit before implementation. “Read-on
 - Paid support or response-time commitments.
 - Client/guest accounts with a separate external-permission model.
 - SSO, SCIM, enterprise audit exports, advanced organization policy, and billing.
-- Broad CRM, invoicing, capacity, profitability, and studio-operations features unless they block the proofing workflow.
+- Expanded CRM depth (external client portals, advanced profitability analytics, and studio-operations features beyond the shipped Admin surfaces).
 - Native mobile apps and guaranteed playback of every professional codec.
 
 ## Repository evidence reviewed
@@ -337,7 +338,7 @@ The following blockers describe the pre-MVP baseline and are retained as an impl
 19. Add a data export/deletion procedure appropriate to one self-hosted studio instance.
 20. Test upgrade and migration behavior from the current unauthenticated/Basic-Auth database.
 21. Resolve route/API error states and loading states for first-run, expired invites, disabled users, and invalid sessions.
-22. Decide whether the internal CRM/finance features are hidden from normal studio members in the MVP or explicitly included in the role matrix.
+22. **Resolved:** CRM/finance surfaces ship Admin-only; Creative and Proofing users access proofing through Projects. Server authorization and navigation restrictions enforce this in the role matrix.
 23. Address the large client bundle if performance testing shows it harms first-run usability; do not let this precede identity and authorization work.
 
 ## Target onboarding experience
@@ -556,7 +557,7 @@ The following execution view is the implementation order for the detailed backlo
 
 - [x] Add and backfill studio ownership for every studio-owned table, upload, avatar, and file path.
 - [x] Require authenticated server-derived studio context in every repository method and route.
-- [x] Enforce the role matrix on project, deliverable, version, comment, annotation, approval, playback, download, upload, delete, team, settings, and legacy CRM/finance routes.
+- [x] Enforce the role matrix on project, deliverable, version, comment, annotation, approval, playback, download, upload, delete, team, settings, and CRM/finance routes.
 - [x] Enforce the single-studio-per-instance invariant while using a second studio only as an isolated test fixture.
 - [x] Add route/file-serving inventory and exhaustive allow/deny tests, including nested, search, aggregate, duplicate, archive, and download paths.
 - [x] Add Admin-superset tests proving Admin can perform every permitted Creative and Proofing operation.
@@ -568,7 +569,7 @@ The following execution view is the implementation order for the detailed backlo
 - [x] Hide or disable controls that the current role cannot use, while preserving server-side denial as the authority.
 - [x] Render forbidden states and safe empty states without leaking cross-studio existence.
 - [x] Ensure current user/studio context is sent only through the session and not as trusted client authorization data.
-- [x] Remove or restrict non-MVP CRM/finance/capacity surfaces for Creative and Proofing users.
+- [x] Restrict Admin-only CRM/finance/capacity surfaces for Creative and Proofing users.
 
 #### Integration/verification
 
