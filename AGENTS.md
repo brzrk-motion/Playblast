@@ -2,7 +2,7 @@
 
 ## Cursor Cloud specific instructions
 
-Playblast is a free, open-source, self-hosted video proofing tool for motion design studios — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work.
+Playblast is a free, open-source, self-hosted video proofing and studio CRM tool for motion design studios — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work, plus Admin CRM and finance (clients, pipeline, services, timesheet, capacity, invoicing).
 
 ## Design and implementation skills
 

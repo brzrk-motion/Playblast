@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/brzrk-motion/Playblast/actions/workflows/ci.yml/badge.svg?branch=development-mvp)](https://github.com/brzrk-motion/Playblast/actions/workflows/ci.yml?query=branch%3Adevelopment-mvp) [![Docs](https://github.com/brzrk-motion/Playblast/actions/workflows/deploy-docs.yml/badge.svg?branch=development-mvp)](https://github.com/brzrk-motion/Playblast/actions/workflows/deploy-docs.yml?query=branch%3Adevelopment-mvp) [![License: MIT](https://img.shields.io/github/license/brzrk-motion/Playblast)](LICENSE) [![Node.js 22](https://img.shields.io/badge/node-%3E%3D22.12.0-339933?logo=node.js&logoColor=white)](package.json) ![status: release candidate](https://img.shields.io/badge/status-release%20candidate-orange)
 
-**Self-hosted video proofing for motion studios** — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work.
+**Self-hosted video proofing and studio CRM for motion studios** — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work, plus Admin CRM and finance (clients, pipeline, services, timesheet, capacity, invoicing).
 
 MIT-licensed, one studio per instance. Playblast is sponsorship-first open source from Brzrk Interactive: studios run free self-hosted deployments; optional donations and company sponsorships fund general maintenance and development — not a support SLA or managed service.
 
@@ -12,6 +12,7 @@ MIT-licensed, one studio per instance. Playblast is sponsorship-first open sourc
 
 - **Own your pipeline** — Docker/NAS deploy with local SQLite and uploads; no hosted SaaS or centralized studio media
 - **Proofing built for motion** — versions, timestamped comments, side-by-side compare, and approval workflows for CGI and motion review
+- **Studio CRM and finance (Admin)** — clients, pipeline, services, timesheet, capacity, and project invoicing on the same self-hosted instance
 - **Roles that match the floor** — server-side admin, creative, and proofing permissions
 - **Built for operators** — first-run setup, invite flows, and deploy docs you run yourself — not a managed service
 
@@ -93,7 +94,7 @@ See [.env.example](.env.example) and [docs/deployment/secrets.md](docs/deploymen
 
 ## Support boundary
 
-Self-hosted operators own Docker, networking, HTTPS/VPN, backups, and SMTP deliverability. Playblast provides application setup, roles, and proofing — not remote hands or paid support. Report defects via the project's public issue tracker. Security issues: see [SECURITY.md](SECURITY.md).
+Self-hosted operators own Docker, networking, HTTPS/VPN, backups, and SMTP deliverability. Playblast provides application setup, roles, proofing, and Admin CRM/finance — not remote hands or paid support. Report defects via the project's public issue tracker. Security issues: see [SECURITY.md](SECURITY.md).
 
 ## MVP reference
 
