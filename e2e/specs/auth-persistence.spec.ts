@@ -30,13 +30,13 @@ async function waitForPidExit(pid: number, timeoutMs = 10_000): Promise<void> {
 test("Admin logout then login restores access", async ({ page }) => {
   await loginAs(page, E2E_ADMIN.email, E2E_ADMIN.password)
   await page.goto("/team")
-  await expect(page.getByRole("heading", { name: "Team", level: 2 })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Team", level: 1 })).toBeVisible()
   await logout(page)
   await page.goto("/team")
   await expect(page).toHaveURL(/\/login/)
   await loginAs(page, E2E_ADMIN.email, E2E_ADMIN.password)
   await page.goto("/team")
-  await expect(page.getByRole("heading", { name: "Team", level: 2 })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Team", level: 1 })).toBeVisible()
 })
 
 test("Server restart preserves the database and authenticated session", async ({ page }) => {
@@ -45,7 +45,7 @@ test("Server restart preserves the database and authenticated session", async ({
 
   await loginAs(page, E2E_ADMIN.email, E2E_ADMIN.password)
   await page.goto("/team")
-  await expect(page.getByRole("heading", { name: "Team", level: 2 })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Team", level: 1 })).toBeVisible()
 
   try {
     process.kill(-oldPid, "SIGTERM")
@@ -110,7 +110,7 @@ test("Server restart preserves the database and authenticated session", async ({
   }
 
   await page.goto("/team")
-  await expect(page.getByRole("heading", { name: "Team", level: 2 })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Team", level: 1 })).toBeVisible()
   await expect(page.getByText(E2E_ADMIN.email).first()).toBeVisible()
 })
 
@@ -119,7 +119,7 @@ test.describe("Team membership controls", () => {
 
   test("Admin sees members with assigned roles", async ({ page }) => {
     await page.goto("/team")
-    await expect(page.getByRole("heading", { name: "Team", level: 2 })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Team", level: 1 })).toBeVisible()
     await expect(page.getByText(E2E_ADMIN.email).first()).toBeVisible()
     await expect(page.getByText("creative@e2e.fixture").first()).toBeVisible()
     await expect(page.getByText("proofing@e2e.fixture").first()).toBeVisible()

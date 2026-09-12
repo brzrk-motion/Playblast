@@ -62,7 +62,7 @@ export async function configureSmtpViaUi(
   input: { host: string; fromEmail: string; instanceUrl: string },
 ): Promise<void> {
   await page.goto("/team")
-  await expect(page.getByRole("heading", { name: "Team", level: 2 })).toBeVisible({
+  await expect(page.getByRole("heading", { name: "Team", level: 1 })).toBeVisible({
     timeout: 20_000,
   })
 

@@ -16,10 +16,10 @@ test.describe("Responsive and accessibility smoke", () => {
       })
 
       await page.goto("/team")
-      await expect(page.getByRole("heading", { name: "Team", level: 2 })).toBeVisible()
+      await expect(page.getByRole("heading", { name: "Team", level: 1 })).toBeVisible()
 
       await page.goto("/profile")
-      await expect(page.getByRole("heading", { name: "Profile", level: 2 })).toBeVisible()
+      await expect(page.getByRole("heading", { name: "Profile", level: 1 })).toBeVisible()
 
       await page.goto("/projects")
       await expect(page).not.toHaveURL(/\/forbidden|\/login/)

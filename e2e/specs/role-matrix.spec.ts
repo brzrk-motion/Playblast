@@ -24,7 +24,7 @@ test.describe("Admin UI", () => {
 
   test("Admin can open Team and CRM routes", async ({ page }) => {
     await page.goto("/team")
-    await expect(page.getByRole("heading", { name: "Team", level: 2 })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Team", level: 1 })).toBeVisible()
     await page.goto("/clients")
     await expect(page).not.toHaveURL(/\/forbidden|\/login/)
   })
@@ -87,7 +87,7 @@ test.describe("Account Executive UI", () => {
     await page.goto("/clients")
     await expect(page).not.toHaveURL(/\/forbidden|\/login/)
     await page.goto("/team")
-    await expect(page.getByRole("heading", { name: "Team", level: 2 })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Team", level: 1 })).toBeVisible()
     await expect(page.getByRole("button", { name: "Invite member" })).toHaveCount(0)
   })
 })
