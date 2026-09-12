@@ -12,12 +12,6 @@ export const INVOICE_STATUS_STYLES: Record<InvoiceStatus, string> = {
   paid: "border-status-success text-status-success-foreground",
 }
 
-export const DUE_DATE_PRESETS = [
-  { label: "Net 7", days: 7 },
-  { label: "Net 14", days: 14 },
-  { label: "Net 30", days: 30 },
-] as const
-
 export function formatInvoiceDate(value: string): string {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -33,10 +27,4 @@ export function formatInvoiceDate(value: string): string {
 
 export function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10)
-}
-
-export function addDaysToIsoDate(isoDate: string, days: number): string {
-  const date = new Date(isoDate)
-  date.setDate(date.getDate() + days)
-  return date.toISOString().slice(0, 10)
 }

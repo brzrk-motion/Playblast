@@ -10,21 +10,14 @@ import {
   listInvoicesByProject,
   updateInvoice,
 } from "../storage/index.js"
-import { getParam, getProjectIdParam } from "../utils/params.js"
+import {
+  getParam,
+  getProjectIdParam,
+  parsePositiveNumber,
+} from "../utils/params.js"
 import { requireInvoiceStudio, requireProjectStudio } from "./route-helpers.js"
 
 const projectInvoicesRouter = Router({ mergeParams: true })
-
-function parsePositiveNumber(
-  value: unknown,
-  fieldName: string,
-): { value: number } | { error: string } {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-    return { error: `${fieldName} must be greater than 0.` }
-  }
-
-  return { value }
-}
 
 function parseIsoDate(
   value: unknown,

@@ -9,33 +9,10 @@ import {
   E2E_CREATIVE,
   E2E_PROOFING,
 } from "./credentials.js"
+import { authHeaders, collectSetCookies } from "./helpers/api.js"
 
 const baseUrl = process.env.PLAYBLAST_BASE_URL ?? "http://127.0.0.1:3098"
 const dbPath = process.env.DB_PATH
-
-function collectSetCookies(response: Response): string[] {
-  const headers = response.headers as Headers & { getSetCookie?: () => string[] }
-  if (typeof headers.getSetCookie === "function") {
-    return headers.getSetCookie()
-  }
-  const single = response.headers.get("set-cookie")
-  return single ? [single] : []
-}
-
-function cookieHeader(cookies: string[]): string {
-  return cookies.map((entry) => entry.split(";")[0]!).join("; ")
-}
-
-function authHeaders(cookies: string[], csrfToken: string, json = true): HeadersInit {
-  const headers: Record<string, string> = {
-    Cookie: cookieHeader(cookies),
-    "X-CSRF-Token": csrfToken,
-  }
-  if (json) {
-    headers["Content-Type"] = "application/json"
-  }
-  return headers
-}
 
 async function hashPassword(password: string): Promise<string> {
   const { hashPasswordSync } = await import("../server/src/auth/password.js")

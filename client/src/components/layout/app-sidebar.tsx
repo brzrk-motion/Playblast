@@ -7,6 +7,7 @@ import {
   User,
 } from "lucide-react"
 import {
+  getVisibleNavItems,
   ROLE_BADGE_TOKENS,
   type NavItemDefinition,
 } from "@playblast/shared"
@@ -42,7 +43,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { useSession } from "@/hooks/use-session"
-import { getMvpNavItemsForRole } from "@/lib/mvp-contracts"
 import { logout } from "@/lib/identity-api"
 import {
   isNavGroupActive,
@@ -72,10 +72,10 @@ export function AppSidebar() {
   const sessionStudio = state.status === "ready" ? state.session?.studio : null
 
   const visibleMainNav = role
-    ? filterNavByContract(navMain, getMvpNavItemsForRole(role, "main"))
+    ? filterNavByContract(navMain, getVisibleNavItems(role, "main"))
     : navMain
   const visibleSecondaryNav = role
-    ? filterNavByContract(navSecondary, getMvpNavItemsForRole(role, "secondary"))
+    ? filterNavByContract(navSecondary, getVisibleNavItems(role, "secondary"))
     : navSecondary
 
   const studioName = sessionStudio?.name || "Playblast Studio"

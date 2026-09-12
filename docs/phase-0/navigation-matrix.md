@@ -35,4 +35,4 @@ Hidden or disabled controls are never authorization.
 
 CRM and operations nav items are available to Admin and Account Executive users. Creative and Proofing users retain production routes through Projects.
 
-Client adapter: `getMvpNavItemsForRole()` in `client/src/lib/mvp-contracts.ts`.
+Client adapter: `getVisibleNavItems()` from `@playblast/shared`.

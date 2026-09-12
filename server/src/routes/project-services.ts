@@ -6,25 +6,15 @@ import {
   removeProjectService,
   updateProjectService,
 } from "../storage/index.js"
-import { getParam, getProjectIdParam } from "../utils/params.js"
+import {
+  getParam,
+  getProjectIdParam,
+  hasAtMostOneDecimalPlace,
+  parsePositiveNumber,
+} from "../utils/params.js"
 import { requireProjectStudio } from "./route-helpers.js"
 
 const projectServicesRouter = Router({ mergeParams: true })
-
-function parsePositiveNumber(
-  value: unknown,
-  fieldName: string,
-): { value: number } | { error: string } {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-    return { error: `${fieldName} must be greater than 0.` }
-  }
-
-  return { value }
-}
-
-function hasAtMostOneDecimalPlace(value: number): boolean {
-  return Math.round(value * 10) / 10 === value
-}
 
 function parseOverrideHours(
   value: unknown,

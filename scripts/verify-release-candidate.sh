@@ -20,9 +20,6 @@ step() {
   echo "==> $*"
 }
 
-step "Shared contract build"
-npm run build -w shared
-
 step "Server, client, and shared tests"
 npm run test
 

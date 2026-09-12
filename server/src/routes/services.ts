@@ -9,28 +9,17 @@ import {
   updateService,
 } from "../storage/index.js"
 import { isServiceType } from "../types/index.js"
-import { getParam } from "../utils/params.js"
+import {
+  getParam,
+  hasAtMostOneDecimalPlace,
+  parsePositiveNumber,
+} from "../utils/params.js"
 import { requireServiceStudio, requireStudioSession } from "./route-helpers.js"
 
 const MAX_NAME_LENGTH = 100
 
 function getServiceIdParam(req: { params: { id?: string | string[] } }): string {
   return getParam(req.params.id ?? "")
-}
-
-function parsePositiveNumber(
-  value: unknown,
-  fieldName: string,
-): { value: number } | { error: string } {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-    return { error: `${fieldName} must be greater than 0.` }
-  }
-
-  return { value }
-}
-
-function hasAtMostOneDecimalPlace(value: number): boolean {
-  return Math.round(value * 10) / 10 === value
 }
 
 function validateServiceName(name: unknown): { value: string } | { error: string } {

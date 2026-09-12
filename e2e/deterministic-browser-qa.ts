@@ -10,22 +10,10 @@ import {
   E2E_CREATIVE,
   E2E_PROOFING,
 } from "./credentials.js"
+import { authHeaders, collectSetCookies } from "./helpers/api.js"
 
 const baseUrl = process.env.PLAYBLAST_BASE_URL ?? "http://127.0.0.1:3098"
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-
-function collectSetCookies(response: Response): string[] {
-  const headers = response.headers as Headers & { getSetCookie?: () => string[] }
-  if (typeof headers.getSetCookie === "function") {
-    return headers.getSetCookie()
-  }
-  const single = response.headers.get("set-cookie")
-  return single ? [single] : []
-}
-
-function cookieHeader(cookies: string[]): string {
-  return cookies.map((entry) => entry.split(";")[0]!).join("; ")
-}
 
 async function login(email: string, password: string) {
   const response = await fetch(`${baseUrl}/api/auth/login`, {
@@ -75,17 +63,9 @@ async function expectApiStatus(
   expected: number,
   method = "GET",
 ) {
-  const headers: Record<string, string> = {
-    Cookie: cookieHeader(cookies),
-    "X-CSRF-Token": csrfToken,
-  }
-  if (method !== "GET" && method !== "DELETE") {
-    headers["Content-Type"] = "application/json"
-  }
-
   const response = await fetch(`${baseUrl}${pathName}`, {
     method,
-    headers,
+    headers: authHeaders(cookies, csrfToken, method !== "GET" && method !== "DELETE"),
     body: method === "GET" || method === "DELETE" ? undefined : JSON.stringify({ name: "QA Project" }),
   })
   if (response.status !== expected) {

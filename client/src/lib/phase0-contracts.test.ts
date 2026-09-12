@@ -4,11 +4,11 @@ import {
   APP_ROUTES,
   canRoleAccessRoute,
   getNavVisibility,
+  getVisibleNavItems,
   getUiStateForErrorCode,
   ROLE_BADGE_TOKENS,
   UI_STATE_CATALOG,
 } from "@playblast/shared"
-import { getMvpNavItemsForRole, mapApiErrorToUiState } from "./mvp-contracts.js"
 
 describe("Phase 0 client route map", () => {
   it("classifies implemented proofing routes as authenticated", () => {
@@ -32,8 +32,8 @@ describe("Phase 0 client route map", () => {
 
 describe("Phase 0 client navigation contract", () => {
   it("returns only visible nav items for each role", () => {
-    const adminMain = getMvpNavItemsForRole("admin", "main")
-    const proofingMain = getMvpNavItemsForRole("proofing", "main")
+    const adminMain = getVisibleNavItems("admin", "main")
+    const proofingMain = getVisibleNavItems("proofing", "main")
 
     assert.ok(adminMain.some((item) => item.id === "clients"))
     assert.equal(proofingMain.some((item) => item.id === "clients"), false)
@@ -60,7 +60,7 @@ describe("Phase 0 client UI states", () => {
   })
 
   it("maps API error codes to UI states", () => {
-    assert.equal(mapApiErrorToUiState("FORBIDDEN"), "forbidden")
+    assert.equal(getUiStateForErrorCode("FORBIDDEN"), "forbidden")
     assert.equal(getUiStateForErrorCode("INVITE_REVOKED"), "invite_expired")
   })
 

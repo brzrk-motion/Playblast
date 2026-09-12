@@ -8,7 +8,7 @@ Phase 0 establishes the executable contracts and documentation that later implem
 |-------|----------|----------|
 | Shared | Role capability matrix, API errors, bootstrap rules | `@playblast/shared` (`shared/src/`) |
 | Server | Capability contract tests | `server/src/contracts/phase0.test.ts` |
-| Client | Route/nav/UI-state adapters | `client/src/lib/mvp-contracts.ts` |
+| Client | Route/nav/UI-state contracts | `@playblast/shared` (`shared/src/`) |
 | Client | Contract tests | `client/src/lib/phase0-contracts.test.ts` |
 | Docs | Human-readable specifications | `docs/phase-0/*.md` |
 

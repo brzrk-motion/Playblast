@@ -15,7 +15,6 @@ PORT="${PLAYBLAST_BROWSER_QA_PORT:-3098}"
 BASE_URL="http://127.0.0.1:${PORT}"
 
 echo "==> Build production artifacts"
-npm run build -w shared
 npm run build
 
 TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/playblast-browser-qa-fallback.XXXXXX")"

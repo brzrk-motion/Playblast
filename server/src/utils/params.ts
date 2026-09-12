@@ -22,3 +22,18 @@ export function getVersionRouteParams(req: Request): {
     version: getParam(params.version),
   }
 }
+
+export function parsePositiveNumber(
+  value: unknown,
+  fieldName: string,
+): { value: number } | { error: string } {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return { error: `${fieldName} must be greater than 0.` }
+  }
+
+  return { value }
+}
+
+export function hasAtMostOneDecimalPlace(value: number): boolean {
+  return Math.round(value * 10) / 10 === value
+}

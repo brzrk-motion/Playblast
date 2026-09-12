@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { Clapperboard } from "lucide-react"
-import { PASSWORD_POLICY, ROLE_BADGE_TOKENS, ROLE_LABELS, type InvitableRole } from "@playblast/shared"
+import {
+  PASSWORD_POLICY,
+  ROLE_BADGE_TOKENS,
+  ROLE_LABELS,
+  UI_STATE_CATALOG,
+  type InvitableRole,
+} from "@playblast/shared"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,7 +27,6 @@ import {
   fetchInvitePreview,
   isIdentityApiError,
 } from "@/lib/identity-api"
-import { UI_STATE_CATALOG } from "@/lib/mvp-contracts"
 import { cn } from "@/lib/utils"
 
 export function InviteAcceptPage() {

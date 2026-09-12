@@ -4,8 +4,6 @@ node_modules
 # Build output
 dist
 dist-ssr
-client/dist
-server/dist
 server/uploads
 server/data/*
 !server/data/store.json
