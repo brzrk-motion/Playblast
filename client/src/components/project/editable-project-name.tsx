@@ -99,7 +99,7 @@ export function EditableProjectName({
   }
 
   return (
-    <h2
+    <h1
       className={cn("type-page-title", className)}
       onClick={startEditing}
       onKeyDown={(event) => {
@@ -110,8 +110,9 @@ export function EditableProjectName({
       }}
       role="button"
       tabIndex={0}
+      aria-label={`Rename project: ${name}`}
     >
       {name}
-    </h2>
+    </h1>
   )
 }

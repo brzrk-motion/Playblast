@@ -149,7 +149,7 @@ export function ProjectServiceHoursControl({
       </button>
       {isOverridden ? (
         <>
-          <Badge variant="secondary" className="h-5 px-1.5 text-[10px] uppercase">
+          <Badge variant="secondary" className="type-micro h-5 px-1.5 uppercase">
             Custom
           </Badge>
           <Button

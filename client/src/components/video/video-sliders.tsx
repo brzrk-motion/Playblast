@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils"
 import type { Comment } from "@/types/comment"
 
 const hudSliderClass =
-  "[&_[data-slot=slider-track]]:h-1 [&_[data-slot=slider-track]]:bg-white/20 [&_[data-slot=slider-range]]:bg-white [&_[data-slot=slider-thumb]]:size-3 [&_[data-slot=slider-thumb]]:border-white [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-[0_0_0_2px_rgba(0,0,0,0.35)]"
+  "[&_[data-slot=slider-track]]:h-1 [&_[data-slot=slider-track]]:bg-white/20 [&_[data-slot=slider-range]]:bg-white [&_[data-slot=slider-thumb]]:size-4 sm:[&_[data-slot=slider-thumb]]:size-3 [&_[data-slot=slider-thumb]]:border-white [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-[0_0_0_2px_rgba(0,0,0,0.35)]"
 
 export function VideoVolumeSlider({ className }: { className?: string }) {
   const volume = useMediaState("volume")
@@ -75,7 +75,10 @@ export function VideoTimeSlider({
     fps && previewTime >= 0 ? timeToFrame(previewTime, fps) : null
 
   return (
-    <div ref={previewRootRef} className={cn("relative flex-1 py-1", className)}>
+    <div
+      ref={previewRootRef}
+      className={cn("relative flex-1 min-h-11 py-2 sm:min-h-0 sm:py-1", className)}
+    >
       <Slider
         className={cn("w-full", hudSliderClass)}
         value={[value]}

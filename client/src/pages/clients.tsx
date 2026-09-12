@@ -43,7 +43,7 @@ export function ClientsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
-        <h2 className="type-page-title">Client Management</h2>
+        <h1 className="type-page-title">Client Management</h1>
         <p className="text-muted-foreground">
           Track leads through the pipeline and manage client relationships.
         </p>

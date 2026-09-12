@@ -40,6 +40,11 @@ typography:
     fontSize: "0.75rem"
     fontWeight: 400
     lineHeight: "1rem"
+  micro:
+    fontFamily: "ui-sans-serif, system-ui, sans-serif"
+    fontSize: "0.625rem"
+    fontWeight: 400
+    lineHeight: "0.875rem"
   timestamp:
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace"
     fontSize: "0.75rem"
@@ -146,6 +151,7 @@ The palette is neutral-first with functional color only where it encodes review 
 - **Section title** (600, 1.125rem / 1.75rem): `.type-section-title` on card headers and panel labels.
 - **Body** (400, 0.875rem / 1.25rem): Default UI copy, form labels, table cells.
 - **Caption** (400, 0.75rem, muted): Helper text, metadata, badge labels.
+- **Micro** (400, 0.625rem / 0.875rem): Compact badges, sidebar labels, dense metadata chips. Use `.type-micro`; never raw `text-[10px]`.
 - **Timestamp** (500 mono, 0.75rem): Player time, comment timecodes, duration fields.
 
 ### Named Rules

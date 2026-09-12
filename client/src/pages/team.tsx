@@ -340,7 +340,7 @@ export function TeamPage() {
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <div className="space-y-2">
-        <h2 className="type-page-title">Team</h2>
+        <h1 className="type-page-title">Team</h1>
         <p className="text-muted-foreground">
           Manage studio members, invitations, and SMTP delivery for this self-hosted instance.
         </p>

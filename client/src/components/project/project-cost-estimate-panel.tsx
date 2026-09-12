@@ -81,7 +81,7 @@ export function ProjectCostEstimatePanel({
                     {isProjectServiceHoursOverridden(item) ? (
                       <Badge
                         variant="secondary"
-                        className="ml-2 h-5 px-1.5 text-[10px] uppercase"
+                        className="type-micro ml-2 h-5 px-1.5 uppercase"
                       >
                         Custom
                       </Badge>

@@ -362,6 +362,18 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .transition-interactive,
+    .transition-panel,
+    .interactive-card,
+    .interactive-row {
+      transition: none;
+    }
+
+    .interactive-card:active,
+    button:active {
+      transform: none;
+    }
+
     .video-controls {
       transition: none;
     }

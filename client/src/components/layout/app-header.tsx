@@ -14,7 +14,7 @@ export function AppHeader({ title = "Dashboard", subtitle }: AppHeaderProps) {
       <Separator orientation="vertical" className="mr-2 h-4" />
 
       <div className="flex flex-1 items-center gap-2">
-        <h1 className="text-sm font-semibold">{title}</h1>
+        <p className="text-sm font-semibold">{title}</p>
         {subtitle && (
           <span className="text-xs text-muted-foreground hidden sm:block">/ {subtitle}</span>
         )}

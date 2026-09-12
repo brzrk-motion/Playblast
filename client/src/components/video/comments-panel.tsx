@@ -162,7 +162,7 @@ function CommentRow({
         className="flex items-start gap-2.5 px-3 py-2.5 text-left"
       >
         <Avatar size="sm" className="mt-0.5" aria-hidden="true">
-          <AvatarFallback className="text-[10px] font-medium">
+          <AvatarFallback className="type-micro font-medium">
             {getAuthorInitial(comment.author)}
           </AvatarFallback>
         </Avatar>

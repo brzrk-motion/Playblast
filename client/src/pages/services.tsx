@@ -335,7 +335,7 @@ export function ServicesPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
-          <h2 className="type-page-title">Services</h2>
+          <h1 className="type-page-title">Services</h1>
           <p className="text-muted-foreground">
             Manage your catalog of static and animated offerings with rates and
             hour estimates.

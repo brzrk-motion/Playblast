@@ -311,7 +311,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="type-page-title">{greeting}</h2>
+        <h1 className="type-page-title">{greeting}</h1>
         <p className="text-muted-foreground">
           Portfolio health across budgets, deadlines, and approvals.
         </p>

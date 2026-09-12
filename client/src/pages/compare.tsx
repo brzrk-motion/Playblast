@@ -226,7 +226,7 @@ export function ComparePage() {
         </Button>
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="type-page-title">{deliverable.name}</h2>
+            <h1 className="type-page-title">{deliverable.name}</h1>
             <Badge variant="secondary">Version comparison</Badge>
           </div>
           <p className="text-muted-foreground">

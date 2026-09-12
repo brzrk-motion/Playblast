@@ -56,7 +56,7 @@ function ComingSoonBadge() {
   return (
     <Badge
       variant="outline"
-      className="ml-auto shrink-0 px-1.5 py-0 text-[10px] font-normal text-muted-foreground"
+      className="type-micro ml-auto shrink-0 px-1.5 py-0 font-normal text-muted-foreground"
     >
       Soon
     </Badge>

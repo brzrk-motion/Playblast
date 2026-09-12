@@ -157,6 +157,26 @@ export function useAnnotationDrawing({
     [draftShape, enabled, getOverlayRect],
   )
 
+  const finalizeDraftShape = useCallback(() => {
+    if (!draftShape) {
+      return
+    }
+
+    if (draftShape.type === "freehand") {
+      if (draftShape.points.length >= 4) {
+        setShapes((current) => [...current, draftShape])
+      }
+    } else if (draftShape.type === "arrow") {
+      const [x1, y1, x2, y2] = draftShape.points
+      const distance = Math.hypot(x2 - x1, y2 - y1)
+      if (distance > 0.01) {
+        setShapes((current) => [...current, draftShape])
+      }
+    }
+
+    setDraftShape(null)
+  }, [draftShape])
+
   const handlePointerUp = useCallback(
     (event: React.PointerEvent<SVGSVGElement>) => {
       if (!enabled || !draftShape) {
@@ -167,22 +187,33 @@ export function useAnnotationDrawing({
         event.currentTarget.releasePointerCapture(event.pointerId)
       }
 
-      if (draftShape.type === "freehand") {
-        if (draftShape.points.length >= 4) {
-          setShapes((current) => [...current, draftShape])
-        }
-      } else if (draftShape.type === "arrow") {
-        const [x1, y1, x2, y2] = draftShape.points
-        const distance = Math.hypot(x2 - x1, y2 - y1)
-        if (distance > 0.01) {
-          setShapes((current) => [...current, draftShape])
-        }
+      finalizeDraftShape()
+    },
+    [draftShape, enabled, finalizeDraftShape],
+  )
+
+  const handlePointerCancel = useCallback(
+    (event: React.PointerEvent<SVGSVGElement>) => {
+      if (!enabled) {
+        return
+      }
+
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId)
       }
 
       setDraftShape(null)
     },
-    [draftShape, enabled],
+    [enabled],
   )
+
+  const handleLostPointerCapture = useCallback(() => {
+    if (!enabled) {
+      return
+    }
+
+    setDraftShape(null)
+  }, [enabled])
 
   return {
     overlayRef,
@@ -196,6 +227,8 @@ export function useAnnotationDrawing({
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    handlePointerCancel,
+    handleLostPointerCapture,
     getOverlayRect,
   }
 }

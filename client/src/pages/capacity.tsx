@@ -77,10 +77,10 @@ export function CapacityPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="type-page-title flex items-center gap-2">
+        <h1 className="type-page-title flex items-center gap-2">
           <Gauge className="size-6 text-muted-foreground" />
           Capacity
-        </h2>
+        </h1>
         <p className="text-muted-foreground">
           Active project workload and estimated hours remaining across the
           studio.

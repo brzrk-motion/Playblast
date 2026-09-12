@@ -19,16 +19,25 @@ function AppLayoutContent() {
 
   return (
     <SidebarProvider>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-2 focus:rounded-md focus:border focus:border-border focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-sm focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      >
+        Skip to main content
+      </a>
       <AppSidebar />
       <SidebarInset className="min-h-svh">
         <AppHeader title={title} subtitle={headerSubtitle} />
         {isReviewLayout ? (
-          <main className="flex min-h-0 w-full flex-1 flex-col overflow-hidden p-3 md:p-4">
+          <main
+            id="main-content"
+            className="flex min-h-0 w-full flex-1 flex-col overflow-hidden p-3 md:p-4"
+          >
             <Outlet />
           </main>
         ) : (
           <ScrollArea className="min-w-0 flex-1">
-            <main className="min-w-0 p-4 md:p-6">
+            <main id="main-content" className="min-w-0 p-4 md:p-6">
               <Outlet />
             </main>
           </ScrollArea>

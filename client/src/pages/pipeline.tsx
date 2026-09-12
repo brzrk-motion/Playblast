@@ -297,6 +297,13 @@ export function PipelinePage() {
       className="flex min-w-0 flex-1 flex-col gap-6"
       aria-busy={loading}
     >
+      <div>
+        <h1 className="type-page-title">Pipeline</h1>
+        <p className="text-muted-foreground">
+          Revenue by project stage.
+        </p>
+      </div>
+
       {loading ? (
         <PageLoading label="Loading pipeline summary" className="grid gap-4 sm:grid-cols-2">
           <Skeleton className="h-28" />

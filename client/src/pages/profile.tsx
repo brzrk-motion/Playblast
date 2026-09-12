@@ -27,7 +27,7 @@ export function ProfilePage() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <div className="space-y-2">
-        <h2 className="type-page-title">Profile</h2>
+        <h1 className="type-page-title">Profile</h1>
         <p className="text-muted-foreground">
           Server-derived account and studio identity for this signed-in session.
         </p>

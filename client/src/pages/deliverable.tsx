@@ -411,9 +411,9 @@ export function DeliverablePage() {
 
           <div className="hidden h-4 w-px bg-border sm:block" />
 
-          <h2 className="max-w-[10rem] truncate text-sm font-semibold sm:max-w-[16rem]">
+          <h1 className="max-w-[10rem] truncate text-sm font-semibold sm:max-w-[16rem]">
             {deliverable.name}
-          </h2>
+          </h1>
 
           <VersionSelector
             versions={versions}

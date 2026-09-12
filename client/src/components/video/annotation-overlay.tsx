@@ -38,6 +38,8 @@ export function AnnotationOverlay({ comments, className }: AnnotationOverlayProp
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    handlePointerCancel,
+    handleLostPointerCapture,
     getOverlayRect,
   } = useAnnotationDrawing({
     enabled: drawingEnabled,
@@ -83,6 +85,8 @@ export function AnnotationOverlay({ comments, className }: AnnotationOverlayProp
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        onLostPointerCapture={handleLostPointerCapture}
       >
         <AnnotationMarkerDefs />
 

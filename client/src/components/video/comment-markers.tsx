@@ -49,17 +49,22 @@ export function CommentMarkers({
           >
             <button
               type="button"
-              className={cn(
-                "block rounded-full ring-1 ring-black/40 transition-interactive hover:scale-125 focus-visible:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 active:scale-110",
-                comment.annotation ? "size-2.5 ring-2" : "size-2",
-                markerColorClass(index),
-              )}
+              className="flex size-11 items-center justify-center rounded-full transition-interactive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 motion-reduce:transform-none"
               aria-label={`${comment.annotation ? "Annotated comment" : "Comment"} at ${formatTimecode(comment.timestamp)} by ${comment.author}`}
               onClick={(event) => {
                 event.stopPropagation()
                 onSeek?.(comment.timestamp)
               }}
-            />
+            >
+              <span
+                className={cn(
+                  "block rounded-full ring-1 ring-black/40",
+                  comment.annotation ? "size-2.5 ring-2" : "size-2",
+                  markerColorClass(index),
+                )}
+                aria-hidden="true"
+              />
+            </button>
 
             <div
               role="tooltip"

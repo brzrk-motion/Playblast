@@ -44,8 +44,13 @@ export function TimesheetPage() {
   }
 
   return (
-
     <div className="space-y-6">
+      <div>
+        <h1 className="type-page-title">Timesheet</h1>
+        <p className="text-muted-foreground">
+          Weekly hours across projects.
+        </p>
+      </div>
       <TimesheetView
         data={data}
         loading={loading}

@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react"
+import { useInView } from "@/hooks/use-in-view"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Wallet } from "lucide-react"
 import {
   Bar,
@@ -183,6 +185,7 @@ function RevenueChartBody({
 
 export function MonthlyRevenueChart({ projects }: MonthlyRevenueChartProps) {
   const [dateField, setDateField] = useState<RevenueDateField>("startDate")
+  const { ref: chartViewportRef, inView: chartInView } = useInView()
   const year = new Date().getFullYear()
 
   const buckets = useMemo(
@@ -224,13 +227,22 @@ export function MonthlyRevenueChart({ projects }: MonthlyRevenueChartProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <RevenueChartBody
-          buckets={buckets}
-          maxValue={maxValue}
-          year={year}
-          wrapperClassName="h-[280px] w-full rounded-lg bg-gradient-to-b from-status-warning/10 via-transparent to-transparent p-2"
-          maxBarSize={48}
-        />
+        <div ref={chartViewportRef}>
+          {chartInView ? (
+            <RevenueChartBody
+              buckets={buckets}
+              maxValue={maxValue}
+              year={year}
+              wrapperClassName="h-[280px] w-full rounded-lg bg-gradient-to-b from-status-warning/10 via-transparent to-transparent p-2"
+              maxBarSize={48}
+            />
+          ) : (
+            <Skeleton
+              className="h-[280px] w-full rounded-lg"
+              aria-label="Loading monthly revenue chart"
+            />
+          )}
+        </div>
       </CardContent>
     </Card>
   )

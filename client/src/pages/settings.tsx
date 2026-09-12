@@ -206,7 +206,7 @@ export function SettingsPage() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h2 className="type-page-title">Settings</h2>
+        <h1 className="type-page-title">Settings</h1>
         <p className="text-muted-foreground">
           Workspace preferences and appearance.
         </p>
