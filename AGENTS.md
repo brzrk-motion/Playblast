@@ -121,6 +121,7 @@ npm run start -w server    # Run compiled server (after build)
 
 ### Notes
 
-- Node 22 LTS is required (Dockerfile uses Node 22; see `engines` in `package.json`).
+- Node 22 LTS is required (Dockerfile uses Node 22; see `engines` in `package.json`). Local dev is pinned via `.node-version` and `.mise.toml`; run `mise install` (or `fnm use` / `nvm use`) after cloning.
+- `pretest` runs `scripts/verify-native-modules.js` so `better-sqlite3` loads before server tests; if it fails after switching Node versions, run `npm rebuild better-sqlite3` or reinstall `node_modules`.
 - Client API calls go through `client/src/lib/api.ts` using relative `/api/*` paths.
 - Key client routes: dashboard (`/`), project review (`/projects/:projectId`), version comparison (`/projects/:projectId/compare`).
