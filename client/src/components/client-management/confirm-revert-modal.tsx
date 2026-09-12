@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
 import { revertClientToLead } from "@/lib/api"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import type { Client } from "@/types/client"
 import type { Lead } from "@/types/lead"
 
@@ -53,11 +54,11 @@ export function ConfirmRevertModal({
 
     try {
       const lead = await revertClientToLead(client.id)
-      showSuccessToast(`${client.name} has been moved back to leads`)
+      toast.success(`${client.name} has been moved back to leads`)
       onOpenChange(false)
       onSuccess?.(lead)
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to convert client to lead"))
+      toast.error(humanizeApiError(err, "Failed to convert client to lead"))
     } finally {
       setReverting(false)
     }

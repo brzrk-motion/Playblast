@@ -8,7 +8,8 @@ import { Spinner } from "@/components/ui/spinner"
 import { useVideoPlayer } from "@/hooks/use-video-player"
 import { useSession } from "@/hooks/use-session"
 import { getForbiddenMessage, redirectOnSessionExpired } from "@/lib/api"
-import { humanizeApiError, showErrorToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import type { FrameAnnotation } from "@/types/annotation"
 
@@ -82,7 +83,7 @@ export function CommentComposerForm({
       const message =
         forbiddenMessage ?? humanizeApiError(err, "Failed to add comment")
       setError(message)
-      showErrorToast(message)
+      toast.error(message)
       setSubmitting(false)
     }
   }

@@ -25,8 +25,8 @@ import { useSession } from "@/hooks/use-session"
 import {
   acceptInvitation,
   fetchInvitePreview,
-  isIdentityApiError,
-} from "@/lib/identity-api"
+  isApiError,
+} from "@/lib/api-http"
 import { cn } from "@/lib/utils"
 
 export function InviteAcceptPage() {
@@ -70,7 +70,7 @@ export function InviteAcceptPage() {
         if (cancelled) {
           return
         }
-        if (isIdentityApiError(error)) {
+        if (isApiError(error)) {
           const state = UI_STATE_CATALOG.invite_expired.relatedErrorCodes?.includes(
             error.code,
           )
@@ -108,7 +108,7 @@ export function InviteAcceptPage() {
       await refresh()
       navigate("/", { replace: true })
     } catch (error) {
-      if (isIdentityApiError(error)) {
+      if (isApiError(error)) {
         if (error.details) {
           setFieldErrors(error.details)
         }

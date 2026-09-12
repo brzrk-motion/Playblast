@@ -13,9 +13,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  isIdentityApiError,
+  isApiError,
   recoverAdminPassword,
-} from "@/lib/identity-api"
+} from "@/lib/api-http"
 
 export function RecoverAdminPage() {
   const navigate = useNavigate()
@@ -46,7 +46,7 @@ export function RecoverAdminPage() {
       setConfirmPassword("")
       setSuccess(true)
     } catch (submitError) {
-      if (isIdentityApiError(submitError)) {
+      if (isApiError(submitError)) {
         if (submitError.code === "RATE_LIMITED") {
           setError("Too many recovery attempts. Wait and try again later.")
         } else if (submitError.details) {

@@ -19,7 +19,8 @@ import {
   filterServices,
   formatHourEstimate,
 } from "@/lib/services"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import type { ProjectServiceWithDetails } from "@/types/project-service"
 import type { Service } from "@/types/service"
@@ -62,7 +63,7 @@ export function AddProjectServicesModal({
         }
       } catch (err) {
         if (!cancelled) {
-          showErrorToast(humanizeApiError(err, "Failed to load services"))
+          toast.error(humanizeApiError(err, "Failed to load services"))
         }
       } finally {
         if (!cancelled) {
@@ -98,9 +99,9 @@ export function AddProjectServicesModal({
         next.delete(serviceId)
         return next
       })
-      showSuccessToast(`Added ${added.service.name}`)
+      toast.success(`Added ${added.service.name}`)
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to add service"))
+      toast.error(humanizeApiError(err, "Failed to add service"))
     } finally {
       setAddingIds((current) => {
         const next = new Set(current)
@@ -131,7 +132,7 @@ export function AddProjectServicesModal({
           return next
         })
       } catch (err) {
-        showErrorToast(humanizeApiError(err, "Failed to add service"))
+        toast.error(humanizeApiError(err, "Failed to add service"))
         break
       } finally {
         setAddingIds((current) => {
@@ -143,7 +144,7 @@ export function AddProjectServicesModal({
     }
 
     if (addedCount > 0) {
-      showSuccessToast(
+      toast.success(
         addedCount === 1 ? "Added 1 service" : `Added ${addedCount} services`,
       )
     }

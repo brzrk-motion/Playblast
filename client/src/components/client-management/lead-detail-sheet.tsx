@@ -36,7 +36,8 @@ import {
   toDateInputValue,
 } from "@/lib/contact-log"
 import { formatDateTime, formatRelativeDate } from "@/lib/dates"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import {
   CONTACT_LOG_TYPES,
   type ContactLog,
@@ -103,7 +104,7 @@ export function LeadDetailSheet({
     } catch (err) {
       const message = humanizeApiError(err, "Failed to load lead")
       setError(message)
-      showErrorToast(message)
+      toast.error(message)
       return null
     } finally {
       setLoading(false)
@@ -150,7 +151,7 @@ export function LeadDetailSheet({
         if (!cancelled) {
           const message = humanizeApiError(err, "Failed to load lead")
           setError(message)
-          showErrorToast(message)
+          toast.error(message)
         }
       } finally {
         if (!cancelled) {
@@ -181,11 +182,11 @@ export function LeadDetailSheet({
 
     try {
       await deleteLead(lead.id)
-      showSuccessToast("Lead deleted")
+      toast.success("Lead deleted")
       onOpenChange(false)
       onLeadDeleted?.()
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to delete lead"))
+      toast.error(humanizeApiError(err, "Failed to delete lead"))
     } finally {
       setDeleting(false)
     }
@@ -206,7 +207,7 @@ export function LeadDetailSheet({
         contactedAt: dateInputToIso(logDate),
         notes: logNotes.trim() || undefined,
       })
-      showSuccessToast("Contact logged")
+      toast.success("Contact logged")
       setLogNotes("")
       setLogDate(toDateInputValue())
       const refreshed = await refreshLead()
@@ -214,7 +215,7 @@ export function LeadDetailSheet({
         onLeadUpdated?.(refreshed)
       }
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to log contact"))
+      toast.error(humanizeApiError(err, "Failed to log contact"))
     } finally {
       setLoggingContact(false)
     }
@@ -233,13 +234,13 @@ export function LeadDetailSheet({
 
     try {
       await deleteContactLog(lead.id, entry.id)
-      showSuccessToast("Contact log entry deleted")
+      toast.success("Contact log entry deleted")
       const refreshed = await refreshLead()
       if (refreshed) {
         onLeadUpdated?.(refreshed)
       }
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to delete contact log entry"))
+      toast.error(humanizeApiError(err, "Failed to delete contact log entry"))
     } finally {
       setDeletingLogId(null)
     }

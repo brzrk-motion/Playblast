@@ -1,6 +1,6 @@
 # Platform boundaries
 
-Source of truth: `@playblast/shared` (`platform-boundaries.ts`).
+Source of truth: this document and `AGENTS.md` deployment notes.
 
 ## Runtime
 

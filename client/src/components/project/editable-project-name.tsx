@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { updateProject } from "@/lib/api"
-import { humanizeApiError, showErrorToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 
 interface EditableProjectNameProps {
@@ -67,7 +68,7 @@ export function EditableProjectName({
       setEditing(false)
       onEditEnd?.()
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to rename project"))
+      toast.error(humanizeApiError(err, "Failed to rename project"))
       setDraft(name)
     } finally {
       setSaving(false)

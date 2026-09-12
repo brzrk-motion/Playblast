@@ -13,7 +13,8 @@ import {
   reviewEmptyCopy,
   reviewErrorTitle,
 } from "@/lib/review-feedback"
-import { humanizeApiError, showErrorToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { pickCompareVersionLabels, sortVersionsByDate } from "@/lib/versions"
 import type { Deliverable } from "@/types/deliverable"
 import type { ProjectDetail } from "@/types/project"
@@ -66,7 +67,7 @@ export function ComparePage() {
       }
       const message = humanizeApiError(err, "Failed to load deliverable")
       setError(message)
-      showErrorToast(message)
+      toast.error(message)
       setProject(null)
       setDeliverable(null)
       setVersions([])
@@ -100,7 +101,7 @@ export function ComparePage() {
           }
           const message = humanizeApiError(err, "Failed to load deliverable")
           setError(message)
-          showErrorToast(message)
+          toast.error(message)
           setProject(null)
           setDeliverable(null)
           setVersions([])

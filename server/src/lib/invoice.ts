@@ -43,8 +43,4 @@ export function isInvoiceOverdue(
   return due < today
 }
 
-export function addDaysToIsoDate(isoDate: string, days: number): string {
-  const date = new Date(isoDate)
-  date.setDate(date.getDate() + days)
-  return date.toISOString().slice(0, 10)
-}
+export { addDaysToIsoDate } from "@playblast/shared"

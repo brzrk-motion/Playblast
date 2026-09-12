@@ -1,4 +1,4 @@
-import { inferCodecHint } from "@/lib/video-format"
+import { inferCodecHint } from "@playblast/shared"
 
 export interface VideoFileMetadata {
   duration: number | null

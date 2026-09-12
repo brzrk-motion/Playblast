@@ -54,15 +54,15 @@ import {
   fetchInvitations,
   fetchSmtpSettings,
   fetchUsers,
-  isIdentityApiError,
+  isApiError,
   resendInvitation,
   revokeInvitation,
   testSmtpSettings,
   updateSmtpSettings,
   updateUser,
-} from "@/lib/identity-api"
+} from "@/lib/api-http"
 import { cn } from "@/lib/utils"
-import { showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
 import { useCapability } from "@/hooks/use-capability"
 
 const INVITE_STATUS_LABELS: Record<InvitationSummary["status"], string> = {
@@ -129,7 +129,7 @@ export function TeamPage() {
         setSmtpInstanceUrl(smtpSettings.instanceUrl ?? window.location.origin)
       }
     } catch (loadError) {
-      if (isIdentityApiError(loadError) && loadError.code === "FORBIDDEN") {
+      if (isApiError(loadError) && loadError.code === "FORBIDDEN") {
         setError("You do not have permission to manage team settings.")
       } else {
         setError("Could not load team data.")
@@ -178,7 +178,7 @@ export function TeamPage() {
         if (cancelled) {
           return
         }
-        if (isIdentityApiError(loadError) && loadError.code === "FORBIDDEN") {
+        if (isApiError(loadError) && loadError.code === "FORBIDDEN") {
           setError("You do not have permission to manage team settings.")
         } else {
           setError("Could not load team data.")
@@ -233,10 +233,10 @@ export function TeamPage() {
       })
       setSmtp(updated)
       setSmtpPassword("")
-      showSuccessToast("SMTP settings saved.")
+      toast.success("SMTP settings saved.")
     } catch (saveError) {
       setSmtpFormError(
-        isIdentityApiError(saveError) ? saveError.message : "Could not save SMTP settings.",
+        isApiError(saveError) ? saveError.message : "Could not save SMTP settings.",
       )
     } finally {
       setSmtpSaving(false)
@@ -259,10 +259,10 @@ export function TeamPage() {
             }
           : current,
       )
-      showSuccessToast("SMTP test delivered successfully.")
+      toast.success("SMTP test delivered successfully.")
       await reloadTeam()
     } catch (testError) {
-      const message = isIdentityApiError(testError)
+      const message = isApiError(testError)
         ? testError.message
         : "SMTP test failed."
       setSmtpFormError(message)
@@ -286,11 +286,11 @@ export function TeamPage() {
       setInviteName("")
       setInviteEmail("")
       setInviteRole("creative")
-      showSuccessToast("Invitation sent.")
+      toast.success("Invitation sent.")
       await reloadTeam()
     } catch (submitError) {
       setInviteError(
-        isIdentityApiError(submitError)
+        isApiError(submitError)
           ? submitError.message
           : "Could not send invitation.",
       )
@@ -302,11 +302,11 @@ export function TeamPage() {
   async function handleUserUpdate(userId: string, patch: { role?: UserRole; disabled?: boolean }) {
     try {
       await updateUser(userId, patch)
-      showSuccessToast("User updated.")
+      toast.success("User updated.")
       await reloadTeam()
     } catch (updateError) {
-      showErrorToast(
-        isIdentityApiError(updateError) ? updateError.message : "Could not update user.",
+      toast.error(
+        isApiError(updateError) ? updateError.message : "Could not update user.",
       )
     }
   }
@@ -314,11 +314,11 @@ export function TeamPage() {
   async function handleResend(invitationId: string) {
     try {
       await resendInvitation(invitationId)
-      showSuccessToast("Invitation resent.")
+      toast.success("Invitation resent.")
       await reloadTeam()
     } catch (resendError) {
-      showErrorToast(
-        isIdentityApiError(resendError) ? resendError.message : "Could not resend invitation.",
+      toast.error(
+        isApiError(resendError) ? resendError.message : "Could not resend invitation.",
       )
     }
   }
@@ -326,11 +326,11 @@ export function TeamPage() {
   async function handleRevoke(invitationId: string) {
     try {
       await revokeInvitation(invitationId)
-      showSuccessToast("Invitation revoked.")
+      toast.success("Invitation revoked.")
       await reloadTeam()
     } catch (revokeError) {
-      showErrorToast(
-        isIdentityApiError(revokeError) ? revokeError.message : "Could not revoke invitation.",
+      toast.error(
+        isApiError(revokeError) ? revokeError.message : "Could not revoke invitation.",
       )
     }
   }

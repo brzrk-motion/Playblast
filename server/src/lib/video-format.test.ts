@@ -1,10 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 
-import {
-  getPlaybackWarnings,
-  inferCodecHint,
-} from "../../../client/src/lib/video-format.ts"
+import { getPlaybackWarnings, inferCodecHint } from "@playblast/shared"
 
 function makeFile(name: string, type: string, size = 1024): File {
   return new File([new Uint8Array(size)], name, { type })

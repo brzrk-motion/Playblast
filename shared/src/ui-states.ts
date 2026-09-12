@@ -124,26 +124,3 @@ export const ROLE_BADGE_TOKENS = {
     className: "bg-status-success-muted text-status-success-foreground border-status-success-border",
   },
 } as const
-
-export const SETUP_PROGRESS_STEPS = [
-  { id: "admin", label: "Admin account" },
-  { id: "studio", label: "Studio profile" },
-  { id: "smtp", label: "Email (optional)" },
-  { id: "team", label: "Invite team" },
-] as const
-
-export const DESTRUCTIVE_ACTION_TOKENS = {
-  confirmLabel: "Confirm",
-  cancelLabel: "Cancel",
-  buttonVariant: "destructive",
-  requiresAdminCapability: "data.delete",
-} as const
-
-export const RESPONSIVE_BREAKPOINTS = {
-  tabletMin: "768px",
-  desktopMin: "1024px",
-  reviewMinWidth: "1024px",
-  setupMaxWidth: "480px",
-  loginMaxWidth: "400px",
-  teamTableMinWidth: "768px",
-} as const

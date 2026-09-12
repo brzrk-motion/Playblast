@@ -24,8 +24,10 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { createInvoicePayment, getInvoice } from "@/lib/api"
 import { formatEstimateCurrency } from "@/lib/budget"
-import { formatInvoiceDate, todayIsoDate } from "@/lib/invoices"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { formatShortDate } from "@playblast/shared"
+import { todayIsoDate } from "@/lib/invoices"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import type { InvoiceWithPayments } from "@/types/invoice"
 
 interface InvoiceDetailSheetProps {
@@ -97,7 +99,7 @@ export function InvoiceDetailSheet({
         if (!cancelled) {
           const message = humanizeApiError(err, "Failed to load invoice")
           setError(message)
-          showErrorToast(message)
+          toast.error(message)
         }
       } finally {
         if (!cancelled) {
@@ -136,7 +138,7 @@ export function InvoiceDetailSheet({
 
     const parsedAmount = Number(amount)
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      showErrorToast("Payment amount must be greater than 0.")
+      toast.error("Payment amount must be greater than 0.")
       return
     }
 
@@ -150,9 +152,9 @@ export function InvoiceDetailSheet({
       setInvoice(result.invoice)
       onInvoiceUpdated?.(result.invoice)
       resetPaymentForm()
-      showSuccessToast("Payment logged")
+      toast.success("Payment logged")
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to log payment"))
+      toast.error(humanizeApiError(err, "Failed to log payment"))
     } finally {
       setSubmitting(false)
     }
@@ -182,8 +184,8 @@ export function InvoiceDetailSheet({
                       Invoice #{invoice.invoiceNumber}
                     </SheetTitle>
                     <SheetDescription>
-                      Issued {formatInvoiceDate(invoice.invoiceDate)} · Due{" "}
-                      {formatInvoiceDate(invoice.dueDate)}
+                      Issued {formatShortDate(invoice.invoiceDate)} · Due{" "}
+                      {formatShortDate(invoice.dueDate)}
                     </SheetDescription>
                   </div>
                 </div>
@@ -243,7 +245,7 @@ export function InvoiceDetailSheet({
                       <TableBody>
                         {invoice.payments.map((payment) => (
                           <TableRow key={payment.id}>
-                            <TableCell>{formatInvoiceDate(payment.paidAt)}</TableCell>
+                            <TableCell>{formatShortDate(payment.paidAt)}</TableCell>
                             <TableCell className="text-right tabular-nums">
                               {formatEstimateCurrency(
                                 payment.amount,

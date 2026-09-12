@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { PageLoading } from "@/components/feedback/page-loading"
 import { Skeleton } from "@/components/ui/skeleton"
 import { listProjects } from "@/lib/api"
-import { humanizeApiError, showErrorToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import type { ProjectSummary } from "@/types/project"
 
 export function CapacityPage() {
@@ -33,7 +34,7 @@ export function CapacityPage() {
         if (!cancelled) {
           const message = humanizeApiError(err, "Failed to load projects")
           setError(message)
-          showErrorToast(message)
+          toast.error(message)
         }
       } finally {
         if (!cancelled) {

@@ -14,8 +14,8 @@ import {
 import {
   fetchCurrentSession,
   fetchSetupStatus,
-  isIdentityApiError,
-} from "@/lib/identity-api"
+  isApiError,
+} from "@/lib/api-http"
 
 function shouldLoadSession(setupStatus: string): boolean {
   return setupStatus !== "pending"
@@ -33,7 +33,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         try {
           session = await fetchCurrentSession()
         } catch (error) {
-          if (!isIdentityApiError(error)) {
+          if (!isApiError(error)) {
             throw error
           }
 
@@ -78,7 +78,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           try {
             session = await fetchCurrentSession()
           } catch (error) {
-            if (!isIdentityApiError(error)) {
+            if (!isApiError(error)) {
               throw error
             }
 

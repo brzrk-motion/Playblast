@@ -43,7 +43,8 @@ import {
   MARGIN_STATUS_STYLES,
   marginStatus,
 } from "@/lib/profitability"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { formatHourEstimate } from "@/lib/services"
 import { cn } from "@/lib/utils"
 import type { ProjectBudget } from "@/types/project"
@@ -148,7 +149,7 @@ export function ProjectBudgetEstimatePanel({
     }
 
     if (estimate.lines.length === 0) {
-      showErrorToast("Add at least one service before generating an invoice.")
+      toast.error("Add at least one service before generating an invoice.")
       return
     }
 
@@ -156,10 +157,10 @@ export function ProjectBudgetEstimatePanel({
     try {
       const invoice = await createInvoice(projectId)
       await downloadInvoicePdf(invoice.id)
-      showSuccessToast(`Invoice #${invoice.invoiceNumber} generated`)
+      toast.success(`Invoice #${invoice.invoiceNumber} generated`)
       onInvoiceCreated?.()
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to generate invoice"))
+      toast.error(humanizeApiError(err, "Failed to generate invoice"))
     } finally {
       setGenerating(false)
     }

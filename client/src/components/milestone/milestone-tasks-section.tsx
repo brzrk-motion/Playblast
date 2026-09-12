@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { TaskTimeLogControl } from "@/components/milestone/task-time-log-control"
 import { createTask, deleteTask, updateTask } from "@/lib/api"
-import { humanizeApiError, showErrorToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import type { Task } from "@/types/task"
 
@@ -41,7 +42,7 @@ export function MilestoneTasksSection({
       onTasksChange(milestoneId, [...tasks, task])
       setNewTaskName("")
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to add task"))
+      toast.error(humanizeApiError(err, "Failed to add task"))
     } finally {
       setAdding(false)
     }
@@ -55,7 +56,7 @@ export function MilestoneTasksSection({
         tasks.map((item) => (item.id === task.id ? updated : item)),
       )
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to update task"))
+      toast.error(humanizeApiError(err, "Failed to update task"))
     }
   }
 
@@ -72,7 +73,7 @@ export function MilestoneTasksSection({
         return next
       })
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to delete task"))
+      toast.error(humanizeApiError(err, "Failed to delete task"))
     }
   }
 

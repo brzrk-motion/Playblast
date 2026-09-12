@@ -29,9 +29,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { deleteClient, getClient, updateProject } from "@/lib/api"
 import { formatEstimateCurrency } from "@/lib/budget"
-import { formatDateAdded } from "@/lib/dates"
+import { formatShortDate } from "@playblast/shared"
 import { isProjectArchived } from "@/lib/projects"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { RetainerPanel } from "@/components/client-management/retainer-panel"
 import { ClientLifetimeValuePanel } from "@/components/client-management/client-lifetime-value-panel"
 import type { Client, ClientWithProjects } from "@/types/client"
@@ -173,7 +174,7 @@ export function ClientDetailSheet({
     } catch (err) {
       const message = humanizeApiError(err, "Failed to load client")
       setError(message)
-      showErrorToast(message)
+      toast.error(message)
       return null
     } finally {
       setLoading(false)
@@ -217,7 +218,7 @@ export function ClientDetailSheet({
         if (!cancelled) {
           const message = humanizeApiError(err, "Failed to load client")
           setError(message)
-          showErrorToast(message)
+          toast.error(message)
         }
       } finally {
         if (!cancelled) {
@@ -239,7 +240,7 @@ export function ClientDetailSheet({
     }
 
     if (hasActiveProjects) {
-      showErrorToast(
+      toast.error(
         "Client cannot be deleted while linked to active projects. Archive or unlink those projects first.",
       )
       return
@@ -255,11 +256,11 @@ export function ClientDetailSheet({
 
     try {
       await deleteClient(client.id)
-      showSuccessToast("Client deleted")
+      toast.success("Client deleted")
       onOpenChange(false)
       onClientDeleted?.()
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to delete client"))
+      toast.error(humanizeApiError(err, "Failed to delete client"))
     } finally {
       setDeleting(false)
     }
@@ -282,11 +283,11 @@ export function ClientDetailSheet({
 
     try {
       await updateProject(project.id, { clientId: null })
-      showSuccessToast(`Unlinked ${project.name}`)
+      toast.success(`Unlinked ${project.name}`)
       await refreshClient()
       onProjectsChanged?.()
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to unlink project"))
+      toast.error(humanizeApiError(err, "Failed to unlink project"))
     } finally {
       setUnlinkingProjectId(null)
     }
@@ -313,11 +314,11 @@ export function ClientDetailSheet({
           updateProject(project.id, { clientId: null }),
         ),
       )
-      showSuccessToast("Unlinked all projects")
+      toast.success("Unlinked all projects")
       await refreshClient()
       onProjectsChanged?.()
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to unlink projects"))
+      toast.error(humanizeApiError(err, "Failed to unlink projects"))
     } finally {
       setUnlinkingAll(false)
     }
@@ -454,7 +455,7 @@ export function ClientDetailSheet({
                   </DetailRow>
                   <DetailRow label="Notes">{client.notes ?? "—"}</DetailRow>
                   <DetailRow label="Date added">
-                    {formatDateAdded(client.createdAt)}
+                    {formatShortDate(client.createdAt)}
                   </DetailRow>
                   {client.convertedFromLeadId ? (
                     <DetailRow label="Converted from lead">

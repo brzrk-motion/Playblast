@@ -8,14 +8,18 @@
  */
 import fs from "node:fs"
 import path from "node:path"
+import { loadEnvFile } from "node:process"
 import { fileURLToPath } from "node:url"
-import dotenv from "dotenv"
 import Database from "better-sqlite3"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, "..")
 
-dotenv.config({ path: path.join(repoRoot, ".env") })
+try {
+  loadEnvFile(path.join(repoRoot, ".env"))
+} catch {
+  // Optional when the host injects variables.
+}
 
 const dbPath =
   process.env.DB_PATH ?? path.join(repoRoot, "server", "data", "playblast.db")

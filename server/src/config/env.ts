@@ -1,11 +1,15 @@
 import path from "node:path"
+import { loadEnvFile } from "node:process"
 import { fileURLToPath } from "node:url"
-import dotenv from "dotenv"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(__dirname, "../../..")
 
-dotenv.config({ path: path.join(REPO_ROOT, ".env") })
+try {
+  loadEnvFile(path.join(REPO_ROOT, ".env"))
+} catch {
+  // Optional in production when Compose or the host injects variables.
+}
 
 const DEFAULT_PORT = 3000
 const DEFAULT_HOST = "0.0.0.0"

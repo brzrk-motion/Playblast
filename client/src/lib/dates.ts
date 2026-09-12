@@ -47,16 +47,3 @@ export function formatDateTime(value: string | undefined): string {
     minute: "2-digit",
   })
 }
-
-export function formatDateAdded(value: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return "—"
-  }
-
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  })
-}

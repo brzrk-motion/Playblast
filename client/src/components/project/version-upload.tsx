@@ -4,13 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { uploadVersion, updateVersionLabel } from "@/lib/api"
-import {
-  dismissToast,
-  humanizeApiError,
-  showErrorToast,
-  showLoadingToast,
-  showSuccessToast,
-} from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import {
   isValidVersionLabel,
   suggestNextVersionLabel,
@@ -21,7 +16,7 @@ import {
   probeVideoFile,
   type VideoFileMetadata,
 } from "@/lib/video-metadata"
-import { getPlaybackWarnings, type PlaybackWarning } from "@/lib/video-format"
+import { getPlaybackWarnings, type PlaybackWarning } from "@playblast/shared"
 import type { UploadProgress, UploadResponse } from "@/types/upload"
 import type { Version } from "@/types/version"
 import { Spinner } from "@/components/ui/spinner"
@@ -227,15 +222,15 @@ export function VersionUpload({
     setUploadProgress(null)
     setError(null)
 
-    const loadingToastId = showLoadingToast(`Uploading ${versionLabel}…`)
+    const loadingToastId = toast.loading(`Uploading ${versionLabel}…`)
 
     try {
       const response = await uploadVersion(deliverableId, versionLabel, selectedFile, (progress) => {
         setUploadProgress(progress)
       })
 
-      dismissToast(loadingToastId)
-      showSuccessToast("Upload complete")
+      toast.dismiss(loadingToastId)
+      toast.success("Upload complete")
 
       const metadata =
         fileMetadata ??
@@ -254,10 +249,10 @@ export function VersionUpload({
       onSelectVersion(versionLabel)
       onUploaded()
     } catch (err) {
-      dismissToast(loadingToastId)
+      toast.dismiss(loadingToastId)
       const message = humanizeApiError(err, "Upload failed")
       setError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       setUploading(false)
     }
@@ -300,11 +295,11 @@ export function VersionUpload({
       setRenameLabel(updated.label)
       onSelectVersion(updated.label)
       onUploaded()
-      showSuccessToast(`Renamed to ${updated.label}`)
+      toast.success(`Renamed to ${updated.label}`)
     } catch (err) {
       const message = humanizeApiError(err, "Rename failed")
       setError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       setRenaming(false)
     }

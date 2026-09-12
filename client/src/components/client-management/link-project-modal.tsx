@@ -14,7 +14,8 @@ import { Spinner } from "@/components/ui/spinner"
 import { ProjectStatusBadge } from "@/components/project/project-status-badge"
 import { listProjects, updateProject } from "@/lib/api"
 import { filterProjectsByName } from "@/lib/projects"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import type { ProjectSummary } from "@/types/project"
 
 interface LinkProjectModalProps {
@@ -51,7 +52,7 @@ export function LinkProjectModal({
         }
       } catch (err) {
         if (!cancelled) {
-          showErrorToast(humanizeApiError(err, "Failed to load projects"))
+          toast.error(humanizeApiError(err, "Failed to load projects"))
         }
       } finally {
         if (!cancelled) {
@@ -76,12 +77,12 @@ export function LinkProjectModal({
     setLinkingProjectId(projectId)
     try {
       await updateProject(projectId, { clientId })
-      showSuccessToast("Project linked")
+      toast.success("Project linked")
       onOpenChange(false)
       setSearchQuery("")
       onLinked()
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to link project"))
+      toast.error(humanizeApiError(err, "Failed to link project"))
     } finally {
       setLinkingProjectId(null)
     }

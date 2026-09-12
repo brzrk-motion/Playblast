@@ -1,3 +1,7 @@
+import {
+  effectiveProjectServiceHours,
+  projectServiceLineTotal,
+} from "@playblast/shared"
 import type { ProjectServiceWithDetails } from "@/types/project-service"
 import type { ServiceType } from "@/types/service"
 import { SERVICE_TYPES } from "@/types/service"
@@ -21,20 +25,15 @@ export interface ProjectCostEstimate {
   totalEstimate: number
 }
 
-export function effectiveProjectServiceHours(
-  item: ProjectServiceWithDetails,
-): number {
-  return item.overrideHours ?? item.service.hourEstimate
+export {
+  effectiveProjectServiceHours,
+  projectServiceLineTotal,
 }
 
 export function isProjectServiceHoursOverridden(
   item: ProjectServiceWithDetails,
 ): boolean {
   return item.overrideHours !== null
-}
-
-export function projectServiceLineTotal(item: ProjectServiceWithDetails): number {
-  return effectiveProjectServiceHours(item) * item.service.hourlyRate
 }
 
 export function calculateProjectCostEstimate(

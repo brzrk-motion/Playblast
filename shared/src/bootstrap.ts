@@ -10,42 +10,9 @@ export const SETUP_STATUSES = [
 
 export type SetupStatus = (typeof SETUP_STATUSES)[number]
 
-export interface BootstrapAdminRules {
-  /** Exactly one studio may exist per instance. */
-  singleStudioPerInstance: true
-  /** First admin is created during setup; subsequent admins are invited. */
-  bootstrapAdminDuringSetup: true
-  /** Setup completion is idempotent and race-safe. */
-  setupClaimIsAtomic: true
-  /** Invited users cannot be assigned admin through the invite flow. */
-  inviteRolesExcludeAdmin: true
-}
-
-export const BOOTSTRAP_ADMIN_RULES: BootstrapAdminRules = {
-  singleStudioPerInstance: true,
-  bootstrapAdminDuringSetup: true,
-  setupClaimIsAtomic: true,
-  inviteRolesExcludeAdmin: true,
-}
-
 export const INVITABLE_ROLES = ["account_executive", "creative", "proofing"] as const satisfies readonly UserRole[]
 
 export type InvitableRole = (typeof INVITABLE_ROLES)[number]
-
-export interface SingleStudioInvariant {
-  /** All studio-owned rows reference the lone studio id for this instance. */
-  studioScopedData: true
-  /** Cross-studio reads/writes are impossible in production configuration. */
-  noCrossStudioAccess: true
-  /** Second studio creation is rejected once setup is complete. */
-  rejectAdditionalStudios: true
-}
-
-export const SINGLE_STUDIO_INVARIANT: SingleStudioInvariant = {
-  studioScopedData: true,
-  noCrossStudioAccess: true,
-  rejectAdditionalStudios: true,
-}
 
 export interface BootstrapLifecycleStep {
   status: SetupStatus

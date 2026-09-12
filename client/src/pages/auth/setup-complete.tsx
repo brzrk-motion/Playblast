@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card"
 import { StudioIdentityPreview } from "@/components/studio/studio-profile-fields"
 import { useSession } from "@/hooks/use-session"
-import { completeStudioSetup, isIdentityApiError } from "@/lib/identity-api"
+import { completeStudioSetup, isApiError } from "@/lib/api-http"
 
 const ONBOARDING_STEPS = [
   {
@@ -50,7 +50,7 @@ export function SetupCompletePage() {
       await refresh()
       navigate(target, { replace: true })
     } catch (submitError) {
-      if (isIdentityApiError(submitError)) {
+      if (isApiError(submitError)) {
         setError(submitError.message)
       } else {
         setError("Could not finish setup. Try again.")

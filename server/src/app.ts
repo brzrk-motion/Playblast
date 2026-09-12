@@ -1,5 +1,4 @@
 import fs from "node:fs"
-import cors from "cors"
 import express, { type NextFunction, type Request, type Response } from "express"
 import path from "node:path"
 import { config } from "./config/env.js"
@@ -63,12 +62,6 @@ export function createApp(options: { serveClient?: boolean } = {}) {
   })
 
   app.use(createAuthMiddleware())
-  app.use(
-    cors({
-      origin: true,
-      credentials: true,
-    }),
-  )
   app.use(express.json())
   app.use(attachSessionContext())
   app.use(requireCsrfProtection())

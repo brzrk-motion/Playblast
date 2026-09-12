@@ -16,10 +16,10 @@ import {
 import { validateStudioNameInput } from "@/lib/studio-profile"
 import { useSession } from "@/hooks/use-session"
 import {
-  isIdentityApiError,
+  isApiError,
   updateStudioProfile,
   uploadStudioAvatar,
-} from "@/lib/identity-api"
+} from "@/lib/api-http"
 
 export function SetupStudioPage() {
   const navigate = useNavigate()
@@ -73,7 +73,7 @@ export function SetupStudioPage() {
       await refresh()
       navigate("/setup/complete", { replace: true })
     } catch (submitError) {
-      if (isIdentityApiError(submitError)) {
+      if (isApiError(submitError)) {
         if (submitError.details?.name?.[0]) {
           setNameError(submitError.details.name[0])
         }

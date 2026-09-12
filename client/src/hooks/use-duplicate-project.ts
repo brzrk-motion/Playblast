@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { duplicateProject } from "@/lib/api"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 
 export function useDuplicateProject() {
   const navigate = useNavigate()
@@ -12,12 +13,12 @@ export function useDuplicateProject() {
       setDuplicating(true)
       try {
         const project = await duplicateProject(projectId)
-        showSuccessToast("Project duplicated")
+        toast.success("Project duplicated")
         navigate(
           `/projects/${encodeURIComponent(project.id)}?editName=1`,
         )
       } catch (err) {
-        showErrorToast(humanizeApiError(err, "Failed to duplicate project"))
+        toast.error(humanizeApiError(err, "Failed to duplicate project"))
       } finally {
         setDuplicating(false)
       }

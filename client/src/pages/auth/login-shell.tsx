@@ -14,9 +14,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useSession } from "@/hooks/use-session"
 import {
-  isIdentityApiError,
+  isApiError,
   login,
-} from "@/lib/identity-api"
+} from "@/lib/api-http"
 
 const GENERIC_LOGIN_ERROR = "Invalid email or password."
 
@@ -45,7 +45,7 @@ export function LoginShellPage() {
       await refresh()
       navigate(from, { replace: true })
     } catch (submitError) {
-      if (isIdentityApiError(submitError)) {
+      if (isApiError(submitError)) {
         if (submitError.code === "RATE_LIMITED") {
           setError("Too many sign-in attempts. Wait a few minutes and try again.")
         } else if (submitError.details) {

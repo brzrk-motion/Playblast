@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { useMediaPlayer, useMediaState } from "@vidstack/react"
 
 import { frameDuration } from "@/lib/timecode"
-import { DEFAULT_VIDEO_FPS } from "@/lib/video-player-config"
+const DEFAULT_VIDEO_FPS = Number(import.meta.env.VITE_DEFAULT_VIDEO_FPS) || 24
 
 const SAMPLE_TARGET = 30
 

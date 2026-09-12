@@ -1,11 +1,3 @@
-export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value)
-}
-
 export function formatHours(value: number): string {
   return `${value.toFixed(1)}h`
 }

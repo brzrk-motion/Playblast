@@ -6,13 +6,15 @@ import { after, before, describe, it } from "node:test"
 import assert from "node:assert/strict"
 import type { Server } from "node:http"
 import {
-  API_ROUTES,
   assertAdminSuperset,
   getCapabilitiesForRole,
   hasCapability,
-  type ApiRouteDefinition,
   type UserRole,
 } from "@playblast/shared"
+import {
+  API_ROUTES,
+  type ApiRouteDefinition,
+} from "../test/api-route-inventory.js"
 import { createApp } from "../app.js"
 import { hashPasswordSync, normalizeEmail } from "../auth/password.js"
 import { getDrizzle } from "../db/drizzle.js"

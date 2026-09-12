@@ -1,4 +1,4 @@
-import type { Capability } from "./capabilities.js"
+import type { Capability } from "@playblast/shared"
 
 export type ApiRouteAccess =
   | "public"

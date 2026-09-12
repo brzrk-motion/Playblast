@@ -20,7 +20,8 @@ import {
   updateProjectService,
 } from "@/lib/api"
 import { formatCurrency } from "@/lib/budget"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import type { ProjectServiceWithDetails } from "@/types/project-service"
 
 interface ProjectServicesSectionProps {
@@ -76,7 +77,7 @@ export function ProjectServicesSection({
     } catch (err) {
       const message = humanizeApiError(err, "Failed to load project services")
       setError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       if (!isControlled) {
         setInternalLoading(false)
@@ -102,7 +103,7 @@ export function ProjectServicesSection({
         if (!cancelled) {
           const message = humanizeApiError(err, "Failed to load project services")
           setError(message)
-          showErrorToast(message)
+          toast.error(message)
         }
       } finally {
         if (!cancelled) {
@@ -145,10 +146,10 @@ export function ProjectServicesSection({
         current.map((item) => (item.serviceId === serviceId ? updated : item)),
       )
       if (overrideHours === null) {
-        showSuccessToast("Hours reset to catalog default")
+        toast.success("Hours reset to catalog default")
       }
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to update service hours"))
+      toast.error(humanizeApiError(err, "Failed to update service hours"))
       throw err
     } finally {
       setUpdatingServiceId(null)
@@ -162,9 +163,9 @@ export function ProjectServicesSection({
       updateProjectServices((current) =>
         current.filter((item) => item.serviceId !== serviceId),
       )
-      showSuccessToast("Service removed from project")
+      toast.success("Service removed from project")
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to remove service"))
+      toast.error(humanizeApiError(err, "Failed to remove service"))
     } finally {
       setRemovingServiceId(null)
     }

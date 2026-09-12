@@ -19,7 +19,8 @@ import {
   HOURS_DELTA_STATUS_STYLES,
 } from "@/lib/hours-summary"
 import { formatHourEstimate } from "@/lib/services"
-import { humanizeApiError, showErrorToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import type { ProjectHoursSummary } from "@/types/hours-summary"
 
@@ -76,7 +77,7 @@ export function ProjectHoursSummaryPanel({
         if (!cancelled) {
           const message = humanizeApiError(err, "Failed to load hours summary")
           setError(message)
-          showErrorToast(message)
+          toast.error(message)
         }
       } finally {
         if (!cancelled) {

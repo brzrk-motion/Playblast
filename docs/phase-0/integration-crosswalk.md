@@ -7,9 +7,9 @@ Verifies that the server capability contract, client route map, and navigation m
 | Check | Location |
 |-------|----------|
 | Admin superset over Creative and Proofing | `shared/src/phase0.test.ts` |
-| CRM routes require business capability | `shared/src/phase0.test.ts`, `server/src/contracts/phase0.test.ts` |
-| Nav hidden for non-Admin CRM items | `client/src/lib/phase0-contracts.test.ts` |
-| API error → UI state mapping | `shared/src/phase0.test.ts`, client tests |
+| CRM routes require business capability | `shared/src/phase0.test.ts` |
+| Nav hidden for non-Admin CRM items | `shared/src/phase0.test.ts` |
+| API error → UI state mapping | `shared/src/phase0.test.ts` |
 
 Run: `npm run test`
 
@@ -31,6 +31,4 @@ Every `visible` nav item maps to an `APP_ROUTES` entry with equal or broader acc
 
 ## Fixtures
 
-`FIXTURE_USERS`, `FIXTURE_SESSIONS`, and `FIXTURE_INVITATIONS` in `@playblast/shared` document the contract fixtures for Admin, Creative, and Proofing identities. Runtime E2E setup creates isolated database fixtures independently.
-
-Test matrices: `buildCapabilityTestMatrix()`, `buildRouteTestMatrix()`, `buildNavTestMatrix()`.
+Runtime E2E setup (`e2e/fixtures/`) creates isolated database fixtures for Admin, Account Executive, Creative, and Proofing identities. Test matrices in `@playblast/shared`: `buildCapabilityTestMatrix()`, `buildRouteTestMatrix()`, `buildNavTestMatrix()`.

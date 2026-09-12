@@ -20,7 +20,8 @@ import {
   updateTimeLog,
 } from "@/lib/api"
 import { formatDateTime } from "@/lib/dates"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { formatDurationHours } from "@/lib/time-log"
 import { isoDateToLoggedAt, loggedAtToIsoDate } from "@/lib/timesheet"
 import type { TimeLog } from "@/types/time-log"
@@ -71,7 +72,7 @@ export function TimesheetEntryPanel({
         setNewEntry({ hours: "", notes: "" })
       } catch (err) {
         if (!cancelled) {
-          showErrorToast(humanizeApiError(err, "Failed to load time entries"))
+          toast.error(humanizeApiError(err, "Failed to load time entries"))
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -87,7 +88,7 @@ export function TimesheetEntryPanel({
   async function handleCreate() {
     const durationHours = Number(newEntry.hours)
     if (!Number.isFinite(durationHours) || durationHours <= 0) {
-      showErrorToast("Enter a valid number of hours.")
+      toast.error("Enter a valid number of hours.")
       return
     }
 
@@ -100,10 +101,10 @@ export function TimesheetEntryPanel({
       })
       setEntries((current) => [entry, ...current])
       setNewEntry({ hours: "", notes: "" })
-      showSuccessToast(`Logged ${formatDurationHours(durationHours)}`)
+      toast.success(`Logged ${formatDurationHours(durationHours)}`)
       onChanged()
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to log time"))
+      toast.error(humanizeApiError(err, "Failed to log time"))
     } finally {
       setSaving(false)
     }
@@ -120,7 +121,7 @@ export function TimesheetEntryPanel({
   async function handleSaveEdit(entryId: string) {
     const durationHours = Number(editForm.hours)
     if (!Number.isFinite(durationHours) || durationHours <= 0) {
-      showErrorToast("Enter a valid number of hours.")
+      toast.error("Enter a valid number of hours.")
       return
     }
 
@@ -135,10 +136,10 @@ export function TimesheetEntryPanel({
         current.map((entry) => (entry.id === entryId ? updated : entry)),
       )
       setEditingId(null)
-      showSuccessToast("Time entry updated")
+      toast.success("Time entry updated")
       onChanged()
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to update time entry"))
+      toast.error(humanizeApiError(err, "Failed to update time entry"))
     } finally {
       setSaving(false)
     }
@@ -149,10 +150,10 @@ export function TimesheetEntryPanel({
     try {
       await deleteTimeLog(entryId)
       setEntries((current) => current.filter((entry) => entry.id !== entryId))
-      showSuccessToast("Time entry deleted")
+      toast.success("Time entry deleted")
       onChanged()
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to delete time entry"))
+      toast.error(humanizeApiError(err, "Failed to delete time entry"))
     } finally {
       setSaving(false)
     }

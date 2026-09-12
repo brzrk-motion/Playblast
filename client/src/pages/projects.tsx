@@ -52,7 +52,8 @@ import {
   sortProjects,
   type ProjectSortField,
 } from "@/lib/projects"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { useCapability } from "@/hooks/use-capability"
 import type { Client } from "@/types/client"
 import type { ProjectSummary } from "@/types/project"
@@ -200,7 +201,7 @@ export function ProjectsPage() {
     } catch (err) {
       const message = humanizeApiError(err, "Failed to load projects")
       setError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       setLoading(false)
     }
@@ -222,7 +223,7 @@ export function ProjectsPage() {
         if (!cancelled) {
           const message = humanizeApiError(err, "Failed to load projects")
           setError(message)
-          showErrorToast(message)
+          toast.error(message)
         }
       } finally {
         if (!cancelled) {
@@ -262,12 +263,12 @@ export function ProjectsPage() {
           : {}),
       })
       setSheetOpen(false)
-      showSuccessToast("Project created")
+      toast.success("Project created")
       await loadProjects()
     } catch (err) {
       const message = humanizeApiError(err, "Failed to create project")
       setCreateError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       setCreating(false)
     }
@@ -281,11 +282,11 @@ export function ProjectsPage() {
     setArchiving(true)
     try {
       await archiveProject(archiveTarget.id)
-      showSuccessToast("Project archived")
+      toast.success("Project archived")
       setArchiveTarget(null)
       await loadProjects()
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to archive project"))
+      toast.error(humanizeApiError(err, "Failed to archive project"))
     } finally {
       setArchiving(false)
     }
@@ -295,10 +296,10 @@ export function ProjectsPage() {
     setActionProjectId(project.id)
     try {
       await unarchiveProject(project.id)
-      showSuccessToast("Project restored")
+      toast.success("Project restored")
       await loadProjects()
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to restore project"))
+      toast.error(humanizeApiError(err, "Failed to restore project"))
     } finally {
       setActionProjectId(null)
     }

@@ -1,16 +1,11 @@
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom"
 import {
-  ChevronRight,
   Clapperboard,
   ChevronsUpDown,
   LogOut,
   User,
 } from "lucide-react"
-import {
-  getVisibleNavItems,
-  ROLE_BADGE_TOKENS,
-  type NavItemDefinition,
-} from "@playblast/shared"
+import { ROLE_BADGE_TOKENS } from "@playblast/shared"
 import {
   Sidebar,
   SidebarContent,
@@ -21,16 +16,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -43,25 +30,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { useSession } from "@/hooks/use-session"
-import { logout } from "@/lib/identity-api"
-import {
-  isNavGroupActive,
-  isNavItemActive,
-  navMain,
-  navSecondary,
-  type NavItem,
-} from "@/lib/nav"
-
-function ComingSoonBadge() {
-  return (
-    <Badge
-      variant="outline"
-      className="type-micro ml-auto shrink-0 px-1.5 py-0 font-normal text-muted-foreground"
-    >
-      Soon
-    </Badge>
-  )
-}
+import { logout } from "@/lib/api-http"
+import { getNavItemsForRole, isNavItemActive } from "@/lib/nav"
 
 export function AppSidebar() {
   const location = useLocation()
@@ -71,12 +41,8 @@ export function AppSidebar() {
   const sessionUser = state.status === "ready" ? state.session?.user : null
   const sessionStudio = state.status === "ready" ? state.session?.studio : null
 
-  const visibleMainNav = role
-    ? filterNavByContract(navMain, getVisibleNavItems(role, "main"))
-    : navMain
-  const visibleSecondaryNav = role
-    ? filterNavByContract(navSecondary, getVisibleNavItems(role, "secondary"))
-    : navSecondary
+  const visibleMainNav = getNavItemsForRole(role, "main")
+  const visibleSecondaryNav = getNavItemsForRole(role, "secondary")
 
   const studioName = sessionStudio?.name || "Playblast Studio"
   const userName = sessionUser?.name || "Signed-in user"
@@ -117,64 +83,20 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Application</SidebarGroupLabel>
           <SidebarMenu>
-            {visibleMainNav.map((item) =>
-              item.items ? (
-                <Collapsible
-                  key={item.title}
+            {visibleMainNav.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
                   asChild
-                  defaultOpen={isNavGroupActive(location.pathname, item.items)}
-                  className="group/collapsible"
+                  tooltip={item.title}
+                  isActive={isNavItemActive(location.pathname, item.url)}
                 >
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip={item.title}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {item.items.map((sub) => (
-                          <SidebarMenuSubItem key={sub.url}>
-                            <SidebarMenuSubButton
-                              asChild
-                              isActive={isNavItemActive(location.pathname, sub.url)}
-                            >
-                              <NavLink
-                                to={sub.url}
-                                className={cn(sub.comingSoon && "text-muted-foreground")}
-                              >
-                                <span>{sub.title}</span>
-                                {sub.comingSoon ? <ComingSoonBadge /> : null}
-                              </NavLink>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
-              ) : (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    tooltip={item.title}
-                    isActive={isNavItemActive(location.pathname, item.url)}
-                  >
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/"}
-                      className={cn(item.comingSoon && "text-muted-foreground")}
-                    >
-                      <item.icon />
-                      <span>{item.title}</span>
-                      {item.comingSoon ? <ComingSoonBadge /> : null}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ),
-            )}
+                  <NavLink to={item.url} end={item.url === "/"}>
+                    <item.icon />
+                    <span>{item.title}</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
           </SidebarMenu>
         </SidebarGroup>
 
@@ -188,13 +110,9 @@ export function AppSidebar() {
                   tooltip={item.title}
                   isActive={isNavItemActive(location.pathname, item.url)}
                 >
-                  <NavLink
-                    to={item.url}
-                    className={cn(item.comingSoon && "text-muted-foreground")}
-                  >
+                  <NavLink to={item.url}>
                     <item.icon />
                     <span>{item.title}</span>
-                    {item.comingSoon ? <ComingSoonBadge /> : null}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -302,10 +220,3 @@ function getInitials(value: string): string {
     .join("")
 }
 
-function filterNavByContract(
-  items: NavItem[],
-  contractItems: NavItemDefinition[],
-): NavItem[] {
-  const visibleUrls = new Set(contractItems.map((item) => item.url))
-  return items.filter((item) => visibleUrls.has(item.url))
-}

@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { convertLeadToClient } from "@/lib/api"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import type { Client } from "@/types/client"
 import type { Lead } from "@/types/lead"
 
@@ -65,7 +66,7 @@ export function ConfirmConvertModal({
       const client = await convertLeadToClient(lead.id, {
         notes: additionalNotes.trim() || undefined,
       })
-      showSuccessToast(`${lead.name} has been converted to a client`)
+      toast.success(`${lead.name} has been converted to a client`)
       handleOpenChange(false)
       onSuccess?.(client, {
         ...lead,
@@ -73,7 +74,7 @@ export function ConfirmConvertModal({
         updatedAt: new Date().toISOString(),
       })
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to convert lead"))
+      toast.error(humanizeApiError(err, "Failed to convert lead"))
     } finally {
       setConverting(false)
     }

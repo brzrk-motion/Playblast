@@ -15,7 +15,8 @@ import {
   clientOptionLabel,
   filterClients,
 } from "@/lib/clients"
-import { humanizeApiError, showErrorToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import type { Client } from "@/types/client"
 
@@ -56,7 +57,7 @@ export function ClientSelector({
         }
       } catch (err) {
         if (!cancelled) {
-          showErrorToast(humanizeApiError(err, "Failed to load clients"))
+          toast.error(humanizeApiError(err, "Failed to load clients"))
         }
       } finally {
         if (!cancelled) {

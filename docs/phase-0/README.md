@@ -7,9 +7,9 @@ Phase 0 establishes the executable contracts and documentation that later implem
 | Track | Artifact | Location |
 |-------|----------|----------|
 | Shared | Role capability matrix, API errors, bootstrap rules | `@playblast/shared` (`shared/src/`) |
-| Server | Capability contract tests | `server/src/contracts/phase0.test.ts` |
+| Server | Release verification and route inventory | `server/src/release-verification.test.ts` |
 | Client | Route/nav/UI-state contracts | `@playblast/shared` (`shared/src/`) |
-| Client | Contract tests | `client/src/lib/phase0-contracts.test.ts` |
+| Shared | Contract tests | `shared/src/phase0.test.ts` |
 | Docs | Human-readable specifications | `docs/phase-0/*.md` |
 
 ## Executable contracts
@@ -18,10 +18,9 @@ Import from `@playblast/shared`:
 
 - `ROLE_CAPABILITY_MATRIX`, `hasCapability()` — server authorization source of truth
 - `API_ERROR_CODES`, `createApiError()` — canonical error envelope
-- `BOOTSTRAP_LIFECYCLE`, `SINGLE_STUDIO_INVARIANT` — setup lifecycle
-- `PLATFORM_BOUNDARIES`, `OPERATIONS_CONTRACT` — deployment and ops boundaries
+- `BOOTSTRAP_LIFECYCLE` — setup lifecycle
 - `APP_ROUTES`, `NAV_ITEMS`, `UI_STATE_CATALOG` — client route and state map
-- `FIXTURE_USERS`, `buildCapabilityTestMatrix()` — integration fixtures
+- `buildCapabilityTestMatrix()`, `buildRouteTestMatrix()`, `buildNavTestMatrix()` — test matrices
 
 ## Phase exit gate
 

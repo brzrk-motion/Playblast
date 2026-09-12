@@ -75,7 +75,8 @@ import {
   formatCurrency,
   formatEstimateCurrency,
 } from "@/lib/budget"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { isProjectArchived } from "@/lib/projects"
 import {
   resolveAsyncViewState,
@@ -205,7 +206,7 @@ export function ProjectOverviewPage() {
     } catch (err) {
       const message = humanizeApiError(err, "Failed to load project")
       setError(message)
-      showErrorToast(message)
+      toast.error(message)
       setProject(null)
     } finally {
       setLoading(false)
@@ -241,7 +242,7 @@ export function ProjectOverviewPage() {
         if (!cancelled) {
           const message = humanizeApiError(err, "Failed to load project")
           setError(message)
-          showErrorToast(message)
+          toast.error(message)
           setProject(null)
         }
       } finally {
@@ -283,11 +284,11 @@ export function ProjectOverviewPage() {
       const refreshed = await getProject(project.id)
       setProject(refreshed)
       setEditOpen(false)
-      showSuccessToast("Project updated")
+      toast.success("Project updated")
     } catch (err) {
       const message = humanizeApiError(err, "Failed to update project")
       setProjectError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       setSavingProject(false)
     }
@@ -304,9 +305,9 @@ export function ProjectOverviewPage() {
       const refreshed = await getProject(project.id)
       setProject(refreshed)
       setArchiveOpen(false)
-      showSuccessToast("Project archived")
+      toast.success("Project archived")
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to archive project"))
+      toast.error(humanizeApiError(err, "Failed to archive project"))
     } finally {
       setArchiving(false)
     }
@@ -322,9 +323,9 @@ export function ProjectOverviewPage() {
       await unarchiveProject(project.id)
       const refreshed = await getProject(project.id)
       setProject(refreshed)
-      showSuccessToast("Project restored")
+      toast.success("Project restored")
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to restore project"))
+      toast.error(humanizeApiError(err, "Failed to restore project"))
     } finally {
       setUnarchiving(false)
     }
@@ -347,7 +348,7 @@ export function ProjectOverviewPage() {
           status: values.status,
           dueDate: values.dueDate || null,
         })
-        showSuccessToast("Deliverable updated")
+        toast.success("Deliverable updated")
       } else {
         await createDeliverable(project.id, {
           name: values.name.trim(),
@@ -355,7 +356,7 @@ export function ProjectOverviewPage() {
           status: values.status,
           dueDate: values.dueDate || undefined,
         })
-        showSuccessToast("Deliverable created")
+        toast.success("Deliverable created")
       }
       setDeliverableDialogOpen(false)
       setEditingDeliverable(null)
@@ -363,7 +364,7 @@ export function ProjectOverviewPage() {
     } catch (err) {
       const message = humanizeApiError(err, "Failed to save deliverable")
       setDeliverableError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       setSavingDeliverable(false)
     }
@@ -373,9 +374,9 @@ export function ProjectOverviewPage() {
     try {
       await deleteDeliverable(id)
       setDeliverables((current) => current.filter((item) => item.id !== id))
-      showSuccessToast("Deliverable deleted")
+      toast.success("Deliverable deleted")
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to delete deliverable"))
+      toast.error(humanizeApiError(err, "Failed to delete deliverable"))
     }
   }
 
@@ -393,7 +394,7 @@ export function ProjectOverviewPage() {
       setNewMilestoneName("")
       setNewMilestoneDate("")
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to add milestone"))
+      toast.error(humanizeApiError(err, "Failed to add milestone"))
     } finally {
       setAddingMilestone(false)
     }
@@ -406,7 +407,7 @@ export function ProjectOverviewPage() {
         current.map((item) => (item.id === updated.id ? updated : item)),
       )
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to update milestone"))
+      toast.error(humanizeApiError(err, "Failed to update milestone"))
     }
   }
 
@@ -416,7 +417,7 @@ export function ProjectOverviewPage() {
       setMilestones((current) => current.filter((item) => item.id !== id))
       setTasks((current) => current.filter((item) => item.milestoneId !== id))
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to delete milestone"))
+      toast.error(humanizeApiError(err, "Failed to delete milestone"))
     }
   }
 

@@ -58,7 +58,8 @@ import {
   filterLeadsBySearch,
   LEAD_STATUS_LABELS,
 } from "@/lib/leads"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { PageLoading } from "@/components/feedback/page-loading"
 import { leadFormToPayload, type LeadFormValues } from "@/lib/lead-form"
 import type { Lead, LeadStatus } from "@/types/lead"
@@ -106,7 +107,7 @@ export function LeadsTab() {
       } catch (err) {
         const message = humanizeApiError(err, "Failed to load leads")
         setError(message)
-        showErrorToast(message)
+        toast.error(message)
       } finally {
         setLoading(false)
       }
@@ -138,7 +139,7 @@ export function LeadsTab() {
         if (!cancelled) {
           const message = humanizeApiError(err, "Failed to load leads")
           setError(message)
-          showErrorToast(message)
+          toast.error(message)
         }
       } finally {
         if (!cancelled) {
@@ -196,7 +197,7 @@ export function LeadsTab() {
 
     try {
       await createLead(leadFormToPayload(values))
-      showSuccessToast("Lead added")
+      toast.success("Lead added")
       setAddModalOpen(false)
       await fetchLeads()
     } catch (err) {
@@ -220,7 +221,7 @@ export function LeadsTab() {
         selectedLead.id,
         leadFormToPayload(values),
       )
-      showSuccessToast("Lead updated")
+      toast.success("Lead updated")
       setEditModalOpen(false)
       setSelectedLead(null)
       setLeads((current) =>
@@ -255,10 +256,10 @@ export function LeadsTab() {
 
     try {
       await deleteLead(lead.id)
-      showSuccessToast("Lead deleted")
+      toast.success("Lead deleted")
       await fetchLeads()
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to delete lead"))
+      toast.error(humanizeApiError(err, "Failed to delete lead"))
     }
   }
 

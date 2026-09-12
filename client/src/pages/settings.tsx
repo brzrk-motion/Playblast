@@ -18,10 +18,10 @@ import { Label } from "@/components/ui/label"
 import { useSession } from "@/hooks/use-session"
 import {
   deleteStudioAvatar,
-  isIdentityApiError,
+  isApiError,
   updateStudioProfile,
   uploadStudioAvatar,
-} from "@/lib/identity-api"
+} from "@/lib/api-http"
 import {
   getInternalHourlyCostRate,
   setInternalHourlyCostRate,
@@ -128,7 +128,7 @@ export function SettingsPage() {
       await refresh()
       setStudioSaved(true)
     } catch (error) {
-      if (isIdentityApiError(error)) {
+      if (isApiError(error)) {
         setStudioNameError(error.details?.name?.[0] ?? null)
         setStudioFormError(error.message)
       } else {
@@ -153,7 +153,7 @@ export function SettingsPage() {
       await refresh()
       setStudioSaved(true)
     } catch (error) {
-      if (isIdentityApiError(error)) {
+      if (isApiError(error)) {
         setStudioAvatarError(error.details?.avatar?.[0] ?? error.message)
       } else {
         setStudioAvatarError("Avatar upload failed.")
@@ -175,7 +175,7 @@ export function SettingsPage() {
       await refresh()
       setStudioSaved(true)
     } catch (error) {
-      if (isIdentityApiError(error)) {
+      if (isApiError(error)) {
         setStudioAvatarError(error.message)
       } else {
         setStudioAvatarError("Could not remove avatar.")

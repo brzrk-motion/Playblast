@@ -2,7 +2,7 @@ import { useCallback } from "react"
 import { useMediaRemote, useMediaState } from "@vidstack/react"
 
 import { useVideoFps } from "@/hooks/use-video-fps"
-import { DEFAULT_VIDEO_FPS } from "@/lib/video-player-config"
+const DEFAULT_VIDEO_FPS = Number(import.meta.env.VITE_DEFAULT_VIDEO_FPS) || 24
 import { stepFrameTime } from "@/lib/timecode"
 
 export function useFrameStep() {

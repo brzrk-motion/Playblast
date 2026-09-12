@@ -11,7 +11,8 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import { ClientSelector } from "@/components/project/client-selector"
 import { getProject, updateProject } from "@/lib/api"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import type { ProjectDetail } from "@/types/project"
 
 interface ProjectClientLinkDialogProps {
@@ -44,7 +45,7 @@ function ProjectClientLinkDialogBody({
       await updateProject(projectId, { clientId })
       const refreshed = await getProject(projectId)
       onProjectUpdated(refreshed)
-      showSuccessToast(
+      toast.success(
         clientId
           ? mode === "add"
             ? "Client linked"
@@ -53,7 +54,7 @@ function ProjectClientLinkDialogBody({
       )
       onOpenChange(false)
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to update client link"))
+      toast.error(humanizeApiError(err, "Failed to update client link"))
     } finally {
       setSaving(false)
     }

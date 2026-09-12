@@ -12,19 +12,6 @@ export const INVOICE_STATUS_STYLES: Record<InvoiceStatus, string> = {
   paid: "border-status-success text-status-success-foreground",
 }
 
-export function formatInvoiceDate(value: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return "—"
-  }
-
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  })
-}
-
 export function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10)
 }

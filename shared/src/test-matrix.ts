@@ -46,16 +46,6 @@ export function buildRouteTestMatrix(): RouteTestCase[] {
   )
 }
 
-export const DEFERRED_FEATURE_SURFACES = [
-  "Hosted SaaS tenancy",
-  "Guest/client external accounts",
-  "Billing and subscriptions",
-  "Paid support commitments",
-  "SSO/SCIM",
-  "Native mobile apps",
-  "Self-hosted mail server operations",
-] as const
-
 export const MVP_BUSINESS_ROUTES = [
   "/clients",
   "/pipeline",

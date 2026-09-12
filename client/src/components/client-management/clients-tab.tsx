@@ -46,7 +46,7 @@ import {
   listProjects,
   updateClient,
 } from "@/lib/api"
-import { formatDateAdded } from "@/lib/dates"
+import { formatShortDate } from "@playblast/shared"
 import {
   sortClients,
   type ClientSortField,
@@ -57,7 +57,8 @@ import {
   clientFormToPayload,
   type ClientFormValues,
 } from "@/lib/client-form"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { PageLoading } from "@/components/feedback/page-loading"
 import type { Client, ClientListItem } from "@/types/client"
 
@@ -145,7 +146,7 @@ export function ClientsTab() {
     } catch (err) {
       const message = humanizeApiError(err, "Failed to load clients")
       setError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       setLoading(false)
     }
@@ -177,7 +178,7 @@ export function ClientsTab() {
         if (!cancelled) {
           const message = humanizeApiError(err, "Failed to load clients")
           setError(message)
-          showErrorToast(message)
+          toast.error(message)
         }
       } finally {
         if (!cancelled) {
@@ -245,13 +246,13 @@ export function ClientsTab() {
 
     try {
       await createClient(clientFormToPayload(values))
-      showSuccessToast("Client added")
+      toast.success("Client added")
       setAddModalOpen(false)
       await fetchClients()
     } catch (err) {
       const message = humanizeApiError(err, "Failed to save client")
       setFormError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       setSubmitting(false)
     }
@@ -270,7 +271,7 @@ export function ClientsTab() {
         selectedClient.id,
         clientFormToPayload(values),
       )
-      showSuccessToast("Client updated")
+      toast.success("Client updated")
       setEditModalOpen(false)
       setSelectedClient(null)
       setClients((current) =>
@@ -283,7 +284,7 @@ export function ClientsTab() {
     } catch (err) {
       const message = humanizeApiError(err, "Failed to save client")
       setFormError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       setSubmitting(false)
     }
@@ -298,10 +299,10 @@ export function ClientsTab() {
 
     try {
       await deleteClient(client.id)
-      showSuccessToast("Client deleted")
+      toast.success("Client deleted")
       await fetchClients()
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to delete client"))
+      toast.error(humanizeApiError(err, "Failed to delete client"))
     }
   }
 
@@ -430,7 +431,7 @@ export function ClientsTab() {
                       <TableCell className="tabular-nums">
                         {formatEstimateCurrency(client.lifetimeValue.totalEstimated)}
                       </TableCell>
-                      <TableCell>{formatDateAdded(client.createdAt)}</TableCell>
+                      <TableCell>{formatShortDate(client.createdAt)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

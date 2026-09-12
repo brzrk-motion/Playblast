@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
 import { TimesheetView } from "@/components/timesheet/timesheet-view"
 import { getWeeklyTimesheet } from "@/lib/api"
-import { humanizeApiError, showErrorToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { getWeekStartFromDate } from "@/lib/timesheet"
 import type { TimesheetWeek } from "@/types/timesheet"
 
@@ -20,7 +21,7 @@ export function TimesheetPage() {
         if (!cancelled) setData(sheet)
       } catch (err) {
         if (!cancelled) {
-          showErrorToast(humanizeApiError(err, "Failed to load timesheet"))
+          toast.error(humanizeApiError(err, "Failed to load timesheet"))
         }
       } finally {
         if (!cancelled) setLoading(false)

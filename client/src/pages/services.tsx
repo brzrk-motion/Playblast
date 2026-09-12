@@ -53,8 +53,8 @@ import {
   type ServiceSortField,
   type SortDirection,
 } from "@/lib/services"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
-import { randomUUID } from "@/lib/uuid"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import type { Service } from "@/types/service"
 
@@ -129,7 +129,7 @@ export function ServicesPage() {
     } catch (err) {
       const message = humanizeApiError(err, "Failed to load services")
       setError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       setLoading(false)
     }
@@ -149,7 +149,7 @@ export function ServicesPage() {
         if (!cancelled) {
           const message = humanizeApiError(err, "Failed to load services")
           setError(message)
-          showErrorToast(message)
+          toast.error(message)
         }
       } finally {
         if (!cancelled) {
@@ -249,7 +249,7 @@ export function ServicesPage() {
     setFormError(null)
 
     const payload = serviceFormToPayload(values)
-    const optimisticId = `optimistic-${randomUUID()}`
+    const optimisticId = `optimistic-${crypto.randomUUID()}`
     const optimisticService: Service = {
       id: optimisticId,
       ...payload,
@@ -266,14 +266,14 @@ export function ServicesPage() {
           service.id === optimisticId ? created : service,
         ),
       )
-      showSuccessToast("Service added")
+      toast.success("Service added")
     } catch (err) {
       setServices((current) =>
         current.filter((service) => service.id !== optimisticId),
       )
       const message = humanizeApiError(err, "Failed to save service")
       setFormError(message)
-      showErrorToast(message)
+      toast.error(message)
       throw err
     } finally {
       setSubmitting(false)
@@ -293,7 +293,7 @@ export function ServicesPage() {
         editingService.id,
         serviceFormToPayload(values),
       )
-      showSuccessToast("Service updated")
+      toast.success("Service updated")
       handleFormModalOpenChange(false)
       setServices((current) =>
         current.map((service) =>
@@ -303,7 +303,7 @@ export function ServicesPage() {
     } catch (err) {
       const message = humanizeApiError(err, "Failed to save service")
       setFormError(message)
-      showErrorToast(message)
+      toast.error(message)
       throw err
     } finally {
       setSubmitting(false)
@@ -322,10 +322,10 @@ export function ServicesPage() {
       setServices((current) =>
         current.filter((service) => service.id !== serviceToDelete.id),
       )
-      showSuccessToast("Service deleted")
+      toast.success("Service deleted")
       handleDeleteDialogOpenChange(false)
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to delete service"))
+      toast.error(humanizeApiError(err, "Failed to delete service"))
     } finally {
       setDeleting(false)
     }

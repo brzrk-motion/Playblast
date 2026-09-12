@@ -24,4 +24,4 @@ CRM and finance ship as product capabilities on the self-hosted instance. Routes
 
 Deployment-wide HTTP Basic Auth was a temporary pilot boundary before application sessions shipped. Normal access uses Playblast login sessions. Optional emergency bootstrap Basic Auth (`PLAYBLAST_EMERGENCY_BASIC_AUTH`) applies only before first-run setup completes.
 
-Source: `DEFERRED_FEATURE_SURFACES` and `MVP_CRM_ROUTES_ADMIN_ONLY` in `@playblast/shared`.
+Source: `MVP_BUSINESS_ROUTES` in `@playblast/shared` and the deferred-feature assertions in `shared/src/phase0.test.ts`.

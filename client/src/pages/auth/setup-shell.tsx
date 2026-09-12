@@ -15,8 +15,8 @@ import { Label } from "@/components/ui/label"
 import { useSession } from "@/hooks/use-session"
 import {
   createBootstrapAdmin,
-  isIdentityApiError,
-} from "@/lib/identity-api"
+  isApiError,
+} from "@/lib/api-http"
 
 export function SetupShellPage() {
   const navigate = useNavigate()
@@ -71,7 +71,7 @@ export function SetupShellPage() {
       await refresh()
       navigate("/setup/studio", { replace: true })
     } catch (submitError) {
-      if (isIdentityApiError(submitError)) {
+      if (isApiError(submitError)) {
         if (submitError.code === "SETUP_ALREADY_COMPLETE") {
           setError("Setup was already completed on another request. Sign in instead.")
         } else if (submitError.code === "RATE_LIMITED") {

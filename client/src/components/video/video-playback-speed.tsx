@@ -14,11 +14,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {
-  formatPlaybackSpeed,
-  PLAYBACK_SPEEDS,
-} from "@/lib/playback-speed"
 import { cn } from "@/lib/utils"
+
+const PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2] as const
+
+function formatPlaybackSpeed(rate: number): string {
+  return rate === 1 ? "1x" : `${rate}x`
+}
 
 export function VideoPlaybackSpeed({ className }: { className?: string }) {
   const playbackRate = useMediaState("playbackRate")

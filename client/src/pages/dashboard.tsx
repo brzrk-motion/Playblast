@@ -37,13 +37,13 @@ import {
   recentlyUpdatedProjects,
   totalOpenComments,
 } from "@/lib/projects"
-import { getTimeOfDayGreeting } from "@/lib/greeting"
 import {
   resolveAsyncViewState,
   reviewEmptyCopy,
   reviewErrorTitle,
 } from "@/lib/review-feedback"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { useCapability } from "@/hooks/use-capability"
 import type { ProjectSummary } from "@/types/project"
 
@@ -114,7 +114,13 @@ export function DashboardPage() {
   const [archiving, setArchiving] = useState(false)
   const [unarchivingId, setUnarchivingId] = useState<string | null>(null)
 
-  const greeting = useMemo(() => getTimeOfDayGreeting(), [])
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours()
+    if (hour >= 5 && hour < 12) return "Good morning"
+    if (hour >= 12 && hour < 17) return "Good afternoon"
+    if (hour >= 17 && hour < 21) return "Good evening"
+    return "Good night"
+  }, [])
 
   const loadActiveProjects = useCallback(async () => {
     const data = await listProjects()
@@ -147,7 +153,7 @@ export function DashboardPage() {
         if (!cancelled) {
           const message = humanizeApiError(err, "Failed to load projects")
           setError(message)
-          showErrorToast(message)
+          toast.error(message)
         }
       } finally {
         if (!cancelled) {
@@ -166,7 +172,7 @@ export function DashboardPage() {
     setView(nextView)
     if (nextView === "archived" && archivedProjects.length === 0) {
       void loadArchivedProjects().catch((err) => {
-        showErrorToast(humanizeApiError(err, "Failed to load archived projects"))
+        toast.error(humanizeApiError(err, "Failed to load archived projects"))
       })
     }
   }
@@ -181,14 +187,14 @@ export function DashboardPage() {
     setArchiving(true)
     try {
       await archiveProject(archiveTarget.id)
-      showSuccessToast("Project archived")
+      toast.success("Project archived")
       setArchiveTarget(null)
       await loadActiveProjects()
       if (archivedProjects.length > 0 || view === "archived") {
         await loadArchivedProjects()
       }
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to archive project"))
+      toast.error(humanizeApiError(err, "Failed to archive project"))
     } finally {
       setArchiving(false)
     }
@@ -198,10 +204,10 @@ export function DashboardPage() {
     setUnarchivingId(projectId)
     try {
       await unarchiveProject(projectId)
-      showSuccessToast("Project restored")
+      toast.success("Project restored")
       await Promise.all([loadActiveProjects(), loadArchivedProjects()])
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to restore project"))
+      toast.error(humanizeApiError(err, "Failed to restore project"))
     } finally {
       setUnarchivingId(null)
     }
@@ -215,7 +221,7 @@ export function DashboardPage() {
     } catch (err) {
       const message = humanizeApiError(err, "Failed to load projects")
       setError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       setLoading(false)
     }

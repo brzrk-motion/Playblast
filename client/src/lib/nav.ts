@@ -10,71 +10,43 @@ import {
   UserCog,
   Users,
 } from "lucide-react"
-
-export type NavSubItem = {
-  title: string
-  url: string
-  comingSoon?: boolean
-}
+import { getVisibleNavItems, NAV_ITEMS, type UserRole } from "@playblast/shared"
 
 export type NavItem = {
   title: string
   url: string
   icon: LucideIcon
-  comingSoon?: boolean
-  items?: NavSubItem[]
 }
 
-export const navMain: NavItem[] = [
-  {
-    title: "Dashboard",
-    icon: LayoutDashboard,
-    url: "/",
-  },
-  {
-    title: "Projects",
-    icon: FolderKanban,
-    url: "/projects",
-  },
-  {
-    title: "Pipeline",
-    icon: TrendingUp,
-    url: "/pipeline",
-  },
-  {
-    title: "Clients",
-    icon: Users,
-    url: "/clients",
-  },
-  {
-    title: "Services",
-    icon: Briefcase,
-    url: "/services",
-  },
-  {
-    title: "Timesheet",
-    icon: Clock,
-    url: "/timesheet",
-  },
-  {
-    title: "Capacity",
-    icon: Gauge,
-    url: "/capacity",
-  },
-  {
-    title: "Team",
-    icon: UserCog,
-    url: "/team",
-  },
-]
+const NAV_ICONS: Record<string, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  projects: FolderKanban,
+  pipeline: TrendingUp,
+  clients: Users,
+  services: Briefcase,
+  timesheet: Clock,
+  capacity: Gauge,
+  team: UserCog,
+  settings: Settings,
+}
 
-export const navSecondary: NavItem[] = [
-  {
-    title: "Settings",
-    icon: Settings,
-    url: "/settings",
-  },
-]
+export function getNavItemsForRole(
+  role: UserRole | null,
+  section: "main" | "secondary",
+): NavItem[] {
+  if (!role) {
+    return []
+  }
+
+  return getVisibleNavItems(role, section).flatMap((item) => {
+    const icon = NAV_ICONS[item.id]
+    if (!icon) {
+      return []
+    }
+
+    return [{ title: item.title, url: item.url, icon }]
+  })
+}
 
 export function getPageHeader(pathname: string): { title: string; subtitle?: string } {
   if (pathname.startsWith("/projects/") && pathname.endsWith("/compare")) {
@@ -89,44 +61,24 @@ export function getPageHeader(pathname: string): { title: string; subtitle?: str
     return { title: "Project" }
   }
 
-  if (pathname === "/projects") {
-    return { title: "Projects" }
-  }
+  const matched = NAV_ITEMS.find((item) => {
+    if (item.url === "/projects") {
+      return pathname === "/projects" || pathname.startsWith("/projects/")
+    }
+    return pathname === item.url || pathname.startsWith(`${item.url}/`)
+  })
 
-  if (pathname === "/clients") {
-    return { title: "Clients", subtitle: "Lead & client management" }
-  }
-
-  if (pathname === "/services") {
-    return { title: "Services", subtitle: "Catalog offerings & rates" }
-  }
-
-  if (pathname === "/timesheet") {
-    return { title: "Timesheet", subtitle: "Weekly hours across projects" }
-  }
-
-  if (pathname === "/pipeline") {
-    return { title: "Pipeline", subtitle: "Revenue by project stage" }
-  }
-
-  if (pathname === "/capacity") {
-    return { title: "Capacity", subtitle: "Active workload & hours remaining" }
-  }
-
-  if (pathname === "/team") {
-    return { title: "Team", subtitle: "Users, roles, and invitations" }
-  }
-
-  if (pathname === "/") {
-    return { title: "Dashboard" }
-  }
-
-  if (pathname === "/settings") {
-    return { title: "Settings" }
-  }
-
-  if (pathname === "/profile") {
-    return { title: "Profile" }
+  if (matched) {
+    const subtitles: Record<string, string> = {
+      clients: "Lead & client management",
+      services: "Catalog offerings & rates",
+      timesheet: "Weekly hours across projects",
+      pipeline: "Revenue by project stage",
+      capacity: "Active workload & hours remaining",
+      team: "Users, roles, and invitations",
+    }
+    const subtitle = subtitles[matched.id]
+    return subtitle ? { title: matched.title, subtitle } : { title: matched.title }
   }
 
   return { title: "Playblast" }
@@ -155,8 +107,4 @@ export function isNavItemActive(pathname: string, url: string): boolean {
     return pathname === "/team" || pathname.startsWith("/team/")
   }
   return pathname === url
-}
-
-export function isNavGroupActive(pathname: string, items: NavSubItem[]): boolean {
-  return items.some((item) => pathname === item.url)
 }

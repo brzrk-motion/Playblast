@@ -21,8 +21,9 @@ import {
 } from "@/components/ui/table"
 import { downloadInvoicePdf, listProjectInvoices } from "@/lib/api"
 import { formatEstimateCurrency } from "@/lib/budget"
-import { formatInvoiceDate } from "@/lib/invoices"
-import { humanizeApiError, showErrorToast } from "@/lib/toast"
+import { formatShortDate } from "@playblast/shared"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import type { InvoiceSummary } from "@/types/invoice"
 
 interface ProjectInvoicesSectionProps {
@@ -65,7 +66,7 @@ export function ProjectInvoicesSection({
         }
       } catch (err) {
         if (!cancelled) {
-          showErrorToast(humanizeApiError(err, "Failed to load invoices"))
+          toast.error(humanizeApiError(err, "Failed to load invoices"))
         }
       } finally {
         if (!cancelled) {
@@ -90,7 +91,7 @@ export function ProjectInvoicesSection({
     try {
       await downloadInvoicePdf(invoice.id)
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to download invoice"))
+      toast.error(humanizeApiError(err, "Failed to download invoice"))
     } finally {
       setDownloadingId(null)
     }
@@ -162,10 +163,10 @@ export function ProjectInvoicesSection({
                           #{invoice.invoiceNumber}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Issued {formatInvoiceDate(invoice.invoiceDate)}
+                          Issued {formatShortDate(invoice.invoiceDate)}
                         </div>
                       </TableCell>
-                      <TableCell>{formatInvoiceDate(invoice.dueDate)}</TableCell>
+                      <TableCell>{formatShortDate(invoice.dueDate)}</TableCell>
                       <TableCell>
                         <InvoiceStatusBadge
                           status={invoice.status}

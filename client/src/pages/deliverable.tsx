@@ -33,12 +33,8 @@ import {
   reviewEmptyCopy,
   reviewErrorTitle,
 } from "@/lib/review-feedback"
-import {
-  humanizeApiError,
-  showErrorToast,
-  showSuccessToast,
-  showToast,
-} from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { sortVersionsByDate, VERSION_STATUS_LABELS } from "@/lib/versions"
 import type { Comment } from "@/types/comment"
 import type { Deliverable, DeliverableStatus } from "@/types/deliverable"
@@ -141,7 +137,7 @@ export function DeliverablePage() {
       const message = handleProofingError(err, "Failed to load deliverable")
       if (!message) return
       setError(message)
-      showErrorToast(message)
+      toast.error(message)
       setProject(null)
       setDeliverable(null)
       setVersions([])
@@ -190,7 +186,7 @@ export function DeliverablePage() {
           const message = handleProofingError(err, "Failed to load deliverable")
           if (!message) return
           setError(message)
-          showErrorToast(message)
+          toast.error(message)
           setProject(null)
           setDeliverable(null)
           setVersions([])
@@ -222,12 +218,12 @@ export function DeliverablePage() {
       setComments((current) =>
         current.map((comment) => (comment.id === updated.id ? updated : comment)),
       )
-      showSuccessToast(resolved ? "Comment resolved" : "Comment reopened")
+      toast.success(resolved ? "Comment resolved" : "Comment reopened")
     } catch (err) {
       const message = handleProofingError(err, "Failed to update comment")
       if (!message) return
       setActionError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       setResolvingCommentId(null)
     }
@@ -240,12 +236,12 @@ export function DeliverablePage() {
     try {
       await deleteComment(commentId)
       setComments((current) => current.filter((comment) => comment.id !== commentId))
-      showSuccessToast("Comment deleted")
+      toast.success("Comment deleted")
     } catch (err) {
       const message = handleProofingError(err, "Failed to delete comment")
       if (!message) return
       setActionError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       setDeletingCommentId(null)
     }
@@ -263,11 +259,11 @@ export function DeliverablePage() {
       setVersions(nextVersions)
 
       if (status === "approved") {
-        showSuccessToast("Version approved")
+        toast.success("Version approved")
       } else if (status === "needs_revision") {
-        showSuccessToast("Needs revision")
+        toast.success("Needs revision")
       } else {
-        showSuccessToast(VERSION_STATUS_LABELS[status])
+        toast.success(VERSION_STATUS_LABELS[status])
       }
 
       // Roll the deliverable status up from the latest version's approval state.
@@ -292,7 +288,7 @@ export function DeliverablePage() {
       const message = handleProofingError(err, "Failed to update version status")
       if (!message) return
       setActionError(message)
-      showErrorToast(message)
+      toast.error(message)
     } finally {
       setUpdatingStatusId(null)
     }
@@ -306,9 +302,9 @@ export function DeliverablePage() {
 
     try {
       await navigator.clipboard.writeText(url.toString())
-      showToast("Link copied")
+      toast("Link copied")
     } catch {
-      showErrorToast("Couldn't copy link")
+      toast.error("Couldn't copy link")
     }
   }
 
@@ -337,7 +333,7 @@ export function DeliverablePage() {
           const message = handleProofingError(err, "Failed to load comments")
           if (!message) return
           setActionError(message)
-          showErrorToast(message)
+          toast.error(message)
         }
       } finally {
         if (!cancelled) {
@@ -564,11 +560,11 @@ export function DeliverablePage() {
                           (a, b) => a.timestamp - b.timestamp,
                         ),
                       )
-                      showSuccessToast("Comment posted")
+                      toast.success("Comment posted")
                     } catch (err) {
                       const message = handleProofingError(err, "Failed to post comment")
                       if (!message) return
-                      showErrorToast(message)
+                      toast.error(message)
                       throw err
                     }
                   }

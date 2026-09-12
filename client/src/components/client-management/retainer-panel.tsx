@@ -13,13 +13,14 @@ import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Spinner } from "@/components/ui/spinner"
 import { updateRetainerHours } from "@/lib/api"
+import { formatCurrency } from "@/lib/budget"
 import {
-  formatCurrency,
   formatCycleRange,
   formatHours,
   formatUtilizationPercent,
 } from "@/lib/retainer"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import type { ClientWithProjects } from "@/types/client"
 
 interface RetainerPanelProps {
@@ -47,7 +48,7 @@ function RetainerHoursEntry({
   async function handleSaveHours() {
     const nextHoursLogged = Number(hoursInput)
     if (!Number.isFinite(nextHoursLogged) || nextHoursLogged < 0) {
-      showErrorToast("Enter a valid number of hours.")
+      toast.error("Enter a valid number of hours.")
       return
     }
 
@@ -55,10 +56,10 @@ function RetainerHoursEntry({
 
     try {
       const updated = await updateRetainerHours(clientId, nextHoursLogged)
-      showSuccessToast("Retainer hours updated")
+      toast.success("Retainer hours updated")
       onSaved(updated)
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to update retainer hours"))
+      toast.error(humanizeApiError(err, "Failed to update retainer hours"))
     } finally {
       onSavingChange(false)
     }

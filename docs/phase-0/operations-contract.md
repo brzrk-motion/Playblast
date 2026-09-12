@@ -1,6 +1,6 @@
 # Operations contract
 
-Source of truth: `@playblast/shared` (`operations.ts`).
+Source of truth: this document and `docs/deployment/operator-responsibilities.md`.
 
 ## Data ownership
 

@@ -15,7 +15,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { useTaskTimer } from "@/hooks/use-task-timer"
 import { createTimeLog, deleteTimeLog, listTimeLogs } from "@/lib/api"
 import { formatDateTime } from "@/lib/dates"
-import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { toast } from "sonner"
+import { humanizeApiError } from "@/lib/toast"
 import { formatDurationHours, formatElapsedClock } from "@/lib/time-log"
 import type { TimeLog } from "@/types/time-log"
 
@@ -52,7 +53,7 @@ export function TaskTimeLogControl({
         data.reduce((sum, entry) => sum + entry.durationHours, 0),
       )
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to load time logs"))
+      toast.error(humanizeApiError(err, "Failed to load time logs"))
     } finally {
       setLoading(false)
     }
@@ -77,9 +78,9 @@ export function TaskTimeLogControl({
       onTotalHoursChange?.(
         nextEntries.reduce((sum, item) => sum + item.durationHours, 0),
       )
-      showSuccessToast(`Logged ${formatDurationHours(durationHours)}`)
+      toast.success(`Logged ${formatDurationHours(durationHours)}`)
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to log timer session"))
+      toast.error(humanizeApiError(err, "Failed to log timer session"))
     } finally {
       setSaving(false)
     }
@@ -88,7 +89,7 @@ export function TaskTimeLogControl({
   async function handleManualEntry() {
     const durationHours = Number(manualHours)
     if (!Number.isFinite(durationHours) || durationHours <= 0) {
-      showErrorToast("Enter a valid number of hours.")
+      toast.error("Enter a valid number of hours.")
       return
     }
 
@@ -105,9 +106,9 @@ export function TaskTimeLogControl({
       )
       setManualHours("")
       setManualNotes("")
-      showSuccessToast(`Logged ${formatDurationHours(durationHours)}`)
+      toast.success(`Logged ${formatDurationHours(durationHours)}`)
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to log time"))
+      toast.error(humanizeApiError(err, "Failed to log time"))
     } finally {
       setSaving(false)
     }
@@ -122,7 +123,7 @@ export function TaskTimeLogControl({
         nextEntries.reduce((sum, item) => sum + item.durationHours, 0),
       )
     } catch (err) {
-      showErrorToast(humanizeApiError(err, "Failed to delete time log"))
+      toast.error(humanizeApiError(err, "Failed to delete time log"))
     }
   }
 
