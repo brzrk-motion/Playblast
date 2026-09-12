@@ -56,7 +56,7 @@ export const DEFERRED_FEATURE_SURFACES = [
   "Self-hosted mail server operations",
 ] as const
 
-export const MVP_CRM_ROUTES_ADMIN_ONLY = [
+export const MVP_BUSINESS_ROUTES = [
   "/clients",
   "/pipeline",
   "/services",

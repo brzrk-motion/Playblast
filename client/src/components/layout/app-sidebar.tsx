@@ -101,12 +101,11 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link to="/">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-annotation-accent text-black">
                   <Clapperboard className="size-4" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
                   <span className="font-semibold">Playblast</span>
-                  <span className="text-muted-foreground text-xs">Project Management</span>
                 </div>
               </Link>
             </SidebarMenuButton>

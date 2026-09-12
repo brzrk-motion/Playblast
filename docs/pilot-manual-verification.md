@@ -45,7 +45,7 @@ From the repository root:
 
 ```bash
 npm run verify:release-candidate   # full RC gate; skips Docker locally if daemon absent
-npm run verify:browser-qa        # Chromium smoke for three-role direct-URL guards
+npm run verify:browser-qa        # Chromium smoke for four-role direct-URL guards
 ```
 
 Individual gates:
@@ -61,7 +61,7 @@ npm run verify:pilot-browser
 npm run verify:deployment-config
 ```
 
-- [ ] `npm run test` — shared, server, and client tests pass (includes release verification and role matrix suites).
+- [x] `npm run test` — shared, server, and client tests pass (includes release verification and role matrix suites).
 - [ ] `npm run verify:browser-qa` — Playwright smoke passes (Admin Team access; Creative/Proofing forbidden redirects; login labels).
 - [ ] `npm run verify:backup-restore` — prints `Backup/restore verification passed.`
 - [ ] `npm run verify:secrets` — no accidental secret patterns in tracked files.
@@ -74,7 +74,7 @@ npm run verify:deployment-config
 
 ---
 
-## Browser workflow (three roles)
+## Browser workflow (four roles)
 
 Use a private/incognito window per role. Complete steps in order.
 

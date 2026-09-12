@@ -1,10 +1,10 @@
-import type { Capability } from "@playblast/shared"
+import type { Capability, UserRole } from "@playblast/shared"
 import { hasCapability } from "@playblast/shared"
 import type { Comment } from "../types/comment.js"
 
 export interface CommentActor {
   userId: string
-  role: "admin" | "creative" | "proofing"
+  role: UserRole
 }
 
 export interface CommentMutation {

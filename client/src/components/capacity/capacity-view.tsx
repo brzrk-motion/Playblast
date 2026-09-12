@@ -99,6 +99,7 @@ function CapacityGauge({ totals, weeklyCapacityHours }: CapacityGaugeProps) {
       <CardContent className="space-y-4">
         <Progress
           value={gaugePercent}
+          aria-label={`Weekly capacity used: ${gaugePercent} percent`}
           className={
             overload
               ? "[&_[data-slot=progress-indicator]]:bg-destructive"
@@ -233,6 +234,7 @@ function ProjectCapacityTable({
                       <div className="flex items-center gap-2">
                         <Progress
                           value={utilization}
+                          aria-label={`${row.project.name} utilization: ${utilization} percent`}
                           className={
                             overEstimate
                               ? "[&_[data-slot=progress-indicator]]:bg-destructive"

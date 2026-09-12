@@ -38,4 +38,4 @@ Source of truth: `@playblast/shared` (`routes.ts`).
 | `/forbidden` | public | — |
 | `/session-expired` | public | — |
 
-Route guards and screens implement this contract; navigation visibility for CRM surfaces is Admin-only per `navigation.ts`.
+Route guards and screens implement this contract; navigation visibility for CRM surfaces is limited to Admin and Account Executive per `navigation.ts`.

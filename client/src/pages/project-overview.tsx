@@ -99,8 +99,10 @@ type ProjectOverviewTab = "milestones" | "deliverables" | "services"
 function parseTab(
   value: string | null,
   isAdmin: boolean,
+  canViewBusiness: boolean,
 ): ProjectOverviewTab {
-  if (value === "deliverables" || value === "services") return value
+  if (value === "services") return canViewBusiness ? "services" : "deliverables"
+  if (value === "deliverables") return value
   if (value === "milestones") return isAdmin ? "milestones" : "deliverables"
   return isAdmin ? "milestones" : "deliverables"
 }
@@ -118,10 +120,13 @@ export function ProjectOverviewPage() {
   const { projectId = "" } = useParams()
   const { role } = useSession()
   const isAdmin = role === "admin"
+  const canViewBusiness = useCapability("business.manage")
+  const canMutateProjects = useCapability("projects.mutate")
+  const canDeleteProjects = useCapability("data.delete")
   const canMutateDeliverables = useCapability("projects.mutate")
   const canDeleteDeliverables = useCapability("data.delete")
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab = parseTab(searchParams.get(TAB_PARAM), isAdmin)
+  const activeTab = parseTab(searchParams.get(TAB_PARAM), isAdmin, canViewBusiness)
   const shouldEditName = searchParams.get(EDIT_NAME_PARAM) === "1"
   const [project, setProject] = useState<ProjectDetail | null>(null)
   const [deliverables, setDeliverables] = useState<DeliverableSummary[]>([])
@@ -188,7 +193,7 @@ export function ProjectOverviewPage() {
           listDeliverables(projectId),
           listMilestones(projectId),
           listProjectTasks(projectId),
-          listProjectServices(projectId),
+          canViewBusiness ? listProjectServices(projectId) : Promise.resolve([]),
         ])
       setProject(projectData)
       setOutstandingBalance(projectData.outstandingBalance ?? 0)
@@ -206,7 +211,7 @@ export function ProjectOverviewPage() {
       setLoading(false)
       setServicesLoading(false)
     }
-  }, [projectId])
+  }, [canViewBusiness, projectId])
 
   useEffect(() => {
     if (!projectId) return
@@ -221,7 +226,7 @@ export function ProjectOverviewPage() {
             listDeliverables(projectId),
             listMilestones(projectId),
             listProjectTasks(projectId),
-            listProjectServices(projectId),
+            canViewBusiness ? listProjectServices(projectId) : Promise.resolve([]),
           ])
         if (!cancelled) {
           setProject(projectData)
@@ -252,11 +257,20 @@ export function ProjectOverviewPage() {
     return () => {
       cancelled = true
     }
-  }, [projectId])
+  }, [canViewBusiness, projectId])
 
   async function handleSaveProject(values: ProjectFormValues) {
     if (!project) return
-    const payload = projectFormToPayload(values)
+    const rawPayload = projectFormToPayload(values)
+    const payload = isAdmin
+      ? rawPayload
+      : {
+          name: rawPayload.name,
+          status: rawPayload.status,
+          description: rawPayload.description,
+          startDate: rawPayload.startDate,
+          endDate: rawPayload.endDate,
+        }
     if (!payload.name) {
       setProjectError("Project name is required.")
       return
@@ -489,13 +503,13 @@ export function ProjectOverviewPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <EditableProjectName
+              {canMutateProjects ? <EditableProjectName
                 projectId={project.id}
                 name={project.name}
                 autoFocus={shouldEditName}
                 onNameChange={(name) => setProject({ ...project, name })}
                 onEditEnd={clearEditNameParam}
-              />
+              /> : <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>}
               {isProjectArchived(project) ? <ProjectArchivedBadge /> : null}
               <ProjectStatusBadge status={project.status} />
               {outstandingBalance > 0 ? (
@@ -514,23 +528,28 @@ export function ProjectOverviewPage() {
             ) : null}
           </div>
           <div className="flex items-center gap-2">
-            <ProjectActionsMenu
+             <ProjectActionsMenu
               projectId={project.id}
               projectName={project.name}
-              onArchive={
-                isProjectArchived(project) ? undefined : () => setArchiveOpen(true)
-              }
+               onArchive={
+                 canDeleteProjects && !isProjectArchived(project)
+                   ? () => setArchiveOpen(true)
+                   : undefined
+               }
               onUnarchive={
                 isProjectArchived(project)
-                  ? () => void handleUnarchive()
-                  : undefined
+                   ? canDeleteProjects
+                     ? () => void handleUnarchive()
+                     : undefined
+                   : undefined
               }
-              actionPending={unarchiving}
-            />
-            <Button variant="outline" onClick={() => setEditOpen(true)}>
+               actionPending={unarchiving}
+               canDuplicate={canMutateProjects}
+             />
+             {canMutateProjects ? <Button variant="outline" onClick={() => setEditOpen(true)}>
               <Pencil />
               Edit project
-            </Button>
+             </Button> : null}
           </div>
         </div>
         <ProjectClientInfoBlock
@@ -539,12 +558,15 @@ export function ProjectOverviewPage() {
           onViewClient={setViewClientId}
           onProjectUpdated={setProject}
           linkDialogOpen={clientLinkOpen}
-          onLinkDialogOpenChange={setClientLinkOpen}
+           onLinkDialogOpenChange={setClientLinkOpen}
+           readOnly={!canViewBusiness}
+           canManageLink={canMutateProjects}
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <div className="grid gap-4 md:grid-cols-3">
+          {canViewBusiness ? (
+          <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Budget</CardTitle>
             <Wallet className="size-4 text-muted-foreground" />
@@ -560,7 +582,10 @@ export function ProjectOverviewPage() {
                     of {formatCurrency(budget.total, budget.currency)}
                   </span>
                 </div>
-                <Progress value={Math.min(100, budgetSpentRatio(budget) * 100)} />
+                <Progress
+                  value={Math.min(100, budgetSpentRatio(budget) * 100)}
+                  aria-label={`Project budget used: ${Math.round(budgetSpentRatio(budget) * 100)} percent`}
+                />
                 {health ? (
                   <Badge
                     variant="outline"
@@ -577,6 +602,7 @@ export function ProjectOverviewPage() {
             )}
           </CardContent>
         </Card>
+          ) : null}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -610,7 +636,7 @@ export function ProjectOverviewPage() {
         </Card>
       </div>
 
-      <ProjectNotesField
+       {isAdmin ? <ProjectNotesField
         notes={project.notes}
         onSave={async (notes) => {
           const updated = await updateProject(project.id, { notes })
@@ -618,9 +644,9 @@ export function ProjectOverviewPage() {
             current ? { ...current, notes: updated.notes } : current,
           )
         }}
-      />
+       /> : null}
 
-      {isAdmin ? (
+       {canViewBusiness ? (
         <ProjectBudgetEstimatePanel
           projectId={project.id}
           projectServices={projectServices}
@@ -635,7 +661,7 @@ export function ProjectOverviewPage() {
         />
       ) : null}
 
-      {isAdmin ? (
+       {canViewBusiness ? (
         <ProjectInvoicesSection
           key={invoiceRefreshKey}
           projectId={project.id}
@@ -647,9 +673,9 @@ export function ProjectOverviewPage() {
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
-          {isAdmin ? <TabsTrigger value="milestones">Milestones</TabsTrigger> : null}
+           {isAdmin ? <TabsTrigger value="milestones">Milestones</TabsTrigger> : null}
           <TabsTrigger value="deliverables">Deliverables</TabsTrigger>
-          {isAdmin ? <TabsTrigger value="services">Services</TabsTrigger> : null}
+           {canViewBusiness ? <TabsTrigger value="services">Services</TabsTrigger> : null}
         </TabsList>
 
         <TabsContent
@@ -899,13 +925,14 @@ export function ProjectOverviewPage() {
         </TabsContent>
       </Tabs>
 
-      <ProjectFormSheet
+         <ProjectFormSheet
         open={editOpen}
         onOpenChange={setEditOpen}
         mode="edit"
         project={project}
         submitting={savingProject}
-        error={projectError}
+          error={projectError}
+          showCommercialFields={isAdmin}
         onSubmit={handleSaveProject}
       />
 

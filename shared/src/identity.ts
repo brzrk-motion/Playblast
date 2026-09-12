@@ -1,5 +1,5 @@
 import type { Capability } from "./capabilities.js"
-import type { SetupStatus } from "./bootstrap.js"
+import type { InvitableRole, SetupStatus } from "./bootstrap.js"
 import type { UserRole } from "./roles.js"
 
 /** Public setup status contract (GET /api/setup/status). */
@@ -70,7 +70,7 @@ export interface InvitationSummary {
   id: string
   email: string
   name: string
-  role: Exclude<UserRole, "admin">
+  role: InvitableRole
   status: InvitationStatus
   expiresAt: string
   createdAt: string

@@ -15,9 +15,9 @@ Sections through **Repository evidence reviewed** below describe the **pre-MVP b
 
 ## Executive summary
 
-Playblast now has the core studio-facing MVP implementation: application sessions, first-run setup, studio profile, invitations and SMTP configuration, server-enforced roles, studio ownership, the proofing workflow, Admin-only CRM and finance surfaces, and self-hosted deployment documentation.
+Playblast now has the core studio-facing MVP implementation: application sessions, first-run setup, studio profile, invitations and SMTP configuration, server-enforced roles, studio ownership, the proofing workflow, business CRM and finance surfaces, and self-hosted deployment documentation.
 
-The remaining release work is verification rather than the original identity vertical slice. Open gates include a clean-machine operator walkthrough, Docker/NAS checks, recovery and SMTP delivery checks, and independent adoption evidence. CRM and studio-operations surfaces (clients, pipeline, services, timesheet, capacity, invoicing) ship as Admin-only product capabilities; Creative and Proofing roles use proofing routes only.
+The remaining release work is verification rather than the original identity vertical slice. Open gates include a clean-machine operator walkthrough, Docker/NAS checks, recovery and SMTP delivery checks, and independent adoption evidence. CRM and studio-operations surfaces (clients, pipeline, services, timesheet, capacity, invoicing) are available to Admin and Account Executive users; Creative and Proofing roles use production proofing routes only.
 
 **Practical status:**
 
@@ -27,7 +27,7 @@ The remaining release work is verification rather than the original identity ver
 
 ## Scope of this MVP
 
-The first studio-facing MVP centers on proofing plus Admin-only CRM and finance; it is not a complete studio operating system.
+The first studio-facing MVP centers on proofing plus Admin and Account Executive CRM and finance; it is not a complete studio operating system.
 
 ### In scope
 
@@ -35,12 +35,12 @@ The first studio-facing MVP centers on proofing plus Admin-only CRM and finance;
 - First-run setup performed by the studio administrator.
 - Studio profile with name and profile picture.
 - Admin account creation and login.
-- Admin-created accounts for studio users with one of three roles: `admin`, `creative`, or `proofing`.
+- Admin-created accounts for studio users with one of four roles: `admin`, `account_executive`, `creative`, or `proofing`.
 - Invitation email with a secure acceptance link.
 - Invite recipient creates a password and logs in.
 - Authenticated studio members can access the studio’s projects and proofing workflow.
 - Projects, deliverables, video versions, playback, timestamped comments, frame annotations, comparison, review states, approvals, and downloads.
-- Admin CRM and finance: clients and leads, sales pipeline, services catalog, timesheet, capacity planning, and project invoicing (Admin role only).
+- Business CRM and finance: clients and leads, sales pipeline, services catalog, timesheet, capacity planning, and project invoicing for Admin and Account Executive roles.
 - Docker-based installation with persistent SQLite and media storage.
 - Documented backup, restore, upgrade, rollback, data ownership, and deletion boundaries.
 - Public documentation and issue tracking rather than founder support.
@@ -50,24 +50,27 @@ The first studio-facing MVP centers on proofing plus Admin-only CRM and finance;
 Every user belongs to the single studio configured for that self-hosted instance. The server must enforce these roles from the authenticated session; the client must not be trusted to declare or elevate a role. “Manage the installation” means managing Playblast’s in-app setup, studio configuration, account lifecycle, SMTP test/configuration, and recovery controls; it does not mean Playblast can manage Docker, the host OS, NAS networking, DNS, HTTPS/VPN, storage, or backups from inside the application. Those remain the studio’s deployment-owner responsibilities.
 
 - **Admin:** manages the installation-level setup and studio profile, invites and manages users, assigns roles, configures SMTP, and can perform every action available to Creative and Proofing users. Admins can create, edit, archive, delete, upload, version, proof, comment, annotate, approve, compare, and download within the studio.
+- **Account Executive:** manages CRM and financial operations, including clients, leads, services, timesheets, capacity, project services, invoices, payments, and business records. Account Executives can view project and deliverable context, play, comment, annotate, compare, and download, but cannot create or edit production work, upload/version media, approve, archive, delete, or administer Team and installation settings.
 - **Creative:** the working role for motion designers, video editors, designers, and similar studio contributors. Creatives can create and edit the proofing work permitted by the MVP, upload new videos, create versions, review/play videos, comment, annotate, compare versions, approve where the permission matrix allows, and download deliverables. Creatives cannot manage installation setup, SMTP, studio administration, users, roles, or other admin-only controls.
-- **Proofing:** a read-only review role. Proofing users can view/play deliverables and versions, add comments and frame annotations, compare versions, and see review status/history. They cannot upload media, create or replace versions, modify project/deliverable metadata, approve versions, delete data, manage users, configure the studio, or change installation settings.
+- **Proofing:** a read-only review role. Proofing users can view/play deliverables and versions, add comments and frame annotations, compare versions, and see review status/history. They cannot view commercial CRM/finance details, upload media, create or replace versions, modify project/deliverable metadata, approve versions, delete data, manage users, configure the studio, or change installation settings.
 
-The precise permission matrix must be explicit before implementation. “Read-only” means no mutation of media, versions, project structure, approvals, membership, or installation configuration; commenting and annotations are the deliberate review exceptions.
+The precise permission matrix is explicit in this contract. Account Executive project access is read-only; CRM and financial operations are full business management. “Read-only” means no mutation of media, versions, project structure, approvals, membership, or installation configuration; commenting and annotations are the deliberate review exceptions.
 
-| Capability | Admin | Creative | Proofing |
-|---|---:|---:|---:|
-| Complete first-run installation and studio setup | Yes | No | No |
-| Manage SMTP and installation settings | Yes | No | No |
-| Invite, disable, reactivate, or assign roles | Yes | No | No |
-| View studio projects and deliverables | Yes | Yes | Yes |
-| Create/edit projects and deliverables | Yes | Yes | No |
-| Upload media and create new versions | Yes | Yes | No |
-| Play, review, and compare versions | Yes | Yes | Yes |
-| Add comments and frame annotations | Yes | Yes | Yes |
-| Change approval/review state | Yes | Yes | No |
-| Download deliverables | Yes | Yes | Yes |
-| Delete/archive studio data | Yes | No | No |
+| Capability | Admin | Account Executive | Creative | Proofing |
+|---|---:|---:|---:|---:|
+| View Team membership | Yes | Yes | No | No |
+| Manage CRM and finance | Yes | Yes | No | No |
+| Complete first-run installation and studio setup | Yes | No | No | No |
+| Manage SMTP and installation settings | Yes | No | No | No |
+| Invite, disable, reactivate, or assign roles | Yes | No | No | No |
+| View studio projects and deliverables | Yes | Yes | Yes | Yes |
+| Create/edit projects and deliverables | Yes | No | Yes | No |
+| Upload media and create new versions | Yes | No | Yes | No |
+| Play, review, and compare versions | Yes | Yes | Yes | Yes |
+| Add comments and frame annotations | Yes | Yes | Yes | Yes |
+| Change approval/review state | Yes | No | Yes | No |
+| Download deliverables | Yes | Yes | Yes | Yes |
+| Delete/archive studio data | Yes | No | No | No |
 
 **Role-policy decision:** “proof” means viewing/playing, commenting, annotating, comparing, and participating in the review workflow; it does not grant upload or version-management rights. Creatives may change review/approval state but may not archive or delete studio data. Proofing users may download deliverables because downloading is a read operation, but they cannot mutate media, versions, project structure, approvals, membership, or installation configuration. These defaults are part of the MVP contract unless a later product decision explicitly changes them.
 
@@ -338,7 +341,7 @@ The following blockers describe the pre-MVP baseline and are retained as an impl
 19. Add a data export/deletion procedure appropriate to one self-hosted studio instance.
 20. Test upgrade and migration behavior from the current unauthenticated/Basic-Auth database.
 21. Resolve route/API error states and loading states for first-run, expired invites, disabled users, and invalid sessions.
-22. **Resolved:** CRM/finance surfaces ship Admin-only; Creative and Proofing users access proofing through Projects. Server authorization and navigation restrictions enforce this in the role matrix.
+22. **Resolved:** CRM/finance surfaces are available to Admin and Account Executive users; Creative and Proofing users access production proofing through Projects without commercial data. Server authorization, response shaping, and navigation restrictions enforce this in the role matrix.
 23. Address the large client bundle if performance testing shows it harms first-run usability; do not let this precede identity and authorization work.
 
 ## Target onboarding experience
@@ -375,7 +378,7 @@ This is the required Home Assistant-like self-hosted flow. It should work from a
 
 1. Admin opens Team/Users from the application.
 2. Admin enters one or more user names and email addresses and selects an MVP role.
-3. Server validates the role as exactly `creative` or `proofing` for invited users, prevents duplicate active memberships, creates a cryptographically random one-time invite token, stores only a hash of the token, and sets an expiry.
+3. Server validates the role as exactly `account_executive`, `creative`, or `proofing` for invited users, prevents duplicate active memberships, creates a cryptographically random one-time invite token, stores only a hash of the token, and sets an expiry.
 4. Server sends an invitation email containing the instance URL, studio name, recipient identity, selected role, expiration, and a secure acceptance link.
 5. UI displays invite status: pending, accepted, expired, revoked, or delivery failed.
 6. Admin can resend an invite, which invalidates the prior token, or revoke a pending invite.
@@ -387,7 +390,7 @@ This is the required Home Assistant-like self-hosted flow. It should work from a
 2. Server validates token hash, expiry, intended invite, and unused state.
 3. User sees studio name, selected role, and the email/name associated with the invite.
 4. User creates and confirms a password; the server hashes it and atomically marks the invite accepted.
-5. User receives a session and enters the application using the role selected by the admin: `creative` or `proofing`.
+5. User receives a session and enters the application using the role selected by the admin: `account_executive`, `creative`, or `proofing`.
 6. Expired, revoked, already-used, and malformed links receive clear safe recovery guidance.
 7. User can later change their password and log out from the account menu.
 
@@ -412,13 +415,13 @@ The following execution view is the implementation order for the detailed backlo
 - Client/UI work must consume the server contract through the typed API layer; it must not duplicate authorization decisions or trust client-supplied studio/user/role identifiers.
 - Each phase ends with an integration gate covering the changed server routes, client screens, persistence, and deny/allow behavior.
 - A UI-only visual pass cannot mark a server-dependent task complete, and a passing API test cannot mark a user-facing flow complete.
-- Test fixtures must cover Admin, Creative, and Proofing accounts and must identify which behavior is a permitted mutation, a permitted read, or a denied action.
+- Test fixtures must cover Admin, Account Executive, Creative, and Proofing accounts and must identify which behavior is a permitted mutation, a permitted read, or a denied action.
 
 ### Phase 0 — Scope, contracts, and design system
 
 #### Server/API
 
-- [x] Convert the role matrix into a server capability contract for Admin, Creative, and Proofing.
+- [x] Convert the role matrix into a server capability contract for Admin, Account Executive, Creative, and Proofing.
 - [x] Define API conventions for `401`, `403`, `404`, `409`, `413`, validation failures, expired sessions, expired invites, and delivery failures.
 - [x] Define the single-studio invariant and the bootstrap Admin lifecycle.
 - [x] Define the supported Node LTS, Docker, NAS/Linux, browser, media, storage, and SMTP boundaries.
@@ -426,7 +429,7 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Client/UI
 
-- [x] Map the application route tree to public, setup, authenticated, Admin-only, Creative, and Proofing surfaces.
+- [x] Map the application route tree to public, setup, authenticated, business, Team, and proofing surfaces.
 - [x] Define navigation visibility and disabled/hidden behavior for each role without treating hidden controls as authorization.
 - [x] Define shared UI states for loading, empty, unauthorized, forbidden, expired session, expired invite, validation error, delivery failure, and offline/unavailable server.
 - [x] Define the visual language for role badges, studio identity, account menu, destructive actions, and setup progress.
@@ -435,7 +438,7 @@ The following execution view is the implementation order for the detailed backlo
 #### Integration/verification
 
 - [x] Review the server capability contract and route map against the client route map before implementation.
-- [x] Create representative Admin, Creative, and Proofing fixtures and an API/UI test matrix.
+- [x] Create representative Admin, Account Executive, Creative, and Proofing fixtures and an API/UI test matrix.
 - [x] Confirm that deferred SaaS, guest, billing, and support features have no required client or server surface.
 
 **Phase exit:** the server contract, client route/state map, role matrix, and acceptance fixtures agree before feature implementation begins.
@@ -446,7 +449,7 @@ The following execution view is the implementation order for the detailed backlo
 
 - [x] Add the database boundary and Drizzle ORM/Drizzle Kit while retaining `better-sqlite3` and the existing SQLite file path.
 - [x] Introspect the current schema and reconcile Drizzle schema/migration ownership for new identity tables versus legacy SQL migrations.
-- [x] Add `studios`, `users`, `sessions`, `invitations`, and `audit_events` schema with `admin`, `creative`, and `proofing` roles.
+- [x] Add `studios`, `users`, `sessions`, `invitations`, and `audit_events` schema with `admin`, `account_executive`, `creative`, and `proofing` roles.
 - [x] Add constraints for one studio per instance, one bootstrap Admin, normalized email uniqueness, valid roles, session lookup, invite tokens, and safe foreign-key behavior.
 - [ ] Add fresh-database, existing-database, repeated-startup, schema-drift, rollback, WAL, foreign-key, busy-timeout, and data-preservation tests.
 - [x] Add typed server DTOs/contracts for current session, studio profile, users, invitations, setup status, and role capabilities.
@@ -525,17 +528,17 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Server/API
 
-- [x] Implement Admin-only user listing, invitation creation, resend, revoke, role assignment, disable/reactivate, and last-Admin protections.
+- [x] Implement Admin-only invitation creation, resend, revoke, role assignment, disable/reactivate, and last-Admin protections, plus read-only Team membership for Account Executives.
 - [x] Persist and enforce invitation roles; acceptance cannot change a selected role.
 - [x] Implement secure invite-token hashing, expiry, one-time use, replay protection, and duplicate rules.
 - [x] Implement generic SMTP with explicit TLS/authentication/timeout/error behavior and local secret handling.
 - [x] Implement Admin-only SMTP test delivery and accurate delivery status.
 - [x] Implement invitation templates containing studio, recipient, role, instance URL, expiry, and self-hosting context.
-- [x] Add Admin/Creative/Proofing allow/deny tests for all team, SMTP, and invitation routes.
+- [x] Add Admin/Account Executive/Creative/Proofing allow/deny tests for all team, SMTP, and invitation routes.
 
 #### Client/UI
 
-- [x] Build the Admin-only Team page with users, roles, status, pending invites, resend, revoke, disable, reactivate, and validation states.
+- [x] Build the Team page with read-only membership for Account Executives and Admin-only roles, pending invites, SMTP, resend, revoke, disable, reactivate, and validation states.
 - [x] Build role selection with the fixed role descriptions and prevent invitation of an arbitrary/custom role.
 - [x] Build SMTP configuration/test UI with masked credentials, safe errors, test status, and no secret echoing.
 - [x] Build invite acceptance and password creation screens showing studio name and assigned role.
@@ -569,11 +572,11 @@ The following execution view is the implementation order for the detailed backlo
 - [x] Hide or disable controls that the current role cannot use, while preserving server-side denial as the authority.
 - [x] Render forbidden states and safe empty states without leaking cross-studio existence.
 - [x] Ensure current user/studio context is sent only through the session and not as trusted client authorization data.
-- [x] Restrict Admin-only CRM/finance/capacity surfaces for Creative and Proofing users.
+- [x] Restrict CRM/finance/capacity surfaces to Admin and Account Executive users, including commercial response redaction and production-role widget restrictions.
 
 #### Integration/verification
 
-- [ ] Run the complete three-role matrix against every classified route and file-serving path.
+- [x] Run the complete four-role matrix against every classified route and file-serving path.
 - [x] Verify two fixture studios cannot read, write, stream, download, or delete one another’s data.
 - [ ] Verify Admin can complete every permitted Creative and Proofing flow through the UI.
 - [ ] Verify Proofing cannot upload, version, edit, approve, delete, administer, or elevate privileges through direct requests or manipulated UI state.
@@ -645,7 +648,7 @@ The following execution view is the implementation order for the detailed backlo
 
 #### Client/UI
 
-- [ ] Run browser QA on supported desktop browsers for all three roles.
+- [ ] Run browser QA on supported desktop browsers for all four roles.
 - [ ] Verify responsive setup, login, Team, profile, review, upload, comparison, and error states.
 - [x] Verify no role can access hidden functionality through direct URLs or stale client state.
 - [x] Verify accessible labels, keyboard navigation, focus handling, and destructive-action confirmations on the MVP surfaces.

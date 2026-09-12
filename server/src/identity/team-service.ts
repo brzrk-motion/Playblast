@@ -11,7 +11,7 @@ import type {
   UserRole,
   UserSummary,
 } from "@playblast/shared"
-import { INVITE_EXPIRY_HOURS, INVITABLE_ROLES } from "@playblast/shared"
+import { INVITE_EXPIRY_HOURS, INVITABLE_ROLES, USER_ROLES } from "@playblast/shared"
 import type { Response } from "express"
 import { getDrizzle } from "../db/drizzle.js"
 import { invitations, studios, users } from "../db/schema/identity.js"
@@ -141,15 +141,6 @@ function assertNotLastAdmin(
   }
 }
 
-function isPrivilegeReduction(currentRole: UserRole, nextRole: UserRole): boolean {
-  const rank: Record<UserRole, number> = {
-    admin: 3,
-    creative: 2,
-    proofing: 1,
-  }
-  return rank[nextRole] < rank[currentRole]
-}
-
 function expireStaleInvitations(studioId: string): void {
   const db = getDrizzle()
   const now = new Date().toISOString()
@@ -215,7 +206,7 @@ export async function createInvitation(
   if (emailErrors.length) details.email = emailErrors
 
   if (!INVITABLE_ROLES.includes(input.role)) {
-    details.role = ["Role must be creative or proofing."]
+    details.role = ["Role must be account executive, creative, or proofing."]
   }
 
   if (Object.keys(details).length > 0) {
@@ -489,9 +480,9 @@ export function updateStudioUser(
   const nextRole = input.role ?? user.role
   const nextDisabled = input.disabled ?? user.disabled
 
-  if (input.role && !["admin", "creative", "proofing"].includes(input.role)) {
+  if (input.role && !USER_ROLES.includes(input.role)) {
     throw new TeamServiceError("VALIDATION_FAILED", "Validation failed.", {
-      role: ["Role must be admin, creative, or proofing."],
+      role: ["Role must be admin, account executive, creative, or proofing."],
     })
   }
 
@@ -507,11 +498,7 @@ export function updateStudioUser(
     .where(eq(users.id, userId))
     .run()
 
-  const privilegeReduced =
-    nextDisabled ||
-    (input.role !== undefined && isPrivilegeReduction(user.role, input.role))
-
-  if (privilegeReduced) {
+  if (nextDisabled || (input.role !== undefined && input.role !== user.role)) {
     destroyAllSessionsForUser(userId)
   }
 

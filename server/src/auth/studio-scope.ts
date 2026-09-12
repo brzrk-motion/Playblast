@@ -1,5 +1,6 @@
 import type { Response } from "express"
 import type { Request } from "express"
+import type { UserRole } from "@playblast/shared"
 import { sendApiError } from "../lib/api-response.js"
 import { getDb } from "../storage/db.js"
 
@@ -7,7 +8,7 @@ export interface StudioSessionContext {
   studioId: string
   userId: string
   userName: string
-  role: "admin" | "creative" | "proofing"
+  role: UserRole
 }
 
 export function getStudioSessionContext(

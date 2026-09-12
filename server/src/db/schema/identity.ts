@@ -8,9 +8,9 @@ export const SETUP_STATUS_VALUES = [
   "complete",
 ] as const
 
-export const USER_ROLE_VALUES = ["admin", "creative", "proofing"] as const
+export const USER_ROLE_VALUES = ["admin", "account_executive", "creative", "proofing"] as const
 
-export const INVITABLE_ROLE_VALUES = ["creative", "proofing"] as const
+export const INVITABLE_ROLE_VALUES = ["account_executive", "creative", "proofing"] as const
 
 export const INVITATION_STATUS_VALUES = [
   "pending",
@@ -66,7 +66,7 @@ export const users = sqliteTable(
     index("users_studio_id_idx").on(table.studioId),
     check(
       "users_role_check",
-      sql`${table.role} IN ('admin', 'creative', 'proofing')`,
+      sql`${table.role} IN ('admin', 'account_executive', 'creative', 'proofing')`,
     ),
   ],
 )
@@ -122,7 +122,7 @@ export const invitations = sqliteTable(
     index("invitations_status_idx").on(table.status),
     check(
       "invitations_role_check",
-      sql`${table.role} IN ('creative', 'proofing')`,
+      sql`${table.role} IN ('account_executive', 'creative', 'proofing')`,
     ),
     check(
       "invitations_status_check",

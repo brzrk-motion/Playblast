@@ -4,13 +4,19 @@ import {
   getNavVisibility,
 } from "@playblast/shared"
 import { apiFetch, apiLogin } from "../helpers/api.js"
-import { E2E_ADMIN, E2E_CREATIVE, E2E_PROOFING } from "../credentials.js"
+import {
+  E2E_ACCOUNT_EXECUTIVE,
+  E2E_ADMIN,
+  E2E_CREATIVE,
+  E2E_PROOFING,
+} from "../credentials.js"
 import { expect, runtime, storageStateFor, test } from "../fixtures/test.js"
 
 const ROLE_CREDS = {
   admin: E2E_ADMIN,
   creative: E2E_CREATIVE,
   proofing: E2E_PROOFING,
+  account_executive: E2E_ACCOUNT_EXECUTIVE,
 } as const
 
 test.describe("Admin UI", () => {
@@ -74,6 +80,18 @@ test.describe("Proofing UI", () => {
   })
 })
 
+test.describe("Account Executive UI", () => {
+  test.use({ storageState: storageStateFor("account_executive") })
+
+  test("Account Executive can open business routes and read-only Team", async ({ page }) => {
+    await page.goto("/clients")
+    await expect(page).not.toHaveURL(/\/forbidden|\/login/)
+    await page.goto("/team")
+    await expect(page.getByRole("heading", { name: "Team", level: 2 })).toBeVisible()
+    await expect(page.getByRole("button", { name: "Invite member" })).toHaveCount(0)
+  })
+})
+
 const ROUTE_CASES = APP_ROUTES.filter(
   (entry) =>
     entry.implemented &&
@@ -83,7 +101,7 @@ const ROUTE_CASES = APP_ROUTES.filter(
     entry.path !== "/login",
 )
 
-for (const role of ["admin", "creative", "proofing"] as const) {
+for (const role of ["admin", "account_executive", "creative", "proofing"] as const) {
   test.describe(`${role} route contract`, () => {
     test.use({ storageState: storageStateFor(role) })
 
@@ -181,6 +199,10 @@ test("probes representative capability endpoints per role", async () => {
       body: { name: "Creative API Project" },
     },
     { role: "proofing", path: "/api/projects", method: "GET", expectedAllow: true },
+    { role: "account_executive", path: "/api/clients", method: "GET", expectedAllow: true },
+    { role: "account_executive", path: "/api/users", method: "GET", expectedAllow: true },
+    { role: "account_executive", path: "/api/invitations", method: "GET", expectedAllow: false },
+    { role: "account_executive", path: "/api/projects", method: "POST", expectedAllow: false, body: { name: "Should Deny" } },
   ]
 
   for (const entry of cases) {

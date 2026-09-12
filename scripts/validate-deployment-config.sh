@@ -23,10 +23,11 @@ pass "Dockerfile uses Node 22 Alpine"
 
 [[ -f docker-compose.yml ]] || fail "docker-compose.yml is missing"
 grep -q 'SESSION_SECRET' docker-compose.yml || fail "docker-compose.yml must require SESSION_SECRET"
+grep -q 'action: rebuild' docker-compose.yml || fail "docker-compose.yml must configure file watch rebuilds"
 if grep -q 'PLAYBLAST_AUTH_USER: \${PLAYBLAST_AUTH_USER:\?Set PLAYBLAST_AUTH_USER}' docker-compose.yml; then
   fail "docker-compose.yml must not require PLAYBLAST_AUTH_USER as primary auth"
 fi
-pass "docker-compose.yml requires SESSION_SECRET, not Basic Auth"
+pass "docker-compose.yml requires SESSION_SECRET and configures file watch rebuilds"
 
 [[ -f docker-compose.env.example ]] || fail "docker-compose.env.example is missing"
 grep -q 'SESSION_SECRET=' docker-compose.env.example || fail "docker-compose.env.example must document SESSION_SECRET"

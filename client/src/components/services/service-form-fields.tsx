@@ -129,7 +129,7 @@ export function ServiceFormFields({
         </div>
       </div>
 
-      {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
+      {formError ? <p role="alert" className="text-sm text-destructive">{formError}</p> : null}
     </div>
   )
 }

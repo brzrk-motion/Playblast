@@ -56,9 +56,13 @@ export function getStudioProfile(): StudioProfileResponse | null {
   }
 }
 
-export function listUsers(): UserSummary[] {
+export function listUsers(studioId?: string): UserSummary[] {
   const db = getDrizzle()
-  const rows = db.select().from(users).all()
+  const rows = db
+    .select()
+    .from(users)
+    .where(studioId ? eq(users.studioId, studioId) : undefined)
+    .all()
 
   return rows.map((row) => ({
     id: row.id,

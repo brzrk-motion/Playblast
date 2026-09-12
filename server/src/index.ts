@@ -2,6 +2,10 @@ import { createApp } from "./app.js"
 import { config } from "./config/env.js"
 import { ensureUploadDir } from "./config/paths.js"
 import { validateStartup } from "./config/validate-startup.js"
+import {
+  ensureDevelopmentDemoVideos,
+  seedDevelopmentDatabase,
+} from "./scripts/seed-development.js"
 import { closeDatabase, initDatabase } from "./storage/db.js"
 
 const startup = validateStartup()
@@ -12,6 +16,12 @@ if (!startup.ok) {
 
 const uploadDir = ensureUploadDir()
 initDatabase()
+if (seedDevelopmentDatabase()) {
+  console.log("Development database seeded. Demo logins: admin@playblast.local and taylor@playblast.local / PlayblastDev2026")
+}
+if (ensureDevelopmentDemoVideos()) {
+  console.log("Development demo videos restored.")
+}
 const app = createApp()
 
 const server = app.listen(config.port, config.host, () => {

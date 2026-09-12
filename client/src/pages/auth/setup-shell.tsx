@@ -37,7 +37,7 @@ export function SetupShellPage() {
       <div className="bg-background flex min-h-svh items-center justify-center p-6">
         <Card className="w-full max-w-lg">
           <CardHeader>
-            <CardTitle>Setup in progress</CardTitle>
+            <CardTitle as="h1">Setup in progress</CardTitle>
             <CardDescription>
               This instance already has a bootstrap admin. Continue setup or sign in.
             </CardDescription>
@@ -99,7 +99,7 @@ export function SetupShellPage() {
               <Clapperboard className="size-5" />
             </div>
             <div>
-              <CardTitle>Create admin account</CardTitle>
+              <CardTitle as="h1">Create admin account</CardTitle>
               <CardDescription>
                 Claim this self-hosted Playblast instance with one bootstrap admin.
               </CardDescription>

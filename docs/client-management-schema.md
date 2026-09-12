@@ -161,8 +161,8 @@ The `projects` table already stores proofing metadata (`name`, `status`, `budget
 | Full baseline schema | `server/src/storage/schema.sql` |
 | Upgrade migration | `server/src/storage/migrations/001_client_management.sql` |
 | Migration runner | `server/src/storage/db.ts` (`schema_migrations` tracking table) |
-| Dev seed data | `server/data/seed-client-management.sql` |
-| Seed loader script | `scripts/seed-client-management.js` |
+| Development seed data | `server/src/scripts/seed-development.ts` |
+| Seed loader | Server startup in `server/src/index.ts` |
 
 Later client-management migrations extend this foundation for services, project services, service details and overrides, tasks, time logs, and studio ownership. See `server/src/storage/migrations/` for the complete ordered set.
 
@@ -174,13 +174,23 @@ Migrations run automatically on server startup via `initDatabase()`. For manual 
 node scripts/seed-client-management.js --migrate-only
 ```
 
-### Loading seed data
+### Loading development seed data
 
-```bash
-node scripts/seed-client-management.js
-```
+When `NODE_ENV=development`, server startup seeds a fresh database with sample
+identity, CRM, project, proofing, timesheet, retainer, and invoice data. The
+seed is skipped when any studio already exists and is never run in production.
 
-Loads sample leads, contact log entries, clients, and links an example project when one exists. Safe to re-run only on empty client-management tables (the script skips when leads already exist).
+Demo accounts all use `PlayblastDev2026`:
+
+- `admin@playblast.local` (Admin)
+- `taylor@playblast.local` (Account Executive)
+- `maya@playblast.local` (Creative)
+- `jordan@playblast.local` (Proofing)
+
+The seed is intentionally development-only and copies a small synthetic H.264
+fixture into each sample version so the proofing interface can be exercised.
+Existing demo databases also repair missing fixture files on development
+startup without overwriting existing uploads.
 
 ## Conversion flow (intended usage)
 

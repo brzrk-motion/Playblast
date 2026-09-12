@@ -81,7 +81,7 @@ export function LeadFormFields({
         </div>
 
         <div className="space-y-2">
-          <Label>Source</Label>
+          <Label htmlFor="lead-source">Source</Label>
           <Select
             value={values.source || "none"}
             onValueChange={(value) =>
@@ -104,7 +104,7 @@ export function LeadFormFields({
         </div>
 
         <div className="space-y-2">
-          <Label>Status</Label>
+          <Label htmlFor="lead-status">Status</Label>
           <Select
             value={values.status}
             onValueChange={(value) =>
@@ -139,7 +139,7 @@ export function LeadFormFields({
       </div>
 
       {validationError ? (
-        <p className="text-sm text-destructive">{validationError}</p>
+        <p role="alert" className="text-sm text-destructive">{validationError}</p>
       ) : null}
     </div>
   )

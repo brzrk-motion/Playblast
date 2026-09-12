@@ -22,7 +22,18 @@ export function migrateIdentity(db?: Database.Database): void {
 
   const connection = db ?? getDb()
   const drizzleDb = createDrizzle(connection)
-  migrate(drizzleDb, { migrationsFolder: IDENTITY_MIGRATIONS_DIR })
+  const foreignKeysEnabled = connection.pragma("foreign_keys", { simple: true }) === 1
+  if (foreignKeysEnabled) {
+    // SQLite cannot rebuild a CHECK-constrained parent table while child FKs are active.
+    connection.pragma("foreign_keys = OFF")
+  }
+  try {
+    migrate(drizzleDb, { migrationsFolder: IDENTITY_MIGRATIONS_DIR })
+  } finally {
+    if (foreignKeysEnabled) {
+      connection.pragma("foreign_keys = ON")
+    }
+  }
   backfillExistingInstallations(connection)
 }
 

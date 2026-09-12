@@ -111,6 +111,38 @@ describe("identity schema and Drizzle migrations", () => {
 
     db.close()
   })
+
+  it("accepts Account Executive users and invitations", () => {
+    const db = new Database(dbPath)
+    db.exec(`
+      INSERT INTO studios (id, name, setup_status, created_at, updated_at)
+      VALUES ('ae-studio', 'AE Studio', 'complete', '2026-01-01', '2026-01-01');
+      INSERT INTO users (
+        id, studio_id, name, email, email_normalized, password_hash, role,
+        disabled, created_at, updated_at
+      ) VALUES (
+        'ae-user', 'ae-studio', 'AE User', 'ae@example.test', 'ae@example.test',
+        'hash', 'account_executive', 0, '2026-01-01', '2026-01-01'
+      );
+      INSERT INTO invitations (
+        id, studio_id, email, email_normalized, name, role, token_hash,
+        status, expires_at, created_at, updated_at
+      ) VALUES (
+        'ae-invite', 'ae-studio', 'new-ae@example.test', 'new-ae@example.test',
+        'New AE', 'account_executive', 'token', 'pending', '2099-01-01',
+        '2026-01-01', '2026-01-01'
+      );
+    `)
+    assert.equal(
+      (db.prepare("SELECT role FROM users WHERE id = 'ae-user'").get() as { role: string }).role,
+      "account_executive",
+    )
+    assert.equal(
+      (db.prepare("SELECT role FROM invitations WHERE id = 'ae-invite'").get() as { role: string }).role,
+      "account_executive",
+    )
+    db.close()
+  })
 })
 
 describe("identity migration on existing proofing database", () => {
@@ -166,6 +198,125 @@ describe("identity migration on existing proofing database", () => {
       .get("project-1") as { id: string; name: string } | undefined
 
     assert.deepEqual(project, { id: "project-1", name: "Legacy Project" })
+    db.close()
+  })
+
+  it("preserves identity rows when upgrading the pre-Account Executive schema", () => {
+    const db = new Database(":memory:")
+    db.pragma("foreign_keys = ON")
+    db.exec(`
+      CREATE TABLE studios (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL DEFAULT '',
+        avatar_path TEXT,
+        setup_status TEXT NOT NULL DEFAULT 'pending',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE users (
+        id TEXT PRIMARY KEY,
+        studio_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        email_normalized TEXT NOT NULL,
+        password_hash TEXT,
+        role TEXT NOT NULL CHECK (role IN ('admin', 'creative', 'proofing')),
+        disabled INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (studio_id) REFERENCES studios(id) ON DELETE CASCADE
+      );
+      CREATE TABLE sessions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        studio_id TEXT NOT NULL,
+        token_hash TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        last_seen_at TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (studio_id) REFERENCES studios(id) ON DELETE CASCADE
+      );
+      CREATE TABLE invitations (
+        id TEXT PRIMARY KEY,
+        studio_id TEXT NOT NULL,
+        email TEXT NOT NULL,
+        email_normalized TEXT NOT NULL,
+        name TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('creative', 'proofing')),
+        token_hash TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        expires_at TEXT NOT NULL,
+        invited_by_user_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (studio_id) REFERENCES studios(id) ON DELETE CASCADE,
+        FOREIGN KEY (invited_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+      );
+      CREATE TABLE audit_events (
+        id TEXT PRIMARY KEY,
+        studio_id TEXT,
+        user_id TEXT,
+        event_type TEXT NOT NULL,
+        metadata TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (studio_id) REFERENCES studios(id) ON DELETE SET NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+      );
+      CREATE TABLE __drizzle_migrations (
+        id INTEGER PRIMARY KEY,
+        hash TEXT NOT NULL,
+        created_at NUMERIC
+      );
+      INSERT INTO __drizzle_migrations (id, hash, created_at)
+      VALUES (1, '0001', 1788280000000);
+      INSERT INTO studios (id, name, setup_status, created_at, updated_at)
+      VALUES ('upgrade-studio', 'Upgrade Studio', 'complete', '2026-01-01', '2026-01-01');
+      INSERT INTO users (
+        id, studio_id, name, email, email_normalized, password_hash, role,
+        created_at, updated_at
+      ) VALUES (
+        'upgrade-user', 'upgrade-studio', 'Existing Admin', 'admin@example.test',
+        'admin@example.test', 'hash', 'admin', '2026-01-01', '2026-01-01'
+      );
+      INSERT INTO sessions (
+        id, user_id, studio_id, token_hash, expires_at, created_at, last_seen_at
+      ) VALUES (
+        'upgrade-session', 'upgrade-user', 'upgrade-studio', 'session-hash',
+        '2099-01-01', '2026-01-01', '2026-01-01'
+      );
+      INSERT INTO invitations (
+        id, studio_id, email, email_normalized, name, role, token_hash,
+        expires_at, created_at, updated_at
+      ) VALUES (
+        'upgrade-invite', 'upgrade-studio', 'creative@example.test',
+        'creative@example.test', 'Existing Creative', 'creative', 'invite-hash',
+        '2099-01-01', '2026-01-01', '2026-01-01'
+      );
+      INSERT INTO audit_events (id, studio_id, user_id, event_type, created_at)
+      VALUES ('upgrade-audit', 'upgrade-studio', 'upgrade-user', 'login', '2026-01-01');
+    `)
+
+    __testOnly_migrateIdentityOn(db)
+
+    assert.equal(
+      (db.prepare("SELECT role FROM users WHERE id = 'upgrade-user'").get() as { role: string }).role,
+      "admin",
+    )
+    assert.equal(
+      (db.prepare("SELECT COUNT(*) AS count FROM sessions WHERE id = 'upgrade-session'").get() as { count: number }).count,
+      1,
+    )
+    assert.equal(
+      (db.prepare("SELECT COUNT(*) AS count FROM invitations WHERE id = 'upgrade-invite'").get() as { count: number }).count,
+      1,
+    )
+    assert.equal(
+      (db.prepare("SELECT COUNT(*) AS count FROM audit_events WHERE id = 'upgrade-audit'").get() as { count: number }).count,
+      1,
+    )
+    assert.equal(db.pragma("foreign_keys", { simple: true }), 1)
+    assert.deepEqual(db.pragma("foreign_key_check"), [])
     db.close()
   })
 })

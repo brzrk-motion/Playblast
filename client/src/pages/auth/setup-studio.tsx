@@ -100,7 +100,7 @@ export function SetupStudioPage() {
               <Clapperboard className="size-5" />
             </div>
             <div>
-              <CardTitle>Name your studio</CardTitle>
+              <CardTitle as="h1">Name your studio</CardTitle>
               <CardDescription>
                 This identity appears in the sidebar, account menu, and setup flow.
               </CardDescription>

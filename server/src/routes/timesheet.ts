@@ -1,12 +1,12 @@
 import { Router } from "express"
-import { requireAdminOnly } from "../middleware/authorization.js"
+import { requireCapability } from "../middleware/authorization.js"
 import { getWeekStartFromDate, isIsoDate } from "../lib/timesheet.js"
 import { getWeeklyTimesheet } from "../storage/index.js"
 import { requireStudioSession } from "./route-helpers.js"
 
 const timesheetRouter = Router()
 
-timesheetRouter.use(requireAdminOnly())
+timesheetRouter.use(requireCapability("business.manage"))
 
 timesheetRouter.get("/", (req, res) => {
   const context = requireStudioSession(req, res)

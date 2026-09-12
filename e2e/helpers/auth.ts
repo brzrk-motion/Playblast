@@ -90,7 +90,7 @@ export async function configureSmtpViaUi(
 
 export async function inviteMemberViaUi(
   page: Page,
-  input: { name: string; email: string; role: "creative" | "proofing" },
+  input: { name: string; email: string; role: "account_executive" | "creative" | "proofing" },
 ): Promise<void> {
   await page.goto("/team")
   await page.getByRole("button", { name: "Invite member" }).click()
@@ -99,7 +99,9 @@ export async function inviteMemberViaUi(
   await page.locator("#invite-email").fill(input.email)
   if (input.role !== "creative") {
     await page.locator("#invite-role").click()
-    await page.getByRole("option", { name: "Proofing" }).click()
+    await page.getByRole("option", {
+      name: input.role === "proofing" ? "Proofing" : "Account Executive",
+    }).click()
   }
   await page.getByRole("button", { name: "Send invitation" }).click()
   await expect(page.getByText(input.email)).toBeVisible({ timeout: 15_000 })

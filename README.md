@@ -51,6 +51,14 @@ docker compose up -d --build
 
 Open `http://<host>:3000` and complete first-run setup (admin account → studio profile → team invites).
 
+For Docker-based development, start the same production-shaped container with automatic image rebuilds when source files change:
+
+```bash
+docker compose watch
+```
+
+This is intentionally opt-in; normal deployments should continue using `docker compose up -d --build`.
+
 **Full guides:** [docs/deployment/index.md](docs/deployment/index.md)
 
 | Topic | Document |
@@ -76,7 +84,7 @@ Normal access uses **Playblast login sessions**, not deployment-wide HTTP Basic 
 | `npm run verify:backup-restore` | Filesystem backup → restore gate |
 | `npm run verify:docker-deployment` | Docker build/start/health (skipped if no Docker) |
 | `npm run verify:release-candidate` | Full release-candidate gate |
-| `npm run verify:browser-qa` | Playwright Chromium smoke (three roles) |
+| `npm run verify:browser-qa` | Playwright Chromium smoke (four roles) |
 | `npm run verify:secrets` | Scan tracked files for accidental secrets |
 | `npm run build:deploy` | Build `linux/amd64` image tarball for NAS |
 

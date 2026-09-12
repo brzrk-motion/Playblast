@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { requireAdminOnly } from "../middleware/authorization.js"
+import { requireCapability } from "../middleware/authorization.js"
 import {
   addProjectService,
   listProjectServices,
@@ -49,7 +49,7 @@ function parseOverrideHours(
   return { value: parsed.value }
 }
 
-projectServicesRouter.use(requireAdminOnly())
+projectServicesRouter.use(requireCapability("business.manage"))
 
 projectServicesRouter.get("/", (req, res) => {
   const projectId = getProjectIdParam(req)

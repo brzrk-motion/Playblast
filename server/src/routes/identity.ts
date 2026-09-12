@@ -43,6 +43,7 @@ import {
   requireAuthenticatedSession,
   requireCsrfProtection,
 } from "../middleware/session.js"
+import { requireCapability } from "../middleware/authorization.js"
 
 const identityRouter = Router()
 
@@ -309,14 +310,14 @@ identityRouter.post(
   },
 )
 
-identityRouter.get("/users", requireAuthenticatedSession(), requireAdminRole(), (_req, res) => {
+identityRouter.get("/users", requireAuthenticatedSession(), requireCapability("team.view"), (req, res) => {
   const setup = getSetupStatusResponse()
   if (!setup.setupComplete) {
     sendApiError(res, "SETUP_NOT_COMPLETE")
     return
   }
 
-  res.json(listUsers())
+  res.json(listUsers(req.currentSession!.studio.id))
 })
 
 identityRouter.get(

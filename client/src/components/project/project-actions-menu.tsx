@@ -17,6 +17,7 @@ interface ProjectActionsMenuProps {
   align?: "start" | "end"
   onArchive?: () => void
   onUnarchive?: () => void
+  canDuplicate?: boolean
   actionPending?: boolean
 }
 
@@ -27,6 +28,7 @@ export function ProjectActionsMenu({
   align = "end",
   onArchive,
   onUnarchive,
+  canDuplicate = false,
   actionPending = false,
 }: ProjectActionsMenuProps) {
   const { duplicate, duplicating } = useDuplicateProject()
@@ -51,13 +53,15 @@ export function ProjectActionsMenu({
         align={align}
         onClick={(event) => event.stopPropagation()}
       >
-        <DropdownMenuItem
-          disabled={duplicating}
-          onClick={() => void duplicate(projectId)}
-        >
-          <Copy />
-          Duplicate project
-        </DropdownMenuItem>
+        {canDuplicate ? (
+          <DropdownMenuItem
+            disabled={duplicating}
+            onClick={() => void duplicate(projectId)}
+          >
+            <Copy />
+            Duplicate project
+          </DropdownMenuItem>
+        ) : null}
         {onArchive || onUnarchive ? <DropdownMenuSeparator /> : null}
         {onArchive ? (
           <DropdownMenuItem

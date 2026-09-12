@@ -32,7 +32,7 @@ The documentation site lives in `docs-site/` and is built with VitePress. Its pu
 - Follow the synchronized phased task list in that document, which separates **Server/API**, **Client/UI**, and **Integration/verification** work.
 - Keep the three tracks synchronized: client work must consume the server contract, and a phase is not complete until its integration gate passes.
 - The MVP is one free, open-source, self-hosted Playblast instance per studio; do not introduce hosted SaaS, founder-installed deployments, paid support commitments, or billing unless the audit is explicitly revised.
-- The required roles are `admin`, `creative`, and `proofing`. Enforce permissions server-side; hidden or disabled UI controls are not authorization.
+- The required roles are `admin`, `account_executive`, `creative`, and `proofing`. Enforce permissions server-side; hidden or disabled UI controls are not authorization.
 - The near-term database direction is Drizzle over the existing `better-sqlite3` driver. Do not migrate to `node:sqlite` as part of MVP work; that is a later gated decision documented in the audit.
 
 ### Task completion protocol

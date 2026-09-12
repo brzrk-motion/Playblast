@@ -1,5 +1,5 @@
 import { Router, type Response } from "express"
-import { requireAdminOnly } from "../middleware/authorization.js"
+import { requireCapability } from "../middleware/authorization.js"
 import { generateInvoicePdf } from "../lib/invoice-pdf.js"
 import {
   createInvoice,
@@ -42,7 +42,7 @@ function parseIsoDate(
   return { value: value.trim() }
 }
 
-projectInvoicesRouter.use(requireAdminOnly())
+projectInvoicesRouter.use(requireCapability("business.manage"))
 
 projectInvoicesRouter.get("/", (req, res) => {
   const projectId = getProjectIdParam(req)
@@ -87,7 +87,7 @@ projectInvoicesRouter.post("/", (req, res) => {
 
 const invoiceByIdRouter = Router()
 
-invoiceByIdRouter.use(requireAdminOnly())
+invoiceByIdRouter.use(requireCapability("business.manage"))
 
 invoiceByIdRouter.get("/:invoiceId", (req, res) => {
   const invoiceId = getParam(req.params.invoiceId)

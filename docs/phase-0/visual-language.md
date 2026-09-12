@@ -39,4 +39,4 @@ Render as a horizontal stepper on setup screens; completed steps use `status-suc
 
 - Current user block: avatar/initials, name, email, role badge.
 - Links: Profile, Settings (role-appropriate), Log out.
-- Admin-only: Team and SMTP.
+- Team membership is visible to Admin and Account Executive users; SMTP and team management remain Admin-only.

@@ -59,6 +59,7 @@ import {
   LEAD_STATUS_LABELS,
 } from "@/lib/leads"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { PageLoading } from "@/components/feedback/page-loading"
 import { leadFormToPayload, type LeadFormValues } from "@/lib/lead-form"
 import type { Lead, LeadStatus } from "@/types/lead"
 import { LEAD_STATUSES } from "@/types/lead"
@@ -331,11 +332,11 @@ export function LeadsTab() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="space-y-3 p-4">
+            <PageLoading label="Loading leads" className="space-y-3 p-4">
               {Array.from({ length: 5 }).map((_, index) => (
                 <Skeleton key={index} className="h-10 w-full" />
               ))}
-            </div>
+            </PageLoading>
           ) : error ? (
             <div className="flex flex-col items-center gap-3 border-destructive/30 bg-destructive/5 p-8 text-center">
               <p className="text-sm text-destructive">{error}</p>
@@ -372,12 +373,17 @@ export function LeadsTab() {
               </TableHeader>
               <TableBody>
                 {filteredLeads.map((lead) => (
-                  <TableRow
-                    key={lead.id}
-                    className="cursor-pointer"
-                    onClick={() => openLeadDetail(lead.id)}
-                  >
-                    <TableCell className="font-medium">{lead.name}</TableCell>
+                  <TableRow key={lead.id}>
+                    <TableCell className="font-medium">
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto p-0 font-medium"
+                        onClick={() => openLeadDetail(lead.id)}
+                      >
+                        {lead.name}
+                      </Button>
+                    </TableCell>
                     <TableCell>{lead.company ?? "—"}</TableCell>
                     <TableCell>
                       <LeadStatusBadge status={lead.status} />

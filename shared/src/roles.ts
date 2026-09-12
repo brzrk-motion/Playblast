@@ -1,5 +1,5 @@
-/** MVP application roles. Every user belongs to the single studio on this instance. */
-export const USER_ROLES = ["admin", "creative", "proofing"] as const
+/** Application roles. Every user belongs to the single studio on this instance. */
+export const USER_ROLES = ["admin", "account_executive", "creative", "proofing"] as const
 
 export type UserRole = (typeof USER_ROLES)[number]
 
@@ -9,6 +9,7 @@ export function isUserRole(value: string): value is UserRole {
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Admin",
+  account_executive: "Account Executive",
   creative: "Creative",
   proofing: "Proofing",
 }
@@ -16,6 +17,8 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   admin:
     "Manages installation setup, studio profile, users, SMTP, and every proofing action.",
+  account_executive:
+    "Manages CRM and financial operations, and reviews project deliverables without production mutations.",
   creative:
     "Creates and edits proofing work, uploads media, versions content, and participates in review.",
   proofing:

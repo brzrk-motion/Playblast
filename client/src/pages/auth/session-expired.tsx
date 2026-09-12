@@ -16,7 +16,7 @@ export function SessionExpiredPage() {
     <div className="bg-background flex min-h-svh items-center justify-center p-6">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{sessionExpiredState.title}</CardTitle>
+          <CardTitle as="h1">{sessionExpiredState.title}</CardTitle>
           <CardDescription>{sessionExpiredState.description}</CardDescription>
         </CardHeader>
         <CardContent>

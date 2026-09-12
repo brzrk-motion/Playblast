@@ -20,6 +20,12 @@ export const E2E_PROOFING = {
   password: "e2e proofing password 99ok",
 } as const
 
+export const E2E_ACCOUNT_EXECUTIVE = {
+  name: "E2E Account Executive",
+  email: "account-executive@e2e.fixture",
+  password: "e2e account executive password 99ok",
+} as const
+
 /** @deprecated Use E2E_* credentials; kept for deterministic-browser-qa fallback. */
 export const BROWSER_QA_ADMIN_EMAIL = E2E_ADMIN.email
 export const BROWSER_QA_ADMIN_PASSWORD = E2E_ADMIN.password

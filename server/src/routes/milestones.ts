@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { requireAdminOnly } from "../middleware/authorization.js"
+import { requireAdminOnly, requireCapability } from "../middleware/authorization.js"
 import {
   createMilestone,
   deleteMilestone,
@@ -13,9 +13,7 @@ import { requireMilestoneStudio, requireProjectStudio } from "./route-helpers.js
 
 const milestonesRouter = Router({ mergeParams: true })
 
-milestonesRouter.use(requireAdminOnly())
-
-milestonesRouter.get("/", (req, res) => {
+milestonesRouter.get("/", requireCapability("projects.view"), (req, res) => {
   const projectId = getProjectIdParam(req)
   const context = requireProjectStudio(req, res, projectId)
   if (!context) {
@@ -25,7 +23,7 @@ milestonesRouter.get("/", (req, res) => {
   res.json(listMilestones(projectId))
 })
 
-milestonesRouter.post("/", (req, res) => {
+milestonesRouter.post("/", requireAdminOnly(), (req, res) => {
   const projectId = getProjectIdParam(req)
   const context = requireProjectStudio(req, res, projectId)
   if (!context) {
@@ -55,9 +53,7 @@ milestonesRouter.post("/", (req, res) => {
 
 const milestoneByIdRouter = Router()
 
-milestoneByIdRouter.use(requireAdminOnly())
-
-milestoneByIdRouter.patch("/:milestoneId", (req, res) => {
+milestoneByIdRouter.patch("/:milestoneId", requireAdminOnly(), (req, res) => {
   const milestoneId = getParam(req.params.milestoneId)
   const context = requireMilestoneStudio(req, res, milestoneId)
   if (!context) {
@@ -105,7 +101,7 @@ milestoneByIdRouter.patch("/:milestoneId", (req, res) => {
   res.json(updated)
 })
 
-milestoneByIdRouter.delete("/:milestoneId", (req, res) => {
+milestoneByIdRouter.delete("/:milestoneId", requireAdminOnly(), (req, res) => {
   const milestoneId = getParam(req.params.milestoneId)
   const context = requireMilestoneStudio(req, res, milestoneId)
   if (!context) {

@@ -11,6 +11,7 @@ import {
   getCapabilitiesForRole,
   hasCapability,
   type ApiRouteDefinition,
+  type UserRole,
 } from "@playblast/shared"
 import { createApp } from "../app.js"
 import { hashPasswordSync, normalizeEmail } from "../auth/password.js"
@@ -27,6 +28,7 @@ import {
 const ADMIN_PASSWORD = "correct horse battery 99"
 const CREATIVE_PASSWORD = "creative password 99 ok"
 const PROOFING_PASSWORD = "proofing password 99 ok"
+const ACCOUNT_EXECUTIVE_PASSWORD = "account executive password 99 ok"
 
 const PLACEHOLDER_IDS: Record<string, string> = {
   projectId: "00000000-0000-4000-8000-000000000001",
@@ -74,6 +76,8 @@ let creativeCookies: string[] = []
 let creativeCsrf = ""
 let proofingCookies: string[] = []
 let proofingCsrf = ""
+let accountExecutiveCookies: string[] = []
+let accountExecutiveCsrf = ""
 
 let primaryStudioId = ""
 let otherStudioId = ""
@@ -96,7 +100,7 @@ function resolveRoutePath(routePath: string): string {
 
 function insertRoleUser(
   studioId: string,
-  role: "creative" | "proofing",
+  role: Exclude<UserRole, "admin">,
   email: string,
   password: string,
 ) {
@@ -106,7 +110,12 @@ function insertRoleUser(
     .values({
       id: randomUUID(),
       studioId,
-      name: role === "creative" ? "Fixture Creative" : "Fixture Proofing",
+      name:
+        role === "creative"
+          ? "Fixture Creative"
+          : role === "proofing"
+            ? "Fixture Proofing"
+            : "Fixture Account Executive",
       email,
       emailNormalized: normalizeEmail(email),
       passwordHash: hashPasswordSync(password),
@@ -118,7 +127,7 @@ function insertRoleUser(
     .run()
 }
 
-function roleHasRouteAccess(role: "admin" | "creative" | "proofing", route: ApiRouteDefinition): boolean {
+function roleHasRouteAccess(role: UserRole, route: ApiRouteDefinition): boolean {
   switch (route.access) {
     case "public":
       return true
@@ -186,6 +195,12 @@ before(async () => {
 
   insertRoleUser(primaryStudioId, "creative", "creative@fixture.studio", CREATIVE_PASSWORD)
   insertRoleUser(primaryStudioId, "proofing", "proofing@fixture.studio", PROOFING_PASSWORD)
+  insertRoleUser(
+    primaryStudioId,
+    "account_executive",
+    "account-executive@fixture.studio",
+    ACCOUNT_EXECUTIVE_PASSWORD,
+  )
 
   const creative = await loginAccount(baseUrl, "creative@fixture.studio", CREATIVE_PASSWORD)
   creativeCookies = creative.cookies
@@ -194,6 +209,14 @@ before(async () => {
   const proofing = await loginAccount(baseUrl, "proofing@fixture.studio", PROOFING_PASSWORD)
   proofingCookies = proofing.cookies
   proofingCsrf = proofing.csrfToken
+
+  const accountExecutive = await loginAccount(
+    baseUrl,
+    "account-executive@fixture.studio",
+    ACCOUNT_EXECUTIVE_PASSWORD,
+  )
+  accountExecutiveCookies = accountExecutive.cookies
+  accountExecutiveCsrf = accountExecutive.csrfToken
 
   const now = new Date().toISOString()
   otherStudioId = "studio-fixture-other"
@@ -257,9 +280,9 @@ describe("Release verification — API route inventory", () => {
     assert.equal(new Set(keys).size, keys.length, "duplicate method/path entries in API_ROUTES")
   })
 
-  it("asserts Admin is a superset of Creative and Proofing capabilities", () => {
+  it("asserts Admin is a superset of every non-Admin role", () => {
     assert.doesNotThrow(() => assertAdminSuperset())
-    for (const role of ["creative", "proofing"] as const) {
+    for (const role of ["account_executive", "creative", "proofing"] as const) {
       for (const capability of getCapabilitiesForRole(role)) {
         assert.ok(hasCapability("admin", capability))
       }
@@ -318,6 +341,7 @@ describe("Release verification — authorization matrix", () => {
       }
 
       for (const [role, cookies, csrf] of [
+        ["account_executive", accountExecutiveCookies, accountExecutiveCsrf],
         ["creative", creativeCookies, creativeCsrf],
         ["proofing", proofingCookies, proofingCsrf],
       ] as const) {
@@ -367,13 +391,21 @@ describe("Release verification — authorization matrix", () => {
     )
 
     for (const route of sampleRoutes) {
-      for (const role of ["creative", "proofing"] as const) {
+      for (const role of ["account_executive", "creative", "proofing"] as const) {
         if (!roleHasRouteAccess(role, route)) {
           continue
         }
 
-        const cookies = role === "creative" ? creativeCookies : proofingCookies
-        const csrf = role === "creative" ? creativeCsrf : proofingCsrf
+        const cookies = role === "account_executive"
+          ? accountExecutiveCookies
+          : role === "creative"
+            ? creativeCookies
+            : proofingCookies
+        const csrf = role === "account_executive"
+          ? accountExecutiveCsrf
+          : role === "creative"
+            ? creativeCsrf
+            : proofingCsrf
         const status = await probeRoute(route, cookies, csrf)
         if (status === 401 || status === 403) {
           failures.push(`${role} on ${routeKey(route)} returned ${status}, expected authorization pass`)

@@ -69,7 +69,7 @@ export function SetupCompletePage() {
               <Clapperboard className="size-5" />
             </div>
             <div>
-              <CardTitle>Studio profile saved</CardTitle>
+              <CardTitle as="h1">Studio profile saved</CardTitle>
               <CardDescription>
                 Finish onboarding, then open Playblast for your first review.
               </CardDescription>

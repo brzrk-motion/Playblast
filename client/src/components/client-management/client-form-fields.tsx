@@ -169,7 +169,7 @@ export function ClientFormFields({
       </div>
 
       {validationError ? (
-        <p className="text-sm text-destructive">{validationError}</p>
+        <p role="alert" className="text-sm text-destructive">{validationError}</p>
       ) : null}
     </div>
   )

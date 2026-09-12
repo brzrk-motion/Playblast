@@ -1,7 +1,12 @@
 import fs from "node:fs"
 import path from "node:path"
 import { test as setup } from "@playwright/test"
-import { E2E_ADMIN, E2E_CREATIVE, E2E_PROOFING } from "../credentials.js"
+import {
+  E2E_ACCOUNT_EXECUTIVE,
+  E2E_ADMIN,
+  E2E_CREATIVE,
+  E2E_PROOFING,
+} from "../credentials.js"
 import {
   acceptInviteViaUi,
   completeFirstRunSetup,
@@ -19,6 +24,7 @@ import {
 const adminFile = path.join(authDir(), "admin.json")
 const creativeFile = path.join(authDir(), "creative.json")
 const proofingFile = path.join(authDir(), "proofing.json")
+const accountExecutiveFile = path.join(authDir(), "account_executive.json")
 
 setup.setTimeout(180_000)
 
@@ -69,6 +75,22 @@ setup("bootstrap admin, SMTP capture, and role invites", async ({ page }) => {
   await acceptInviteViaUi(page, proofingToken, E2E_PROOFING.password)
   await logout(page)
 
+  await loginAs(page, E2E_ADMIN.email, E2E_ADMIN.password)
+  await inviteMemberViaUi(page, {
+    name: E2E_ACCOUNT_EXECUTIVE.name,
+    email: E2E_ACCOUNT_EXECUTIVE.email,
+    role: "account_executive",
+  })
+  const accountExecutiveMail = await waitForInviteEmail(
+    state.smtpCaptureDir,
+    E2E_ACCOUNT_EXECUTIVE.email,
+  )
+  const accountExecutiveToken = extractInviteToken(accountExecutiveMail)
+
+  await logout(page)
+  await acceptInviteViaUi(page, accountExecutiveToken, E2E_ACCOUNT_EXECUTIVE.password)
+  await logout(page)
+
   // Fresh logins after invite acceptance — logout invalidates sessions, so
   // storage states must be captured from live sessions that stay signed in.
   await loginAs(page, E2E_CREATIVE.email, E2E_CREATIVE.password)
@@ -79,10 +101,14 @@ setup("bootstrap admin, SMTP capture, and role invites", async ({ page }) => {
   await page.context().storageState({ path: proofingFile })
   await page.context().clearCookies()
 
+  await loginAs(page, E2E_ACCOUNT_EXECUTIVE.email, E2E_ACCOUNT_EXECUTIVE.password)
+  await page.context().storageState({ path: accountExecutiveFile })
+  await page.context().clearCookies()
+
   await loginAs(page, E2E_ADMIN.email, E2E_ADMIN.password)
   await page.context().storageState({ path: adminFile })
 
-  for (const file of [adminFile, creativeFile, proofingFile]) {
+  for (const file of [adminFile, creativeFile, proofingFile, accountExecutiveFile]) {
     if (!fs.existsSync(file)) {
       throw new Error(`Missing storage state: ${file}`)
     }

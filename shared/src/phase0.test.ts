@@ -11,14 +11,17 @@ import {
   getUiStateForErrorCode,
   hasCapability,
   ROLE_CAPABILITY_MATRIX,
+  CAPABILITIES,
+  USER_ROLES,
 } from "./index.js"
 
 describe("role capability contract", () => {
   it("defines every capability for every role", () => {
     for (const capability of Object.keys(ROLE_CAPABILITY_MATRIX)) {
-      assert.equal(typeof ROLE_CAPABILITY_MATRIX[capability as keyof typeof ROLE_CAPABILITY_MATRIX].admin, "string")
-      assert.equal(typeof ROLE_CAPABILITY_MATRIX[capability as keyof typeof ROLE_CAPABILITY_MATRIX].creative, "string")
-      assert.equal(typeof ROLE_CAPABILITY_MATRIX[capability as keyof typeof ROLE_CAPABILITY_MATRIX].proofing, "string")
+      const grants = ROLE_CAPABILITY_MATRIX[capability as keyof typeof ROLE_CAPABILITY_MATRIX]
+      for (const role of USER_ROLES) {
+        assert.equal(typeof grants[role], "string")
+      }
     }
   })
 
@@ -34,16 +37,18 @@ describe("role capability contract", () => {
 })
 
 describe("route and navigation crosswalk", () => {
-  it("maps CRM routes to admin-only access", () => {
+  it("maps business routes to business capability access", () => {
     const adminOnly = getClientRoutes().filter((route) =>
       ["/clients", "/pipeline", "/services", "/timesheet", "/capacity"].includes(route.path),
     )
 
     assert.equal(adminOnly.length, 5)
     for (const route of adminOnly) {
-      assert.equal(route.access, "admin")
+       assert.equal(route.access, "authenticated")
+       assert.equal(canRoleAccessRoute("account_executive", route), true)
       assert.equal(canRoleAccessRoute("creative", route), false)
-      assert.equal(canRoleAccessRoute("proofing", route), false)
+       assert.equal(canRoleAccessRoute("proofing", route), false)
+       assert.equal(canRoleAccessRoute("admin", route), true)
     }
   })
 
@@ -59,7 +64,7 @@ describe("route and navigation crosswalk", () => {
 describe("test matrices", () => {
   it("builds deterministic capability cases", () => {
     const matrix = buildCapabilityTestMatrix()
-    assert.equal(matrix.length, 48)
+    assert.equal(matrix.length, CAPABILITIES.length * USER_ROLES.length)
     assert.ok(matrix.every((entry) => entry.expected === "allow" || entry.expected === "deny"))
   })
 

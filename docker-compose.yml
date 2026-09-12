@@ -25,6 +25,19 @@ services:
     volumes:
       - playblast_uploads:/app/uploads
       - playblast_data:/app/data
+    develop:
+      watch:
+        - action: rebuild
+          path: .
+          ignore:
+            - .git/
+            - node_modules/
+            - client/dist/
+            - server/dist/
+            - shared/dist/
+            - docs-site/.vitepress/dist/
+            - data/
+            - uploads/
     restart: unless-stopped
     healthcheck:
       test:

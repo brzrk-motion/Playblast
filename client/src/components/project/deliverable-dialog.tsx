@@ -112,7 +112,7 @@ export function DeliverableDialog({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label htmlFor="deliverable-status">Status</Label>
                 <Select
                   value={values.status}
                   onValueChange={(value) =>
@@ -120,7 +120,7 @@ export function DeliverableDialog({
                   }
                   disabled={submitting}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="deliverable-status">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -156,7 +156,7 @@ export function DeliverableDialog({
               />
             </div>
 
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
           </div>
 
           <DialogFooter>

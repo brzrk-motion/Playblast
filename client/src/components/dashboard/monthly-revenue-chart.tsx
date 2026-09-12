@@ -101,6 +101,7 @@ export function MonthlyRevenueChart({ projects }: MonthlyRevenueChartProps) {
         <div
           className="h-[280px] w-full"
           role="img"
+          aria-describedby="monthly-revenue-data"
           aria-label={`Monthly estimated revenue chart for ${year}`}
         >
           <ResponsiveContainer width="100%" height="100%">
@@ -156,6 +157,25 @@ export function MonthlyRevenueChart({ projects }: MonthlyRevenueChartProps) {
             </BarChart>
           </ResponsiveContainer>
         </div>
+        <table id="monthly-revenue-data" className="sr-only">
+          <caption>Monthly estimated revenue for {year}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Month</th>
+              <th scope="col">Projects</th>
+              <th scope="col">Estimated revenue</th>
+            </tr>
+          </thead>
+          <tbody>
+            {buckets.map((bucket) => (
+              <tr key={bucket.monthLabel}>
+                <th scope="row">{bucket.fullLabel}</th>
+                <td>{bucket.projectCount}</td>
+                <td>{formatCurrency(bucket.totalValue)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </CardContent>
     </Card>
   )

@@ -12,11 +12,11 @@ Confirmed: the following have **no required client or server surface** in the MV
 | Native mobile apps | None | None |
 | Self-hosted mail server operations | Documented as unsupported | None |
 
-## CRM and studio-operations surfaces (shipping, Admin-only)
+## CRM and studio-operations surfaces (shipping, Admin and Account Executive)
 
 CRM and finance ship as product capabilities on the self-hosted instance. Routes include `/clients`, `/pipeline`, `/services`, `/timesheet`, and `/capacity`, plus project invoicing.
 
-- **Access:** Admin role only; hidden from Creative and Proofing navigation.
+- **Access:** Admin and Account Executive roles; hidden from Creative and Proofing navigation.
 - **Enforcement:** Server authorization and navigation restrictions are implemented; this document records the MVP policy.
 - Creative and Proofing users access proofing through Projects only.
 

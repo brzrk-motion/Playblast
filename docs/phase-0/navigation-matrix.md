@@ -33,6 +33,6 @@ Hidden or disabled controls are never authorization.
 | Profile | visible | visible | visible |
 | Log out | visible | visible | visible |
 
-CRM and operations nav items are Admin-only in the MVP contract. Proofing users retain proofing routes through Projects.
+CRM and operations nav items are available to Admin and Account Executive users. Creative and Proofing users retain production routes through Projects.
 
 Client adapter: `getMvpNavItemsForRole()` in `client/src/lib/mvp-contracts.ts`.

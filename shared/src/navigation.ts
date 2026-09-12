@@ -23,21 +23,21 @@ export const NAV_ITEMS: NavItemDefinition[] = [
     title: "Dashboard",
     url: "/",
     section: "main",
-    visibility: { admin: "visible", creative: "visible", proofing: "visible" },
+    visibility: { admin: "visible", account_executive: "visible", creative: "visible", proofing: "visible" },
   },
   {
     id: "projects",
     title: "Projects",
     url: "/projects",
     section: "main",
-    visibility: { admin: "visible", creative: "visible", proofing: "visible" },
+    visibility: { admin: "visible", account_executive: "visible", creative: "visible", proofing: "visible" },
   },
   {
     id: "pipeline",
     title: "Pipeline",
     url: "/pipeline",
     section: "main",
-    visibility: { admin: "visible", creative: "hidden", proofing: "hidden" },
+    visibility: { admin: "visible", account_executive: "visible", creative: "hidden", proofing: "hidden" },
     notes: "Deferred CRM surface; hidden from non-Admin roles.",
   },
   {
@@ -45,7 +45,7 @@ export const NAV_ITEMS: NavItemDefinition[] = [
     title: "Clients",
     url: "/clients",
     section: "main",
-    visibility: { admin: "visible", creative: "hidden", proofing: "hidden" },
+    visibility: { admin: "visible", account_executive: "visible", creative: "hidden", proofing: "hidden" },
     notes: "Deferred CRM surface; hidden from non-Admin roles.",
   },
   {
@@ -53,7 +53,7 @@ export const NAV_ITEMS: NavItemDefinition[] = [
     title: "Services",
     url: "/services",
     section: "main",
-    visibility: { admin: "visible", creative: "hidden", proofing: "hidden" },
+    visibility: { admin: "visible", account_executive: "visible", creative: "hidden", proofing: "hidden" },
     notes: "Deferred operations surface; hidden from non-Admin roles.",
   },
   {
@@ -61,7 +61,7 @@ export const NAV_ITEMS: NavItemDefinition[] = [
     title: "Timesheet",
     url: "/timesheet",
     section: "main",
-    visibility: { admin: "visible", creative: "hidden", proofing: "hidden" },
+    visibility: { admin: "visible", account_executive: "visible", creative: "hidden", proofing: "hidden" },
     notes: "Deferred operations surface; hidden from non-Admin roles.",
   },
   {
@@ -69,7 +69,7 @@ export const NAV_ITEMS: NavItemDefinition[] = [
     title: "Capacity",
     url: "/capacity",
     section: "main",
-    visibility: { admin: "visible", creative: "hidden", proofing: "hidden" },
+    visibility: { admin: "visible", account_executive: "visible", creative: "hidden", proofing: "hidden" },
     notes: "Deferred operations surface; hidden from non-Admin roles.",
   },
   {
@@ -77,7 +77,7 @@ export const NAV_ITEMS: NavItemDefinition[] = [
     title: "Team",
     url: "/team",
     section: "main",
-    visibility: { admin: "visible", creative: "hidden", proofing: "hidden" },
+    visibility: { admin: "visible", account_executive: "visible", creative: "hidden", proofing: "hidden" },
     notes: "Admin-only; includes SMTP configuration.",
   },
   {
@@ -85,7 +85,7 @@ export const NAV_ITEMS: NavItemDefinition[] = [
     title: "Settings",
     url: "/settings",
     section: "secondary",
-    visibility: { admin: "visible", creative: "visible", proofing: "visible" },
+    visibility: { admin: "visible", account_executive: "visible", creative: "visible", proofing: "visible" },
     notes: "Personal/browser prefs; studio SMTP is on Team (Admin-only).",
   },
   {
@@ -93,14 +93,14 @@ export const NAV_ITEMS: NavItemDefinition[] = [
     title: "Profile",
     url: "/profile",
     section: "account",
-    visibility: { admin: "visible", creative: "visible", proofing: "visible" },
+    visibility: { admin: "visible", account_executive: "visible", creative: "visible", proofing: "visible" },
   },
   {
     id: "logout",
     title: "Log out",
     url: "/logout",
     section: "account",
-    visibility: { admin: "visible", creative: "visible", proofing: "visible" },
+    visibility: { admin: "visible", account_executive: "visible", creative: "visible", proofing: "visible" },
     notes: "Action route; implemented as account-menu action in Phase 2.",
   },
 ]

@@ -10,6 +10,7 @@ import {
 import { DeleteServiceDialog } from "@/components/services/delete-service-dialog"
 import { ServiceFormModal } from "@/components/services/service-form-modal"
 import { ServiceTypeBadge } from "@/components/services/service-type-badge"
+import { PageLoading } from "@/components/feedback/page-loading"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -75,12 +76,13 @@ function SortableTableHead({
   const isActive = activeField === field
 
   return (
-    <TableHead>
+    <TableHead aria-sort={isActive ? (direction === "asc" ? "ascending" : "descending") : "none"}>
       <Button
         type="button"
         variant="ghost"
         size="sm"
         className="-ml-3 h-8 gap-1.5 px-2 font-medium"
+        aria-label={`Sort by ${label}${isActive ? `, ${direction === "asc" ? "ascending" : "descending"}` : ""}`}
         onClick={() => onSort(field)}
       >
         {label}
@@ -352,11 +354,11 @@ export function ServicesPage() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="space-y-3 p-4">
+            <PageLoading label="Loading services" className="space-y-3 p-4">
               {Array.from({ length: 5 }).map((_, index) => (
                 <Skeleton key={index} className="h-10 w-full" />
               ))}
-            </div>
+            </PageLoading>
           ) : error ? (
             <div className="flex flex-col items-center gap-3 border-destructive/30 bg-destructive/5 p-8 text-center">
               <p className="text-sm text-destructive">{error}</p>

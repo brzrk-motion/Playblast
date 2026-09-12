@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { PageLoading } from "@/components/feedback/page-loading"
 import {
   Table,
   TableBody,
@@ -69,9 +70,9 @@ export function TimesheetView({
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+        <CardHeader className="flex flex-col items-start gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <CardTitle>Weekly timesheet</CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center justify-between gap-2 sm:w-auto">
             <Button
               type="button"
               size="icon-sm"
@@ -81,7 +82,7 @@ export function TimesheetView({
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="min-w-[12rem] text-center text-sm font-medium">
+            <span className="min-w-0 flex-1 text-center text-sm font-medium sm:min-w-[12rem]">
               {formatWeekRange(weekStart, weekEnd)}
             </span>
             <Button
@@ -97,11 +98,11 @@ export function TimesheetView({
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {loading ? (
-            <div className="space-y-2">
+            <PageLoading label="Loading timesheet" className="space-y-2">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
-            </div>
+            </PageLoading>
           ) : !data || data.projects.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               No time logged for this week.

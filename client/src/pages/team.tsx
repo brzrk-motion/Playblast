@@ -63,6 +63,7 @@ import {
 } from "@/lib/identity-api"
 import { cn } from "@/lib/utils"
 import { showErrorToast, showSuccessToast } from "@/lib/toast"
+import { useCapability } from "@/hooks/use-capability"
 
 const INVITE_STATUS_LABELS: Record<InvitationSummary["status"], string> = {
   pending: "Pending",
@@ -74,6 +75,8 @@ const INVITE_STATUS_LABELS: Record<InvitationSummary["status"], string> = {
 
 export function TeamPage() {
   const { role } = useSession()
+  const canViewTeam = useCapability("team.view")
+  const isAdmin = role === "admin"
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [users, setUsers] = useState<UserSummary[]>([])
@@ -104,12 +107,17 @@ export function TeamPage() {
     setLoading(true)
     setError(null)
     try {
-      const [userRows, invitationRows, smtpSettings] = await Promise.all([
-        fetchUsers(),
+      const userRows = await fetchUsers()
+      setUsers(userRows)
+      if (!isAdmin) {
+        setInvitations([])
+        setSmtp(null)
+        return
+      }
+      const [invitationRows, smtpSettings] = await Promise.all([
         fetchInvitations(),
         fetchSmtpSettings(),
       ])
-      setUsers(userRows)
       setInvitations(invitationRows)
       setSmtp(smtpSettings)
       if (smtpSettings.configured) {
@@ -132,7 +140,7 @@ export function TeamPage() {
   }
 
   useEffect(() => {
-    if (role !== "admin") {
+    if (!canViewTeam) {
       return
     }
 
@@ -140,18 +148,24 @@ export function TeamPage() {
 
     async function load() {
       try {
-        const [userRows, invitationRows, smtpSettings] = await Promise.all([
-          fetchUsers(),
-          fetchInvitations(),
-          fetchSmtpSettings(),
-        ])
+        const userRows = await fetchUsers()
+        let invitationRows: InvitationSummary[] = []
+        let smtpSettings: SmtpSettingsResponse | null = null
+        if (isAdmin) {
+          const loaded = await Promise.all([
+            fetchInvitations(),
+            fetchSmtpSettings(),
+          ])
+          invitationRows = loaded[0]
+          smtpSettings = loaded[1]
+        }
         if (cancelled) {
           return
         }
         setUsers(userRows)
         setInvitations(invitationRows)
         setSmtp(smtpSettings)
-        if (smtpSettings.configured) {
+        if (smtpSettings?.configured) {
           setSmtpHost(smtpSettings.host ?? "")
           setSmtpPort(String(smtpSettings.port ?? 587))
           setSmtpUsername(smtpSettings.username ?? "")
@@ -180,13 +194,13 @@ export function TeamPage() {
     return () => {
       cancelled = true
     }
-  }, [role])
+  }, [canViewTeam, isAdmin, role])
 
-  if (role !== "admin") {
+  if (!canViewTeam) {
     return (
       <PageError
         title="Forbidden"
-        message="Team administration is limited to Admin accounts."
+        message="You do not have permission to view the studio team."
       />
     )
   }
@@ -332,7 +346,7 @@ export function TeamPage() {
         </p>
       </div>
 
-      <Card>
+      {isAdmin ? <Card>
         <CardHeader>
           <CardTitle>SMTP configuration</CardTitle>
           <CardDescription>
@@ -450,7 +464,7 @@ export function TeamPage() {
             </div>
           </form>
         </CardContent>
-      </Card>
+      </Card> : null}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
@@ -458,7 +472,7 @@ export function TeamPage() {
             <CardTitle>Members</CardTitle>
             <CardDescription>Active studio accounts and roles.</CardDescription>
           </div>
-          <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+          {isAdmin ? <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
             <DialogTrigger asChild>
               <Button disabled={!canInvite}>Invite member</Button>
             </DialogTrigger>
@@ -518,7 +532,7 @@ export function TeamPage() {
                 </DialogFooter>
               </form>
             </DialogContent>
-          </Dialog>
+          </Dialog> : null}
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
@@ -528,7 +542,7 @@ export function TeamPage() {
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {isAdmin ? <TableHead className="text-right">Actions</TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -544,7 +558,7 @@ export function TeamPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>{user.disabled ? "Disabled" : "Active"}</TableCell>
-                    <TableCell className="space-x-2 text-right">
+                    {isAdmin ? <TableCell className="space-x-2 text-right">
                       {user.role !== "admin" ? (
                         <Select
                           value={user.role}
@@ -552,7 +566,10 @@ export function TeamPage() {
                             void handleUserUpdate(user.id, { role: value as UserRole })
                           }
                         >
-                          <SelectTrigger className="inline-flex w-[130px]">
+                           <SelectTrigger
+                             aria-label={`Role for ${user.name}`}
+                             className="inline-flex w-[130px]"
+                           >
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -573,7 +590,7 @@ export function TeamPage() {
                       >
                         {user.disabled ? "Reactivate" : "Disable"}
                       </Button>
-                    </TableCell>
+                    </TableCell> : null}
                   </TableRow>
                 )
               })}
@@ -582,7 +599,7 @@ export function TeamPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      {isAdmin ? <Card>
         <CardHeader>
           <CardTitle>Invitations</CardTitle>
           <CardDescription>Pending and historical invitation status.</CardDescription>
@@ -634,7 +651,7 @@ export function TeamPage() {
             </Table>
           )}
         </CardContent>
-      </Card>
+      </Card> : null}
     </div>
   )
 }

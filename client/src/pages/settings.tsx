@@ -30,10 +30,12 @@ import {
   getWeeklyCapacityHours,
   setWeeklyCapacityHours,
 } from "@/lib/weekly-capacity"
+import { useCapability } from "@/hooks/use-capability"
 
 export function SettingsPage() {
   const { state, role, refresh } = useSession()
   const isAdmin = role === "admin"
+  const canViewBusiness = useCapability("business.manage")
   const sessionStudio = state.status === "ready" ? state.session?.studio : null
 
   const [internalRateInput, setInternalRateInput] = useState(() => {
@@ -258,7 +260,7 @@ export function SettingsPage() {
         </Card>
       ) : null}
 
-      <Card>
+      {canViewBusiness ? <Card>
         <CardHeader>
           <CardTitle>Profitability</CardTitle>
           <CardDescription>
@@ -308,9 +310,9 @@ export function SettingsPage() {
             ) : null}
           </div>
         </CardContent>
-      </Card>
+      </Card> : null}
 
-      <Card>
+      {canViewBusiness ? <Card>
         <CardHeader>
           <CardTitle>Capacity planning</CardTitle>
           <CardDescription>
@@ -353,7 +355,7 @@ export function SettingsPage() {
             ) : null}
           </div>
         </CardContent>
-      </Card>
+      </Card> : null}
 
       <Card>
         <CardHeader>

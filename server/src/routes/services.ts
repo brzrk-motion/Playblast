@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { requireAdminOnly } from "../middleware/authorization.js"
+import { requireCapability } from "../middleware/authorization.js"
 import {
   createService,
   deleteService,
@@ -54,7 +54,7 @@ function validateServiceName(name: unknown): { value: string } | { error: string
 
 const servicesRouter = Router()
 
-servicesRouter.use(requireAdminOnly())
+servicesRouter.use(requireCapability("business.manage"))
 
 servicesRouter.get("/", (req, res) => {
   const context = requireStudioSession(req, res)

@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Playblast</title>
+    <script>
+      (() => {
+        try {
+          const stored = localStorage.getItem("playblast-theme")
+          const theme = ["light", "dark", "system"].includes(stored ?? "")
+            ? stored
+            : "dark"
+          const resolved = theme === "system"
+            ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+            : theme
+          document.documentElement.classList.add(resolved)
+        } catch {
+          document.documentElement.classList.add("dark")
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

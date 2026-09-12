@@ -85,7 +85,7 @@ describe("Express trust proxy (PROXY_HOPS)", () => {
 
   it("ignores forwarded proto/IP when PROXY_HOPS defaults to 0", async () => {
     delete process.env.PROXY_HOPS
-    const app = createApp()
+    const app = createApp({ serveClient: false })
     app.get("/__trust-probe", (req: Request, res: Response) => {
       res.json({
         ip: req.ip,
@@ -130,7 +130,7 @@ describe("Express trust proxy (PROXY_HOPS)", () => {
 
   it("honors forwarded proto/IP when PROXY_HOPS=1", async () => {
     process.env.PROXY_HOPS = "1"
-    const app = createApp()
+    const app = createApp({ serveClient: false })
     app.get("/__trust-probe", (req: Request, res: Response) => {
       res.json({
         ip: req.ip,

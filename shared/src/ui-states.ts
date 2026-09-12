@@ -111,6 +111,10 @@ export const ROLE_BADGE_TOKENS = {
     label: "Admin",
     className: "bg-primary/15 text-primary border-primary/30",
   },
+  account_executive: {
+    label: "Account Executive",
+    className: "bg-status-warning-muted text-status-warning-foreground border-status-warning-border",
+  },
   creative: {
     label: "Creative",
     className: "bg-status-pending-muted text-status-pending-foreground border-status-pending-border",

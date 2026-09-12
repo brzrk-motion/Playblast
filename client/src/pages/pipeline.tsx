@@ -7,6 +7,7 @@ import {
   TrendingUp,
 } from "lucide-react"
 import { PipelineStatusBadge } from "@/components/pipeline/pipeline-status-badge"
+import { PageLoading } from "@/components/feedback/page-loading"
 import {
   Card,
   CardContent,
@@ -90,14 +91,14 @@ function PipelineProjectCard({
       to={`/projects/${encodeURIComponent(project.id)}`}
       className="block rounded-xl focus-ring"
     >
-      <Card className="interactive-card border-muted">
-        <CardHeader className="space-y-2 pb-2">
-          <CardTitle className="text-sm leading-snug">{project.name}</CardTitle>
+      <Card className="interactive-card gap-3 border-muted py-4">
+        <CardHeader className="space-y-2 px-4 pb-1">
+          <CardTitle className="break-words text-sm leading-snug">{project.name}</CardTitle>
           {clientName ? (
             <CardDescription className="truncate">{clientName}</CardDescription>
           ) : null}
         </CardHeader>
-        <CardContent className="flex items-center justify-between gap-2">
+        <CardContent className="flex items-center justify-between gap-2 px-4">
           <p className="text-sm font-medium tabular-nums">
             {formatCurrency(estimatedValue, currency)}
           </p>
@@ -120,15 +121,19 @@ function PipelineKanbanColumn({
   const summary = summarizePipelineColumn(projects)
 
   return (
-    <section className="flex min-h-0 min-w-[16rem] flex-1 flex-col rounded-xl border bg-muted/20">
-      <header className="space-y-1 border-b px-4 py-3">
+    <section className="flex min-h-0 min-w-0 flex-col rounded-xl border bg-muted/20">
+      <header className="flex items-center justify-between gap-3 border-b px-3 py-3">
         <h2 className="text-sm font-semibold">{PIPELINE_STATUS_LABELS[status]}</h2>
-        <p className="text-xs text-muted-foreground tabular-nums">
-          {summary.count} {summary.count === 1 ? "project" : "projects"} ·{" "}
-          {formatCurrency(summary.totalValue)}
-        </p>
+        <div className="min-w-0 text-right">
+          <p className="text-xs text-muted-foreground tabular-nums">
+            {summary.count} {summary.count === 1 ? "project" : "projects"}
+          </p>
+          <p className="truncate text-xs font-medium tabular-nums">
+            {formatCurrency(summary.totalValue)}
+          </p>
+        </div>
       </header>
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3">
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-2">
         {projects.length === 0 ? (
           <p className="py-8 text-center text-xs text-muted-foreground">
             No projects
@@ -185,9 +190,9 @@ function PipelineListView({
           <TableHeader>
             <TableRow>
               <TableHead>Project</TableHead>
-              <TableHead>Client</TableHead>
+              <TableHead className="hidden md:table-cell">Client</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Estimated value</TableHead>
+              <TableHead className="whitespace-nowrap text-right">Estimated value</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -197,21 +202,21 @@ function PipelineListView({
 
               return (
                 <TableRow key={project.id} className="interactive-row">
-                  <TableCell>
+                  <TableCell className="min-w-0">
                     <Link
                       to={`/projects/${encodeURIComponent(project.id)}`}
-                      className="font-medium hover:underline focus-ring rounded-sm"
+                      className="break-words font-medium hover:underline focus-ring rounded-sm"
                     >
                       {project.name}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
                     {projectClientDisplayName(project, clientLookup) ?? "—"}
                   </TableCell>
                   <TableCell>
                     <PipelineStatusBadge status={pipelineStatus} />
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="whitespace-nowrap text-right tabular-nums">
                     {formatCurrency(projectEstimatedValue(project), currency)}
                   </TableCell>
                 </TableRow>
@@ -230,7 +235,7 @@ export function PipelinePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [clientFilter, setClientFilter] = useState<string>("all")
-  const [viewMode, setViewMode] = useState<PipelineViewMode>("kanban")
+  const [viewMode, setViewMode] = useState<PipelineViewMode>("list")
 
   const loadData = useCallback(async () => {
     const [projectData, clientData] = await Promise.all([
@@ -288,18 +293,15 @@ export function PipelinePage() {
   )
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      <div className="space-y-1">
-        <p className="text-sm text-muted-foreground">
-          Revenue grouped by project stage, based on attached service estimates.
-        </p>
-      </div>
-
+    <div
+      className="flex min-w-0 flex-1 flex-col gap-6"
+      aria-busy={loading}
+    >
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <PageLoading label="Loading pipeline summary" className="grid gap-4 sm:grid-cols-2">
           <Skeleton className="h-28" />
           <Skeleton className="h-28" />
-        </div>
+        </PageLoading>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           <SummaryCard
@@ -318,22 +320,31 @@ export function PipelinePage() {
       )}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <Select value={clientFilter} onValueChange={setClientFilter}>
-          <SelectTrigger className="w-full sm:w-[14rem]">
-            <SelectValue placeholder="Client" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All clients</SelectItem>
-            {clients.map((client) => (
-              <SelectItem key={client.id} value={client.id}>
-                {clientOptionLabel(client)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div>
+          <label htmlFor="pipeline-client-filter" className="sr-only">
+            Filter pipeline by client
+          </label>
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger
+              id="pipeline-client-filter"
+              className="min-h-11 w-full sm:min-h-9 sm:w-[14rem]"
+            >
+              <SelectValue placeholder="Client" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All clients</SelectItem>
+              {clients.map((client) => (
+                <SelectItem key={client.id} value={client.id}>
+                  {clientOptionLabel(client)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <ToggleGroup
           type="single"
+          aria-label="Pipeline view"
           value={viewMode}
           onValueChange={(value) => {
             if (value) {
@@ -343,13 +354,21 @@ export function PipelinePage() {
           variant="outline"
           size="sm"
         >
-          <ToggleGroupItem value="kanban" aria-label="Kanban view">
-            <Columns3 className="size-4" />
-            Pipeline
-          </ToggleGroupItem>
-          <ToggleGroupItem value="list" aria-label="List view">
+          <ToggleGroupItem
+            value="list"
+            aria-label="List view"
+            className="min-h-11 sm:min-h-8"
+          >
             <LayoutList className="size-4" />
             List
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="kanban"
+            aria-label="Kanban view"
+            className="min-h-11 sm:min-h-8"
+          >
+            <Columns3 className="size-4" />
+            Pipeline
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
@@ -361,13 +380,13 @@ export function PipelinePage() {
           </CardContent>
         </Card>
       ) : loading ? (
-        <div className="grid gap-4 lg:grid-cols-4">
+        <PageLoading label="Loading pipeline stages" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <Skeleton key={index} className="h-64" />
           ))}
-        </div>
+        </PageLoading>
       ) : viewMode === "kanban" ? (
-        <div className="flex min-h-[24rem] flex-col gap-4 overflow-x-auto lg:flex-row">
+        <div className="grid min-w-0 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {PIPELINE_STATUSES.map((status) => (
             <PipelineKanbanColumn
               key={status}

@@ -1,5 +1,5 @@
 import type { UserRole } from "./roles.js"
-import type { Capability } from "./capabilities.js"
+import { hasCapability, type Capability } from "./capabilities.js"
 
 /** Route access classification for the MVP application shell. */
 export const ROUTE_ACCESS_LEVELS = [
@@ -35,14 +35,14 @@ export const APP_ROUTES: AppRouteDefinition[] = [
   { path: "/projects/:projectId", name: "Project overview", access: "authenticated", requiredCapabilities: ["projects.view"], implemented: true },
   { path: "/projects/:projectId/deliverables/:deliverableId", name: "Deliverable review", access: "authenticated", requiredCapabilities: ["review.play"], implemented: true },
   { path: "/projects/:projectId/deliverables/:deliverableId/compare", name: "Version compare", access: "authenticated", requiredCapabilities: ["review.compare"], implemented: true },
-  { path: "/team", name: "Team", access: "admin", requiredCapabilities: ["team.manage"], implemented: true },
+  { path: "/team", name: "Team", access: "authenticated", requiredCapabilities: ["team.view"], implemented: true },
   { path: "/settings", name: "Settings", access: "authenticated", requiredCapabilities: ["studio.view"], implemented: true, notes: "Browser-local prefs; studio SMTP is on Team (Admin-only)." },
   { path: "/profile", name: "Profile", access: "authenticated", requiredCapabilities: ["studio.view"], implemented: true },
-  { path: "/clients", name: "Clients", access: "admin", requiredCapabilities: ["projects.view"], implemented: true, notes: "Deferred CRM surface; Admin-only in MVP." },
-  { path: "/pipeline", name: "Pipeline", access: "admin", requiredCapabilities: ["projects.view"], implemented: true, notes: "Deferred CRM surface; Admin-only in MVP." },
-  { path: "/services", name: "Services", access: "admin", requiredCapabilities: ["projects.view"], implemented: true, notes: "Deferred CRM surface; Admin-only in MVP." },
-  { path: "/timesheet", name: "Timesheet", access: "admin", requiredCapabilities: ["projects.view"], implemented: true, notes: "Deferred operations surface; Admin-only in MVP." },
-  { path: "/capacity", name: "Capacity", access: "admin", requiredCapabilities: ["projects.view"], implemented: true, notes: "Deferred operations surface; Admin-only in MVP." },
+  { path: "/clients", name: "Clients", access: "authenticated", requiredCapabilities: ["business.manage"], implemented: true, notes: "CRM surface for Admin and Account Executive." },
+  { path: "/pipeline", name: "Pipeline", access: "authenticated", requiredCapabilities: ["business.manage"], implemented: true, notes: "CRM surface for Admin and Account Executive." },
+  { path: "/services", name: "Services", access: "authenticated", requiredCapabilities: ["business.manage"], implemented: true, notes: "Operations surface for Admin and Account Executive." },
+  { path: "/timesheet", name: "Timesheet", access: "authenticated", requiredCapabilities: ["business.manage"], implemented: true, notes: "Operations surface for Admin and Account Executive." },
+  { path: "/capacity", name: "Capacity", access: "authenticated", requiredCapabilities: ["business.manage"], implemented: true, notes: "Operations surface for Admin and Account Executive." },
   { path: "/forbidden", name: "Forbidden", access: "public", requiredCapabilities: [], implemented: true },
   { path: "/session-expired", name: "Session expired", access: "public", requiredCapabilities: [], implemented: true },
 ]
@@ -57,13 +57,13 @@ export function canRoleAccessRoute(role: UserRole, route: AppRouteDefinition): b
     case "setup":
       return true
     case "authenticated":
-      return role === "admin" || role === "creative" || role === "proofing"
+      return route.requiredCapabilities.every((capability) => hasCapability(role, capability))
     case "admin":
-      return role === "admin"
+      return role === "admin" && route.requiredCapabilities.every((capability) => hasCapability(role, capability))
     case "creative":
-      return role === "admin" || role === "creative"
+      return (role === "admin" || role === "creative") && route.requiredCapabilities.every((capability) => hasCapability(role, capability))
     case "proofing":
-      return role === "admin" || role === "creative" || role === "proofing"
+      return (role === "admin" || role === "creative" || role === "proofing") && route.requiredCapabilities.every((capability) => hasCapability(role, capability))
     default:
       return false
   }

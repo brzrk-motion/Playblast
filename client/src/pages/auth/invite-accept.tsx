@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { Clapperboard } from "lucide-react"
-import { PASSWORD_POLICY, ROLE_BADGE_TOKENS, ROLE_LABELS } from "@playblast/shared"
+import { PASSWORD_POLICY, ROLE_BADGE_TOKENS, ROLE_LABELS, type InvitableRole } from "@playblast/shared"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -33,7 +33,7 @@ export function InviteAcceptPage() {
   const [studioName, setStudioName] = useState("")
   const [inviteName, setInviteName] = useState("")
   const [inviteEmail, setInviteEmail] = useState("")
-  const [inviteRole, setInviteRole] = useState<"creative" | "proofing">("creative")
+  const [inviteRole, setInviteRole] = useState<InvitableRole>("creative")
   const [expiresAt, setExpiresAt] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -143,7 +143,7 @@ export function InviteAcceptPage() {
               <Clapperboard className="size-5" />
             </div>
             <div>
-              <CardTitle>Join {studioName}</CardTitle>
+              <CardTitle as="h1">Join {studioName}</CardTitle>
               <CardDescription>Create your Playblast password to continue.</CardDescription>
             </div>
           </div>

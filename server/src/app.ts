@@ -19,7 +19,7 @@ import { validateVideoParams } from "./middleware/validateParams.js"
 import apiRouter from "./routes/index.js"
 import videoRouter from "./routes/video.js"
 
-export function createApp() {
+export function createApp(options: { serveClient?: boolean } = {}) {
   const app = express()
 
   // Trust X-Forwarded-* only for the configured hop count (default 0).
@@ -82,7 +82,7 @@ export function createApp() {
     videoRouter,
   )
 
-  if (fs.existsSync(CLIENT_DIST)) {
+  if (options.serveClient !== false && fs.existsSync(CLIENT_DIST)) {
     app.use(express.static(CLIENT_DIST))
     app.use((_req, res, next) => {
       res.sendFile(path.join(CLIENT_DIST, "index.html"), (err) => {

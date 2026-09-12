@@ -8,7 +8,7 @@ On every startup (and via `npm run migrate`):
 
 1. **Base schema** — `server/src/storage/schema.sql` creates core proofing tables if missing.
 2. **Legacy SQL migrations** — numbered files in `server/src/storage/migrations/` tracked in `schema_migrations`.
-3. **Drizzle identity migrations** — files in `server/src/db/migrations/` tracked in `__drizzle_migrations` (users, studios, sessions, invitations, SMTP settings).
+3. **Drizzle identity migrations** — files in `server/src/db/migrations/` tracked in `__drizzle_migrations` (users, studios, sessions, invitations, SMTP settings). The Account Executive role migration rebuilds the role-constrained identity tables while preserving existing users, sessions, invitations, and audit references.
 
 Legacy migrations always run before Drizzle identity migrations. Do not run Drizzle tooling against a database that has not completed legacy migrations.
 

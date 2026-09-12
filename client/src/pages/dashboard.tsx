@@ -46,6 +46,7 @@ import {
   reviewErrorTitle,
 } from "@/lib/review-feedback"
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
+import { useCapability } from "@/hooks/use-capability"
 import type { ProjectSummary } from "@/types/project"
 
 type DashboardView = "active" | "archived"
@@ -99,6 +100,9 @@ function StatCard({ title, icon, value, description, to }: StatCardProps) {
 }
 
 export function DashboardPage() {
+  const canViewBusiness = useCapability("business.manage")
+  const canArchiveProjects = useCapability("data.delete")
+  const canMutateProjects = useCapability("projects.mutate")
   const [activeProjects, setActiveProjects] = useState<ProjectSummary[]>([])
   const [archivedProjects, setArchivedProjects] = useState<ProjectSummary[]>([])
   const [view, setView] = useState<DashboardView>("active")
@@ -334,18 +338,20 @@ export function DashboardPage() {
           description="Across all deliverables"
           to="/projects?filter=open_comments"
         />
-        <StatCard
-          title="Budget Attention"
-          icon={<Wallet className="size-4 text-status-warning-foreground" />}
-          value={budgetAttention.length}
-          description="Projects near or over budget"
-          to="/projects"
-        />
+        {canViewBusiness ? (
+          <StatCard
+            title="Budget Attention"
+            icon={<Wallet className="size-4 text-status-warning-foreground" />}
+            value={budgetAttention.length}
+            description="Projects near or over budget"
+            to="/projects"
+          />
+        ) : null}
       </div>
 
-      <MonthlyRevenueChart projects={activeProjects} />
+      {canViewBusiness ? <MonthlyRevenueChart projects={activeProjects} /> : null}
 
-      <Card>
+      {canViewBusiness ? <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -368,10 +374,10 @@ export function DashboardPage() {
         <CardContent>
           <CapacityView projects={activeProjects} compact />
         </CardContent>
-      </Card>
+      </Card> : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
+        {canViewBusiness ? <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarClock className="size-4 text-muted-foreground" />
@@ -411,7 +417,7 @@ export function DashboardPage() {
               </p>
             )}
           </CardContent>
-        </Card>
+        </Card> : null}
 
         <Card>
           <CardHeader>
@@ -502,28 +508,29 @@ export function DashboardPage() {
               {recentProjects.map((project) => (
                 <DashboardProjectCard
                   key={project.id}
-                  projectId={project.id}
+                   projectId={project.id}
                   name={project.name}
                   status={project.status}
                   archived={view === "archived"}
                   clientName={project.clientName}
-                  budget={project.budget}
-                  servicesEstimate={project.servicesEstimate}
-                  servicesEstimatedHours={project.servicesEstimatedHours}
-                  servicesLoggedHours={project.servicesLoggedHours}
+                  budget={canViewBusiness ? project.budget : undefined}
+                  servicesEstimate={canViewBusiness ? project.servicesEstimate : undefined}
+                  servicesEstimatedHours={canViewBusiness ? project.servicesEstimatedHours : undefined}
+                  servicesLoggedHours={canViewBusiness ? project.servicesLoggedHours : undefined}
                   deliverableCount={project.deliverableCount}
                   compact
                   onArchive={
-                    view === "active"
+                    canArchiveProjects && view === "active"
                       ? () => setArchiveTarget(project)
                       : undefined
                   }
                   onUnarchive={
-                    view === "archived"
+                    canArchiveProjects && view === "archived"
                       ? () => void handleUnarchive(project.id)
                       : undefined
                   }
-                  actionPending={unarchivingId === project.id}
+                   actionPending={unarchivingId === project.id}
+                   canDuplicate={canMutateProjects}
                 />
               ))}
             </div>

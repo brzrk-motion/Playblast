@@ -152,6 +152,7 @@ interface DashboardProjectCardProps {
   compact?: boolean
   onArchive?: () => void
   onUnarchive?: () => void
+  canDuplicate?: boolean
   actionPending?: boolean
 }
 
@@ -169,6 +170,7 @@ export function DashboardProjectCard({
   compact = false,
   onArchive,
   onUnarchive,
+  canDuplicate = false,
   actionPending = false,
 }: DashboardProjectCardProps) {
   const financials = (
@@ -187,7 +189,8 @@ export function DashboardProjectCard({
           projectName={name}
           className="size-7"
           onArchive={onArchive}
-          onUnarchive={onUnarchive}
+           onUnarchive={onUnarchive}
+           canDuplicate={canDuplicate}
           actionPending={actionPending}
         />
       </div>

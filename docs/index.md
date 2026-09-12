@@ -15,7 +15,7 @@ features:
   - title: Keep your data on your infrastructure
     details: One studio per instance, with SQLite and media stored on your own host or NAS.
   - title: Give every reviewer the right access
-    details: Admin, Creative, and Proofing roles are enforced by the server.
+    details: Admin, Account Executive, Creative, and Proofing roles are enforced by the server.
   - title: Operate without a cloud dependency
     details: No hosted account, license server, or centralized Playblast service is required.
 ---

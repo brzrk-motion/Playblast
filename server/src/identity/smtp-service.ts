@@ -314,7 +314,11 @@ export function buildInviteEmailContent(input: {
   inviteUrl: string
   expiresAt: string
 }): OutboundEmail {
-  const roleLabel = input.role === "creative" ? "Creative" : "Proofing"
+  const roleLabel = input.role === "creative"
+    ? "Creative"
+    : input.role === "proofing"
+      ? "Proofing"
+      : "Account Executive"
   const expiryLabel = new Date(input.expiresAt).toLocaleString("en-US", {
     dateStyle: "medium",
     timeStyle: "short",

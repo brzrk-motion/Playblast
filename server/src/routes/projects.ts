@@ -1,5 +1,6 @@
 import fs from "node:fs"
 import { Router } from "express"
+import { hasCapability, type UserRole } from "@playblast/shared"
 import { getProjectUploadDir } from "../config/paths.js"
 import { requireCapability } from "../middleware/authorization.js"
 import {
@@ -32,6 +33,54 @@ import { requireProjectStudio, requireStudioSession } from "./route-helpers.js"
 
 const projectsRouter = Router()
 
+function projectForRole<T extends object>(project: T, role: UserRole): T {
+  if (hasCapability(role, "business.manage")) {
+    return project
+  }
+
+  const {
+    budget: _budget,
+    clientId: _clientId,
+    notes: _notes,
+    outstandingBalance: _outstandingBalance,
+    servicesEstimate: _servicesEstimate,
+    servicesEstimatedHours: _servicesEstimatedHours,
+    servicesLoggedHours: _servicesLoggedHours,
+    client,
+    ...safeProject
+  } = project as T & {
+    budget?: unknown
+    clientId?: unknown
+    notes?: unknown
+    outstandingBalance?: unknown
+    servicesEstimate?: unknown
+    servicesEstimatedHours?: unknown
+    servicesLoggedHours?: unknown
+    client?: { id: string; name: string; company?: string } | null
+  }
+
+  if ("client" in project) {
+    return {
+      ...safeProject,
+      client: client
+        ? { id: client.id, name: client.name, company: client.company }
+        : null,
+    } as T
+  }
+
+  return safeProject as T
+}
+
+function hasCommercialProjectFields(body: unknown): boolean {
+  if (!body || typeof body !== "object") {
+    return false
+  }
+
+  return ["client", "clientId", "budget", "notes"].some((field) =>
+    Object.prototype.hasOwnProperty.call(body, field),
+  )
+}
+
 function parseListProjectsOptions(query: Record<string, unknown>) {
   const archived =
     typeof query.archived === "string" ? query.archived.trim() : undefined
@@ -61,7 +110,11 @@ projectsRouter.get("/", requireCapability("projects.view"), (req, res) => {
     typeof req.query.clientId === "string" ? req.query.clientId.trim() : undefined
   const listOptions = parseListProjectsOptions(req.query)
 
-  res.json(listProjectSummaries(context.studioId, clientId || undefined, listOptions))
+  res.json(
+    listProjectSummaries(context.studioId, clientId || undefined, listOptions).map((project) =>
+      projectForRole(project, context.role),
+    ),
+  )
 })
 
 projectsRouter.post("/", requireCapability("projects.mutate"), (req, res) => {
@@ -78,6 +131,11 @@ projectsRouter.post("/", requireCapability("projects.mutate"), (req, res) => {
 
   if (!name) {
     res.status(400).json({ error: "Project name is required." })
+    return
+  }
+
+  if (context.role !== "admin" && hasCommercialProjectFields(req.body)) {
+    res.status(403).json({ error: "Commercial project fields require business access." })
     return
   }
 
@@ -133,7 +191,7 @@ projectsRouter.post("/", requireCapability("projects.mutate"), (req, res) => {
     notes:
       typeof req.body?.notes === "string" ? req.body.notes.trim() : undefined,
   })
-  res.status(201).json(project)
+  res.status(201).json(projectForRole(project, context.role))
 })
 
 projectsRouter.post(
@@ -172,7 +230,7 @@ projectsRouter.get("/:projectId", requireCapability("projects.view"), (req, res)
     return
   }
 
-  res.json(project)
+  res.json(projectForRole(project, context.role))
 })
 
 projectsRouter.patch(
@@ -192,6 +250,11 @@ projectsRouter.patch(
       return
     }
 
+    if (context.role !== "admin" && hasCommercialProjectFields(req.body)) {
+      res.status(403).json({ error: "Commercial project fields require business access." })
+      return
+    }
+
     const parsed = parseProjectPatch(req.body)
     if ("error" in parsed) {
       res.status(400).json({ error: parsed.error })
@@ -208,7 +271,11 @@ projectsRouter.patch(
     }
 
     const updated = updateProject(projectId, parsed.input)
-    res.json(updated)
+    if (!updated) {
+      res.status(404).json({ error: "Project not found." })
+      return
+    }
+    res.json(projectForRole(updated, context.role))
   },
 )
 
@@ -331,7 +398,7 @@ projectsRouter.get(
 
 projectsRouter.get(
   "/:projectId/hours-summary",
-  requireCapability("projects.view"),
+  requireCapability("business.manage"),
   validateProjectParams,
   (req, res) => {
     const projectId = getParam(req.params.projectId)

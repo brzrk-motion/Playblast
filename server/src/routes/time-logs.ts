@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { requireAdminOnly } from "../middleware/authorization.js"
+import { requireCapability } from "../middleware/authorization.js"
 import {
   createTimeLog,
   deleteTimeLog,
@@ -18,7 +18,7 @@ function getTaskIdParam(req: {
 
 const timeLogsRouter = Router({ mergeParams: true })
 
-timeLogsRouter.use(requireAdminOnly())
+timeLogsRouter.use(requireCapability("business.manage"))
 
 timeLogsRouter.get("/", (req, res) => {
   const taskId = getTaskIdParam(req)
@@ -70,7 +70,7 @@ timeLogsRouter.post("/", (req, res) => {
 
 const timeLogByIdRouter = Router()
 
-timeLogByIdRouter.use(requireAdminOnly())
+timeLogByIdRouter.use(requireCapability("business.manage"))
 
 timeLogByIdRouter.delete("/:timeLogId", (req, res) => {
   const timeLogId = getParam(req.params.timeLogId)

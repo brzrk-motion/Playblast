@@ -7,10 +7,11 @@ Every user belongs to the single studio on this self-hosted instance. The server
 | Role | Summary |
 |------|---------|
 | **Admin** | Installation setup, studio profile, team and SMTP, full proofing capabilities |
+| **Account Executive** | Full CRM and financial operations, project/deliverable review, and read-only Team membership |
 | **Creative** | Create and edit proofing work, upload media, manage versions, participate in review |
-| **Proofing** | Review deliverables; comment, annotate, compare, and download; cannot restructure projects |
+| **Proofing** | Review deliverables; comment, annotate, compare, and download; cannot restructure projects or view commercial details |
 
-Admins invite Creative and Proofing users from **Team**. Invitations require working SMTP (or manual link sharing from the invite email flow once SMTP delivers).
+Admins invite Account Executive, Creative, and Proofing users from **Team**. Invitations require working SMTP (or manual link sharing from the invite email flow once SMTP delivers).
 
 ## SMTP setup (Admin)
 

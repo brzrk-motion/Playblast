@@ -80,6 +80,7 @@ function ProjectCard({
   onArchive,
   onUnarchive,
   actionPending = false,
+  canDuplicate,
 }: {
   project: ProjectSummary
   linkedClient?: Client
@@ -88,6 +89,7 @@ function ProjectCard({
   onArchive?: (project: ProjectSummary) => void
   onUnarchive?: (project: ProjectSummary) => void
   actionPending?: boolean
+  canDuplicate: boolean
 }) {
   return (
     <Card className="interactive-card relative h-full border-muted">
@@ -97,6 +99,7 @@ function ProjectCard({
           projectName={project.name}
           onArchive={onArchive ? () => onArchive(project) : undefined}
           onUnarchive={onUnarchive ? () => onUnarchive(project) : undefined}
+          canDuplicate={canDuplicate}
           actionPending={actionPending}
         />
       </div>
@@ -142,7 +145,7 @@ function ProjectCard({
           </div>
         </CardHeader>
         <CardContent className="space-y-1 text-sm text-muted-foreground">
-          {project.budget ? (
+              {project.budget ? (
             <p>
               {formatCurrency(project.budget.spent ?? 0, project.budget.currency)}{" "}
               / {formatCurrency(project.budget.total, project.budget.currency)}
@@ -158,6 +161,7 @@ function ProjectCard({
 export function ProjectsPage() {
   const canCreateProjects = useCapability("projects.mutate")
   const canArchiveProjects = useCapability("data.delete")
+  const canViewBusiness = useCapability("business.manage")
   const [searchParams, setSearchParams] = useSearchParams()
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [clients, setClients] = useState<Client[]>([])
@@ -190,10 +194,8 @@ export function ProjectsPage() {
 
   const loadProjects = useCallback(async () => {
     try {
-      const [projectData, clientData] = await Promise.all([
-        listProjects(showingArchived ? { archived: true } : undefined),
-        listClients(),
-      ])
+      const projectData = await listProjects(showingArchived ? { archived: true } : undefined)
+      const clientData = canViewBusiness ? await listClients() : []
       setProjects(projectData)
       setClients(clientData)
       setError(null)
@@ -204,17 +206,15 @@ export function ProjectsPage() {
     } finally {
       setLoading(false)
     }
-  }, [showingArchived])
+  }, [canViewBusiness, showingArchived])
 
   useEffect(() => {
     let cancelled = false
 
     async function fetchProjects() {
       try {
-        const [projectData, clientData] = await Promise.all([
-          listProjects(showingArchived ? { archived: true } : undefined),
-          listClients(),
-        ])
+        const projectData = await listProjects(showingArchived ? { archived: true } : undefined)
+        const clientData = canViewBusiness ? await listClients() : []
         if (!cancelled) {
           setProjects(projectData)
           setClients(clientData)
@@ -238,7 +238,7 @@ export function ProjectsPage() {
     return () => {
       cancelled = true
     }
-  }, [showingArchived])
+  }, [canViewBusiness, showingArchived])
 
   async function handleCreateProject(values: ProjectFormValues) {
     const payload = projectFormToPayload(values)
@@ -253,11 +253,15 @@ export function ProjectsPage() {
       await createProject({
         name: payload.name,
         status: payload.status,
-        clientId: payload.clientId ?? undefined,
         description: payload.description ?? undefined,
         startDate: payload.startDate ?? undefined,
         endDate: payload.endDate ?? undefined,
-        budget: payload.budget ?? undefined,
+        ...(canViewBusiness
+          ? {
+              clientId: payload.clientId ?? undefined,
+              budget: payload.budget ?? undefined,
+            }
+          : {}),
       })
       setSheetOpen(false)
       showSuccessToast("Project created")
@@ -453,7 +457,8 @@ export function ProjectsPage() {
               {filteredProjects.map((project) => (
                 <ProjectCard
                   key={project.id}
-                  project={project}
+                   project={project}
+                   canDuplicate={canCreateProjects}
                   linkedClient={
                     project.clientId
                       ? clientLookup.get(project.clientId)
@@ -488,6 +493,7 @@ export function ProjectsPage() {
         mode="create"
         submitting={creating}
         error={createError}
+        showCommercialFields={canViewBusiness}
         onSubmit={handleCreateProject}
       />
 
@@ -503,7 +509,7 @@ export function ProjectsPage() {
         onConfirm={() => void handleArchiveConfirm()}
       />
 
-      <ClientDetailSheet
+      {canViewBusiness ? <ClientDetailSheet
         clientId={viewClientId}
         open={viewClientId !== null}
         onOpenChange={(open) => {
@@ -511,7 +517,7 @@ export function ProjectsPage() {
             setViewClientId(null)
           }
         }}
-      />
+      /> : null}
     </div>
   )
 }

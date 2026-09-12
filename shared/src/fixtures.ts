@@ -1,5 +1,5 @@
 import type { UserRole } from "./roles.js"
-import type { SetupStatus } from "./bootstrap.js"
+import type { InvitableRole, SetupStatus } from "./bootstrap.js"
 
 export interface FixtureStudio {
   id: string
@@ -27,7 +27,7 @@ export interface FixtureInvitation {
   id: string
   studioId: string
   email: string
-  role: Exclude<UserRole, "admin">
+  role: InvitableRole
   status: "pending" | "accepted" | "expired" | "revoked"
 }
 
@@ -44,6 +44,14 @@ export const FIXTURE_USERS: Record<UserRole, FixtureUser> = {
     name: "Fixture Admin",
     email: "admin@fixture.studio",
     role: "admin",
+    disabled: false,
+  },
+  account_executive: {
+    id: "user-fixture-account-executive",
+    studioId: FIXTURE_STUDIO.id,
+    name: "Fixture Account Executive",
+    email: "account-executive@fixture.studio",
+    role: "account_executive",
     disabled: false,
   },
   creative: {
@@ -71,6 +79,12 @@ export const FIXTURE_SESSIONS: Record<UserRole, FixtureSession> = {
     studioId: FIXTURE_STUDIO.id,
     expiresAt: "2099-01-01T00:00:00.000Z",
   },
+  account_executive: {
+    id: "session-fixture-account-executive",
+    userId: FIXTURE_USERS.account_executive.id,
+    studioId: FIXTURE_STUDIO.id,
+    expiresAt: "2099-01-01T00:00:00.000Z",
+  },
   creative: {
     id: "session-fixture-creative",
     userId: FIXTURE_USERS.creative.id,
@@ -86,6 +100,13 @@ export const FIXTURE_SESSIONS: Record<UserRole, FixtureSession> = {
 }
 
 export const FIXTURE_INVITATIONS: FixtureInvitation[] = [
+  {
+    id: "invite-fixture-account-executive",
+    studioId: FIXTURE_STUDIO.id,
+    email: "new-account-executive@fixture.studio",
+    role: "account_executive",
+    status: "pending",
+  },
   {
     id: "invite-fixture-creative",
     studioId: FIXTURE_STUDIO.id,

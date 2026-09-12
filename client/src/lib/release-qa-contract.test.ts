@@ -15,7 +15,7 @@ import {
 } from "@playblast/shared"
 
 const IMPLEMENTED_ROUTES = getClientRoutes().filter((route) => route.implemented)
-const ROLES: UserRole[] = ["admin", "creative", "proofing"]
+const ROLES: UserRole[] = ["admin", "account_executive", "creative", "proofing"]
 
 describe("Release QA — client route guard contract", () => {
   it("covers every implemented route in the route test matrix", () => {
@@ -24,14 +24,11 @@ describe("Release QA — client route guard contract", () => {
   })
 
   for (const role of ROLES) {
-    it(`blocks ${role} from admin-only routes via direct URL contract`, () => {
-      const adminRoutes = IMPLEMENTED_ROUTES.filter((route) => route.access === "admin")
+    it(`checks ${role} access to Team via direct URL contract`, () => {
+      const adminRoutes = IMPLEMENTED_ROUTES.filter((route) => route.path === "/team")
       for (const route of adminRoutes) {
-        if (role === "admin") {
-          assert.equal(canRoleAccessRoute(role, route), true)
-        } else {
-          assert.equal(canRoleAccessRoute(role, route), false, `${role} must not access ${route.path}`)
-        }
+        const expected = role === "admin" || role === "account_executive"
+        assert.equal(canRoleAccessRoute(role, route), expected, `${role} Team access mismatch`)
       }
     })
   }
@@ -66,11 +63,14 @@ describe("Release QA — navigation visibility contract", () => {
     }
   })
 
-  it("shows Team navigation to Admin", () => {
+  it("shows Team navigation to Admin and Account Executive", () => {
     const matrix = buildNavTestMatrix()
     const team = matrix.find((entry) => entry.itemId === "team" && entry.role === "admin")
     assert.ok(team)
     assert.equal(team.expectedVisibility, "visible")
+    const accountExecutiveTeam = matrix.find((entry) => entry.itemId === "team" && entry.role === "account_executive")
+    assert.ok(accountExecutiveTeam)
+    assert.equal(accountExecutiveTeam.expectedVisibility, "visible")
   })
 })
 
@@ -123,12 +123,13 @@ describe("Release QA — stale-client authorization bypass guard", () => {
     assert.equal(sessionExpired?.access, "public")
   })
 
-  it("does not expose admin CRM routes as authenticated for non-admin roles", () => {
+  it("exposes business routes only to business roles", () => {
     const crmPaths = ["/clients", "/pipeline", "/services", "/timesheet", "/capacity"]
     for (const path of crmPaths) {
       const route = IMPLEMENTED_ROUTES.find((entry) => entry.path === path)
       assert.ok(route, `missing CRM route ${path}`)
-      assert.equal(route.access, "admin")
+       assert.equal(route.access, "authenticated")
+       assert.equal(canRoleAccessRoute("account_executive", route), true)
       assert.equal(canRoleAccessRoute("creative", route), false)
       assert.equal(canRoleAccessRoute("proofing", route), false)
     }

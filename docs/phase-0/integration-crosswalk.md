@@ -7,7 +7,7 @@ Verifies that the server capability contract, client route map, and navigation m
 | Check | Location |
 |-------|----------|
 | Admin superset over Creative and Proofing | `shared/src/phase0.test.ts` |
-| CRM routes admin-only | `shared/src/phase0.test.ts`, `server/src/contracts/phase0.test.ts` |
+| CRM routes require business capability | `shared/src/phase0.test.ts`, `server/src/contracts/phase0.test.ts` |
 | Nav hidden for non-Admin CRM items | `client/src/lib/phase0-contracts.test.ts` |
 | API error → UI state mapping | `shared/src/phase0.test.ts`, client tests |
 
@@ -22,7 +22,7 @@ Run: `npm run test`
 | `review.compare` | compare |
 | `projects.mutate` | project/deliverable create/edit (server-enforced) |
 | `media.upload` | upload endpoints and UI (server-enforced) |
-| `team.manage` | `/team` (Admin-only) |
+| `team.view` | `/team` (Admin and Account Executive read-only) |
 | `setup.complete` | `/setup*` (setup lifecycle) |
 
 ## Navigation ↔ route alignment

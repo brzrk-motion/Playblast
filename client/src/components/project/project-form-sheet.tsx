@@ -43,6 +43,7 @@ export interface ProjectFormSheetProps {
   project?: ProjectFormProject | null
   submitting?: boolean
   error?: string | null
+  showCommercialFields?: boolean
   onSubmit: (values: ProjectFormValues) => void
 }
 
@@ -74,6 +75,7 @@ export function ProjectFormSheet({
   project,
   submitting = false,
   error,
+  showCommercialFields = false,
   onSubmit,
 }: ProjectFormSheetProps) {
   const [values, setValues] = useState<ProjectFormValues>(() =>
@@ -97,7 +99,7 @@ export function ProjectFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-md">
+      <SheetContent className="w-full overflow-y-auto sm:max-w-md">
         <form
           onSubmit={(event) => {
             event.preventDefault()
@@ -110,9 +112,13 @@ export function ProjectFormSheet({
               {mode === "create" ? "New Project" : "Edit Project"}
             </SheetTitle>
             <SheetDescription>
-              {mode === "create"
-                ? "Set up a project with its client, timeline, and budget."
-                : "Update the project details, timeline, and budget."}
+                {mode === "create"
+                  ? showCommercialFields
+                    ? "Set up a project with its client, timeline, and budget."
+                    : "Set up the project timeline and production details."
+                  : showCommercialFields
+                    ? "Update the project details, timeline, and budget."
+                    : "Update the production details and timeline."}
             </SheetDescription>
           </SheetHeader>
 
@@ -129,14 +135,16 @@ export function ProjectFormSheet({
               />
             </div>
 
-            <ClientSelector
-              value={values.clientId}
-              onChange={(clientId) => update("clientId", clientId)}
-              disabled={submitting}
-            />
+            {showCommercialFields ? (
+              <ClientSelector
+                value={values.clientId}
+                onChange={(clientId) => update("clientId", clientId)}
+                disabled={submitting}
+              />
+            ) : null}
 
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label htmlFor="project-status">Status</Label>
               <Select
                 value={values.status}
                 onValueChange={(value) =>
@@ -144,7 +152,7 @@ export function ProjectFormSheet({
                 }
                 disabled={submitting}
               >
-                <SelectTrigger>
+                <SelectTrigger id="project-status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -157,7 +165,7 @@ export function ProjectFormSheet({
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="project-start">Start date</Label>
                 <Input
@@ -180,8 +188,8 @@ export function ProjectFormSheet({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2 space-y-2">
+            {showCommercialFields ? <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="project-budget">Budget</Label>
                 <Input
                   id="project-budget"
@@ -203,9 +211,9 @@ export function ProjectFormSheet({
                   disabled={submitting}
                 />
               </div>
-            </div>
+            </div> : null}
 
-            <div className="space-y-2">
+            {showCommercialFields ? <div className="space-y-2">
               <Label htmlFor="project-spent">Spent to date</Label>
               <Input
                 id="project-spent"
@@ -216,7 +224,7 @@ export function ProjectFormSheet({
                 placeholder="0"
                 disabled={submitting}
               />
-            </div>
+            </div> : null}
 
             <div className="space-y-2">
               <Label htmlFor="project-description">Description</Label>
@@ -230,7 +238,7 @@ export function ProjectFormSheet({
               />
             </div>
 
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
           </div>
 
           <SheetFooter>

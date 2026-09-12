@@ -11,14 +11,14 @@ import {
   getHttpStatusForErrorCode,
   getNavVisibility,
   hasCapability,
-  MVP_CRM_ROUTES_ADMIN_ONLY,
+  MVP_BUSINESS_ROUTES,
   assertAdminSuperset,
 } from "@playblast/shared"
 
 describe("Phase 0 server capability contract", () => {
   it("exposes a complete capability matrix", () => {
     assert.doesNotThrow(() => assertAdminSuperset())
-    assert.equal(buildCapabilityTestMatrix().length, 48)
+    assert.equal(buildCapabilityTestMatrix().length, 72)
   })
 
   it("maps canonical API error codes to HTTP statuses", () => {
@@ -41,11 +41,12 @@ describe("Phase 0 server capability contract", () => {
 
 describe("Phase 0 integration crosswalk", () => {
   it("aligns route access with navigation visibility for CRM surfaces", () => {
-    for (const path of MVP_CRM_ROUTES_ADMIN_ONLY) {
+    for (const path of MVP_BUSINESS_ROUTES) {
       const route = APP_ROUTES.find((entry) => entry.path === path)
       assert.ok(route, `missing route ${path}`)
-      assert.equal(route.access, "admin")
+      assert.equal(route.access, "authenticated")
       assert.equal(canRoleAccessRoute("creative", route), false)
+      assert.equal(canRoleAccessRoute("account_executive", route), true)
 
       const navId = path.slice(1)
       assert.equal(getNavVisibility("creative", navId), "hidden")

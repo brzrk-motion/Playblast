@@ -20,11 +20,12 @@ describe("Phase 0 client route map", () => {
     assert.equal(canRoleAccessRoute("proofing", reviewRoute), true)
   })
 
-  it("keeps CRM routes admin-only in the contract", () => {
+  it("keeps CRM routes unavailable to production roles", () => {
     for (const path of ["/clients", "/pipeline", "/services", "/timesheet", "/capacity"]) {
       const route = APP_ROUTES.find((entry) => entry.path === path)
       assert.ok(route)
       assert.equal(canRoleAccessRoute("creative", route), false)
+      assert.equal(canRoleAccessRoute("account_executive", route), true)
     }
   })
 })
@@ -67,5 +68,6 @@ describe("Phase 0 client UI states", () => {
     assert.equal(ROLE_BADGE_TOKENS.admin.label, "Admin")
     assert.equal(ROLE_BADGE_TOKENS.creative.label, "Creative")
     assert.equal(ROLE_BADGE_TOKENS.proofing.label, "Proofing")
+    assert.equal(ROLE_BADGE_TOKENS.account_executive.label, "Account Executive")
   })
 })

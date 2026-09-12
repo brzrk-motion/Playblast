@@ -7,7 +7,7 @@ import {
   useMediaState,
   type MediaPlayerInstance,
 } from "@vidstack/react"
-import { Focus, PanelRightClose, PanelRightOpen } from "lucide-react"
+import { Focus, PanelRightClose, PanelRightOpen, X } from "lucide-react"
 
 import { AnnotationOverlay } from "@/components/video/annotation-overlay"
 import { CommentsPanel } from "@/components/video/comments-panel"
@@ -204,11 +204,22 @@ function VideoReviewLayout({
               className={immersive ? "pb-2" : undefined}
             />
 
-            {focusMode && !isFullscreen ? (
-              <div className="pointer-events-none absolute inset-x-0 top-3 z-30 flex justify-center">
+            {focusMode ? (
+              <div className="absolute inset-x-0 top-3 z-30 flex justify-center">
                 <p className="rounded-full bg-black/60 px-3 py-1 text-xs text-white/80 backdrop-blur-sm">
                   Focus mode — press <kbd className="font-mono">Z</kbd> to exit
                 </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="absolute right-3 bg-black/60 text-white hover:bg-white/20 hover:text-white"
+                  aria-label="Exit focus mode"
+                  title="Exit focus mode"
+                  onClick={toggleFocusMode}
+                >
+                  <X className="size-4" />
+                </Button>
               </div>
             ) : null}
           </div>

@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { requireAdminOnly } from "../middleware/authorization.js"
+import { requireCapability } from "../middleware/authorization.js"
 import {
   createContactLog,
   createLead,
@@ -46,7 +46,7 @@ function parseRepliedFilter(
 
 const leadsRouter = Router()
 
-leadsRouter.use(requireAdminOnly())
+leadsRouter.use(requireCapability("business.manage"))
 
 leadsRouter.get("/", (req, res) => {
   const context = requireStudioSession(req, res)

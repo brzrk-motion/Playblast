@@ -7,7 +7,7 @@ const e2eRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 
 export const sampleVideoPath = path.join(e2eRoot, "fixtures/assets/sample.mp4")
 
-export type Role = "admin" | "creative" | "proofing"
+export type Role = "admin" | "account_executive" | "creative" | "proofing"
 
 export function storageStateFor(role: Role): string {
   return path.join(authDir(), `${role}.json`)

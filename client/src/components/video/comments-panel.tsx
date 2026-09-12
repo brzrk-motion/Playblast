@@ -159,22 +159,7 @@ function CommentRow({
       )}
     >
       <div
-        role="button"
-        tabIndex={0}
-        aria-label={commentRowLabel(comment)}
-        aria-describedby={bodyId}
-        aria-current={isActive ? "true" : undefined}
-        className={cn(
-          "interactive-row flex cursor-pointer items-start gap-2.5 px-3 py-2.5 text-left",
-          isActive && "bg-transparent hover:bg-primary/10",
-        )}
-        onClick={handleRowActivate}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault()
-            handleRowActivate()
-          }
-        }}
+        className="flex items-start gap-2.5 px-3 py-2.5 text-left"
       >
         <Avatar size="sm" className="mt-0.5" aria-hidden="true">
           <AvatarFallback className="text-[10px] font-medium">
@@ -184,16 +169,19 @@ function CommentRow({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={cn(
-                "group/pill type-timestamp inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-primary transition-colors hover:bg-primary/15",
-                isActive && "bg-primary/15",
-              )}
-              aria-hidden="true"
-            >
-              <Play className="size-3 shrink-0 opacity-0 transition-opacity group-hover/pill:opacity-100" />
-              {formatCommentTimestamp(comment.timestamp)}
-            </span>
+              <button
+                type="button"
+                className={cn(
+                  "group/pill type-timestamp inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  isActive && "bg-primary/15",
+                )}
+                aria-label={commentRowLabel(comment)}
+                aria-current={isActive ? "true" : undefined}
+                onClick={handleRowActivate}
+              >
+                <Play className="size-3 shrink-0 opacity-0 transition-opacity group-hover/pill:opacity-100" />
+                {formatCommentTimestamp(comment.timestamp)}
+              </button>
 
             <span className="text-xs font-medium text-foreground" aria-hidden="true">
               {comment.author}

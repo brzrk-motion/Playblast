@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto"
 import { after, before, beforeEach, describe, it } from "node:test"
 import assert from "node:assert/strict"
 import type { Server } from "node:http"
-import { hasCapability, getCapabilitiesForRole } from "@playblast/shared"
+import { hasCapability, getCapabilitiesForRole, type UserRole } from "@playblast/shared"
 import { createApp } from "../app.js"
 import { hashPasswordSync, normalizeEmail } from "../auth/password.js"
 import { getDrizzle } from "../db/drizzle.js"
@@ -21,6 +21,7 @@ import {
 const ADMIN_PASSWORD = "correct horse battery 99"
 const CREATIVE_PASSWORD = "creative password 99 ok"
 const PROOFING_PASSWORD = "proofing password 99 ok"
+const ACCOUNT_EXECUTIVE_PASSWORD = "account executive password 99 ok"
 
 let tempDir = ""
 let uploadDir = ""
@@ -34,6 +35,8 @@ let creativeCookies: string[] = []
 let creativeCsrf = ""
 let proofingCookies: string[] = []
 let proofingCsrf = ""
+let accountExecutiveCookies: string[] = []
+let accountExecutiveCsrf = ""
 
 let primaryStudioId = ""
 let otherStudioId = ""
@@ -46,7 +49,7 @@ const previousNodeEnv = process.env.NODE_ENV
 
 function insertRoleUser(
   studioId: string,
-  role: "creative" | "proofing",
+  role: Exclude<UserRole, "admin">,
   email: string,
   password: string,
 ) {
@@ -56,7 +59,12 @@ function insertRoleUser(
     .values({
       id: randomUUID(),
       studioId,
-      name: role === "creative" ? "Fixture Creative" : "Fixture Proofing",
+       name:
+         role === "creative"
+           ? "Fixture Creative"
+           : role === "proofing"
+             ? "Fixture Proofing"
+             : "Fixture Account Executive",
       email,
       emailNormalized: normalizeEmail(email),
       passwordHash: hashPasswordSync(password),
@@ -116,6 +124,12 @@ before(async () => {
 
   insertRoleUser(primaryStudioId, "creative", "creative@fixture.studio", CREATIVE_PASSWORD)
   insertRoleUser(primaryStudioId, "proofing", "proofing@fixture.studio", PROOFING_PASSWORD)
+  insertRoleUser(
+    primaryStudioId,
+    "account_executive",
+    "account-executive@fixture.studio",
+    ACCOUNT_EXECUTIVE_PASSWORD,
+  )
 
   const creative = await loginAccount(baseUrl, "creative@fixture.studio", CREATIVE_PASSWORD)
   creativeCookies = creative.cookies
@@ -124,6 +138,14 @@ before(async () => {
   const proofing = await loginAccount(baseUrl, "proofing@fixture.studio", PROOFING_PASSWORD)
   proofingCookies = proofing.cookies
   proofingCsrf = proofing.csrfToken
+
+  const accountExecutive = await loginAccount(
+    baseUrl,
+    "account-executive@fixture.studio",
+    ACCOUNT_EXECUTIVE_PASSWORD,
+  )
+  accountExecutiveCookies = accountExecutive.cookies
+  accountExecutiveCsrf = accountExecutive.csrfToken
 
   const now = new Date().toISOString()
   otherStudioId = "studio-fixture-other"
@@ -264,5 +286,55 @@ describe("Phase 5 authorization", () => {
       headers: authHeaders(adminCookies, adminCsrf, false),
     })
     assert.equal(response.status, 200)
+  })
+
+  it("allows Account Executives business access but keeps project review read-only", async () => {
+    const businessResponse = await fetch(`${baseUrl}/api/clients`, {
+      headers: authHeaders(accountExecutiveCookies, accountExecutiveCsrf, false),
+    })
+    assert.equal(businessResponse.status, 200)
+
+    const projectResponse = await fetch(`${baseUrl}/api/projects`, {
+      method: "POST",
+      headers: authHeaders(accountExecutiveCookies, accountExecutiveCsrf),
+      body: JSON.stringify({ name: "AE Project" }),
+    })
+    assert.equal(projectResponse.status, 403)
+
+    const teamResponse = await fetch(`${baseUrl}/api/users`, {
+      headers: authHeaders(accountExecutiveCookies, accountExecutiveCsrf, false),
+    })
+    assert.equal(teamResponse.status, 200)
+
+    const inviteResponse = await fetch(`${baseUrl}/api/invitations`, {
+      headers: authHeaders(accountExecutiveCookies, accountExecutiveCsrf, false),
+    })
+    assert.equal(inviteResponse.status, 403)
+  })
+
+  it("redacts commercial project fields from Creative and Proofing reads", async () => {
+    const createResponse = await fetch(`${baseUrl}/api/projects`, {
+      method: "POST",
+      headers: authHeaders(adminCookies, adminCsrf),
+      body: JSON.stringify({
+        name: "Commercial Project",
+        budget: { total: 5000, currency: "USD" },
+        notes: "Internal margin note",
+      }),
+    })
+    assert.equal(createResponse.status, 201)
+    const project = (await createResponse.json()) as { id: string }
+
+    for (const cookies of [creativeCookies, proofingCookies]) {
+      const response = await fetch(`${baseUrl}/api/projects/${project.id}`, {
+        headers: authHeaders(cookies, creativeCsrf, false),
+      })
+      assert.equal(response.status, 200)
+      const body = (await response.json()) as Record<string, unknown>
+      assert.equal("budget" in body, false)
+      assert.equal("notes" in body, false)
+      assert.equal("outstandingBalance" in body, false)
+      assert.equal("servicesEstimate" in body, false)
+    }
   })
 })

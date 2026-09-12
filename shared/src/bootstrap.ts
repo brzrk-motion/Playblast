@@ -28,7 +28,7 @@ export const BOOTSTRAP_ADMIN_RULES: BootstrapAdminRules = {
   inviteRolesExcludeAdmin: true,
 }
 
-export const INVITABLE_ROLES = ["creative", "proofing"] as const satisfies readonly UserRole[]
+export const INVITABLE_ROLES = ["account_executive", "creative", "proofing"] as const satisfies readonly UserRole[]
 
 export type InvitableRole = (typeof INVITABLE_ROLES)[number]
 

@@ -72,7 +72,7 @@ export function RecoverAdminPage() {
               <Clapperboard className="size-5" />
             </div>
             <div>
-              <CardTitle>Admin recovery</CardTitle>
+              <CardTitle as="h1">Admin recovery</CardTitle>
               <CardDescription>
                 Reset a lost admin password using your deployment recovery token.
               </CardDescription>

@@ -41,6 +41,37 @@ curl -fsS http://127.0.0.1:3000/health
 
 A healthy instance returns `"status":"ok"` and `"database":"ok"`.
 
+### Docker file watch for development
+
+The Compose service includes an opt-in file-watch configuration. From a checkout with Docker Compose v2.22 or newer, run:
+
+```bash
+docker compose watch
+```
+
+Changes to the application build context trigger a fresh image build and container replacement. Generated output, persistent data, uploads, and Git metadata are ignored. This is for local development; use `docker compose up -d --build` for a normal deployment.
+
+### Start the development demo
+
+The development override enables the development-only database seed and uses
+separate Docker volumes so it cannot modify the normal deployment data:
+
+```bash
+docker compose down
+docker compose -p playblast-demo \
+  -f docker-compose.yml \
+  -f docker-compose.dev.yml \
+  up -d --build
+```
+
+Open `http://127.0.0.1:3000` and sign in with
+`admin@playblast.local` / `PlayblastDev2026`. The development seed also creates
+`taylor@playblast.local` as an Account Executive with the same password. The data seed runs only when the
+demo database is empty; missing demo video fixtures are restored on every
+development startup without overwriting uploads. To reset demo data, stop that Compose project with
+`docker compose -p playblast-demo -f docker-compose.yml -f docker-compose.dev.yml down -v`
+and start it again.
+
 On dual-stack hosts, prefer `127.0.0.1` over `localhost` in operator curl examples: `localhost` may resolve to `::1` while Docker publishes the mapped port on IPv4 only. Keep container `HOST=0.0.0.0` (Compose default); `HOST=127.0.0.1` inside the container breaks published-port access from the host.
 
 ## Build and ship to a remote host

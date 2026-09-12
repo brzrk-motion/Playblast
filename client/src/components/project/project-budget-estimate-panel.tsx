@@ -166,14 +166,7 @@ export function ProjectBudgetEstimatePanel({
   }
 
   return (
-    <Card
-      className={cn(
-        hasBudget && status !== "healthy" && "border-l-4",
-        hasBudget && status === "warning" && "border-l-status-warning",
-        hasBudget && status === "over" && "border-l-destructive",
-        hasBudget && status === "healthy" && "border-l-status-success",
-      )}
-    >
+    <Card>
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">

@@ -75,7 +75,7 @@ export function LoginShellPage() {
               <Clapperboard className="size-5" />
             </div>
             <div>
-              <CardTitle>Sign in</CardTitle>
+              <CardTitle as="h1">Sign in</CardTitle>
               <CardDescription>
                 Use your Playblast studio account to continue.
               </CardDescription>

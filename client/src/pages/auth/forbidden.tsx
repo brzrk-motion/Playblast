@@ -16,7 +16,7 @@ export function ForbiddenPage() {
     <div className="bg-background flex min-h-svh items-center justify-center p-6">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{forbiddenState.title}</CardTitle>
+          <CardTitle as="h1">{forbiddenState.title}</CardTitle>
           <CardDescription>{forbiddenState.description}</CardDescription>
         </CardHeader>
         <CardContent>

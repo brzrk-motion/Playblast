@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { Gauge } from "lucide-react"
 import { CapacityView } from "@/components/capacity/capacity-view"
 import { Button } from "@/components/ui/button"
+import { PageLoading } from "@/components/feedback/page-loading"
 import { Skeleton } from "@/components/ui/skeleton"
 import { listProjects } from "@/lib/api"
 import { humanizeApiError, showErrorToast } from "@/lib/toast"
@@ -50,7 +51,7 @@ export function CapacityPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <PageLoading label="Loading capacity" className="space-y-6">
         <Skeleton className="h-10 w-72" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
@@ -58,7 +59,7 @@ export function CapacityPage() {
           ))}
         </div>
         <Skeleton className="h-64 rounded-lg" />
-      </div>
+      </PageLoading>
     )
   }
 

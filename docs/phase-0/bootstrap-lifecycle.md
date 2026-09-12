@@ -22,7 +22,7 @@ Source of truth: `@playblast/shared` (`bootstrap.ts`).
 
 1. Exactly one bootstrap admin is created during first-run setup.
 2. Setup claim is atomic and race-safe; concurrent requests produce one winner.
-3. Invitations may assign only `creative` or `proofing`; admin promotion is an in-app Admin action later.
+3. Invitations may assign `account_executive`, `creative`, or `proofing`; admin promotion is an in-app Admin action later.
 4. Application routes remain unavailable until setup status is `complete`.
 5. Admin credential recovery must not store plaintext passwords and must invalidate affected sessions.
 

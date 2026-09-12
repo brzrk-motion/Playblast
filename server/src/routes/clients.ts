@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { requireAdminOnly } from "../middleware/authorization.js"
+import { requireCapability } from "../middleware/authorization.js"
 import {
   clampRetainerCycleDay,
   getCurrentCycleStart,
@@ -128,7 +128,7 @@ function applyRetainerInput(
 
 const clientsRouter = Router()
 
-clientsRouter.use(requireAdminOnly())
+clientsRouter.use(requireCapability("business.manage"))
 
 clientsRouter.get("/", (req, res) => {
   const context = requireStudioSession(req, res)

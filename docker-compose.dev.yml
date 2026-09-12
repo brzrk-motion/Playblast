@@ -1,0 +1,11 @@
+services:
+  playblast:
+    environment:
+      NODE_ENV: development
+    volumes:
+      - playblast_demo_uploads:/app/uploads
+      - playblast_demo_data:/app/data
+
+volumes:
+  playblast_demo_uploads:
+  playblast_demo_data:

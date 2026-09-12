@@ -27,8 +27,8 @@ function AppLayoutContent() {
             <Outlet />
           </main>
         ) : (
-          <ScrollArea className="flex-1">
-            <main className="p-4 md:p-6">
+          <ScrollArea className="min-w-0 flex-1">
+            <main className="min-w-0 p-4 md:p-6">
               <Outlet />
             </main>
           </ScrollArea>

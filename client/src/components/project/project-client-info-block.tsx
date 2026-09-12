@@ -11,6 +11,8 @@ interface ProjectClientInfoBlockProps {
   client: Client | null
   onViewClient: (clientId: string) => void
   onProjectUpdated: (project: ProjectDetail) => void
+  readOnly?: boolean
+  canManageLink?: boolean
   className?: string
   linkDialogOpen?: boolean
   onLinkDialogOpenChange?: (open: boolean) => void
@@ -21,6 +23,8 @@ export function ProjectClientInfoBlock({
   client,
   onViewClient,
   onProjectUpdated,
+  readOnly = false,
+  canManageLink = !readOnly,
   className,
   linkDialogOpen: linkDialogOpenProp,
   onLinkDialogOpenChange,
@@ -59,7 +63,7 @@ export function ProjectClientInfoBlock({
               this project.
             </p>
           </div>
-          <Button
+          {canManageLink ? <Button
             type="button"
             variant="outline"
             size="sm"
@@ -68,7 +72,7 @@ export function ProjectClientInfoBlock({
           >
             <UserPlus />
             Add Client
-          </Button>
+          </Button> : null}
         </div>
 
         <ProjectClientLinkDialog
@@ -99,10 +103,10 @@ export function ProjectClientInfoBlock({
               Client
             </p>
             <dl className="space-y-1.5 text-sm">
-              <div className="flex items-center gap-2">
+              {client.email ? <div className="flex items-center gap-2">
                 <UserRound className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <dd className="font-medium">{client.name}</dd>
-              </div>
+              </div> : null}
               {company ? (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Building2 className="size-3.5 shrink-0" aria-hidden="true" />
@@ -132,14 +136,14 @@ export function ProjectClientInfoBlock({
             >
               View Client
             </Button>
-            <Button
+            {canManageLink ? <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => openLinkDialog("change")}
             >
               Change Client
-            </Button>
+            </Button> : null}
           </div>
         </div>
       </div>
