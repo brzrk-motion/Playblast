@@ -134,3 +134,5 @@ export function SetupCompletePage() {
     </div>
   )
 }
+
+export default SetupCompletePage

@@ -525,3 +525,5 @@ export function LeadsTab() {
     </div>
   )
 }
+
+export default LeadsTab

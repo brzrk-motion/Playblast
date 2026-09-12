@@ -28,3 +28,5 @@ export function ForbiddenPage() {
     </div>
   )
 }
+
+export default ForbiddenPage

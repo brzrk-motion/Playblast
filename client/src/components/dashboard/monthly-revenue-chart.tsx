@@ -180,3 +180,5 @@ export function MonthlyRevenueChart({ projects }: MonthlyRevenueChartProps) {
     </Card>
   )
 }
+
+export default MonthlyRevenueChart

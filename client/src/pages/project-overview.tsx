@@ -969,3 +969,5 @@ export function ProjectOverviewPage() {
     </div>
   )
 }
+
+export default ProjectOverviewPage

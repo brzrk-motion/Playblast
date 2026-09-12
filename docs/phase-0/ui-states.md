@@ -6,7 +6,7 @@ Source of truth: `@playblast/shared` (`ui-states.ts`).
 
 | State | When | Primary action |
 |-------|------|----------------|
-| `loading` | Fetch in progress | — |
+| `loading` | Fetch in progress, or a lazy route/chunk `Suspense` | — |
 | `empty` | Successful fetch with no rows | — |
 | `ready` | Primary content available | — |
 | `unauthorized` | `UNAUTHENTICATED` | Go to login |
@@ -22,7 +22,7 @@ Source of truth: `@playblast/shared` (`ui-states.ts`).
 
 | State | Current component |
 |-------|-------------------|
-| loading | `PageLoading` |
+| loading | `PageLoading` (also used as the route/chunk `Suspense` fallback) |
 | empty | `EmptyState` |
 | error (generic) | `PageError`, `ActionErrorBanner` |
 | ready | page content |

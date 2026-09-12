@@ -343,3 +343,5 @@ export function CapacityView({ projects, compact = false }: CapacityViewProps) {
     </div>
   )
 }
+
+export default CapacityView

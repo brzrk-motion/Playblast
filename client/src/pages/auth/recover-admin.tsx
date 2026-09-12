@@ -176,3 +176,5 @@ export function RecoverAdminPage() {
     </div>
   )
 }
+
+export default RecoverAdminPage

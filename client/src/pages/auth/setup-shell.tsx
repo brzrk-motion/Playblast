@@ -192,3 +192,5 @@ export function SetupShellPage() {
     </div>
   )
 }
+
+export default SetupShellPage

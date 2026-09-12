@@ -655,3 +655,5 @@ export function TeamPage() {
     </div>
   )
 }
+
+export default TeamPage

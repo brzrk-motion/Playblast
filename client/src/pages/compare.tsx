@@ -247,3 +247,5 @@ export function ComparePage() {
     </div>
   )
 }
+
+export default ComparePage

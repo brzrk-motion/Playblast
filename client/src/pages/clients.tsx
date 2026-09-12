@@ -1,13 +1,26 @@
+import { lazy, Suspense } from "react"
 import { useSearchParams } from "react-router-dom"
-import { ClientsTab } from "@/components/client-management/clients-tab"
-import { LeadsTab } from "@/components/client-management/leads-tab"
+import { PageLoading } from "@/components/feedback/page-loading"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+const ClientsTab = lazy(() => import("@/components/client-management/clients-tab"))
+const LeadsTab = lazy(() => import("@/components/client-management/leads-tab"))
 
 const TAB_PARAM = "tab"
 type ClientsPageTab = "leads" | "clients"
 
 function parseTab(value: string | null): ClientsPageTab {
   return value === "leads" ? "leads" : "clients"
+}
+
+function TabFallback({ label }: { label: string }) {
+  return (
+    <PageLoading label={label} className="space-y-3">
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-64 w-full" />
+    </PageLoading>
+  )
 }
 
 export function ClientsPage() {
@@ -43,13 +56,23 @@ export function ClientsPage() {
         </TabsList>
 
         <TabsContent value="leads" className="mt-4">
-          <LeadsTab />
+          {activeTab === "leads" ? (
+            <Suspense fallback={<TabFallback label="Loading leads…" />}>
+              <LeadsTab />
+            </Suspense>
+          ) : null}
         </TabsContent>
 
         <TabsContent value="clients" className="mt-4">
-          <ClientsTab />
+          {activeTab === "clients" ? (
+            <Suspense fallback={<TabFallback label="Loading clients…" />}>
+              <ClientsTab />
+            </Suspense>
+          ) : null}
         </TabsContent>
       </Tabs>
     </div>
   )
 }
+
+export default ClientsPage

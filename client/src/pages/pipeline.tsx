@@ -405,3 +405,5 @@ export function PipelinePage() {
     </div>
   )
 }
+
+export default PipelinePage

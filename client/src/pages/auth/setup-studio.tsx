@@ -147,3 +147,5 @@ export function SetupStudioPage() {
     </div>
   )
 }
+
+export default SetupStudioPage

@@ -615,3 +615,5 @@ export function DeliverablePage() {
     </div>
   )
 }
+
+export default DeliverablePage

@@ -342,7 +342,7 @@ The following blockers describe the pre-MVP baseline and are retained as an impl
 20. Test upgrade and migration behavior from the current unauthenticated/Basic-Auth database.
 21. Resolve route/API error states and loading states for first-run, expired invites, disabled users, and invalid sessions.
 22. **Resolved:** CRM/finance surfaces are available to Admin and Account Executive users; Creative and Proofing users access production proofing through Projects without commercial data. Server authorization, response shaping, and navigation restrictions enforce this in the role matrix.
-23. Address the large client bundle if performance testing shows it harms first-run usability; do not let this precede identity and authorization work.
+23. **Resolved:** Client routes and heavy in-page modules (Vidstack, Recharts, clients/leads tabs) are code-split with `React.lazy`. Production entry JS is well under the previous 1.4 MB monolith; identity and authorization work was already complete before this split.
 
 ## Target onboarding experience
 

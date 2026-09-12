@@ -137,3 +137,5 @@ export function LoginShellPage() {
     </div>
   )
 }
+
+export default LoginShellPage

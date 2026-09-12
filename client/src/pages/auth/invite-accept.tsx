@@ -219,3 +219,5 @@ export function InviteAcceptPage() {
     </div>
   )
 }
+
+export default InviteAcceptPage

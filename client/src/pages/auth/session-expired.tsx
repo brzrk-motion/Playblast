@@ -28,3 +28,5 @@ export function SessionExpiredPage() {
     </div>
   )
 }
+
+export default SessionExpiredPage

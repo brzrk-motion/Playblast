@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import {
   AlertTriangle,
@@ -10,7 +10,6 @@ import {
   MessageSquare,
   Wallet,
 } from "lucide-react"
-import { CapacityView } from "@/components/capacity/capacity-view"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,7 +26,6 @@ import { PageError } from "@/components/feedback/page-error"
 import { PageLoading } from "@/components/feedback/page-loading"
 import { ArchiveProjectDialog } from "@/components/project/archive-project-dialog"
 import { DashboardProjectCard } from "@/components/dashboard/project-card"
-import { MonthlyRevenueChart } from "@/components/dashboard/monthly-revenue-chart"
 import { archiveProject, listProjects, unarchiveProject } from "@/lib/api"
 import {
   budgetHealth,
@@ -48,6 +46,9 @@ import {
 import { humanizeApiError, showErrorToast, showSuccessToast } from "@/lib/toast"
 import { useCapability } from "@/hooks/use-capability"
 import type { ProjectSummary } from "@/types/project"
+
+const MonthlyRevenueChart = lazy(() => import("@/components/dashboard/monthly-revenue-chart"))
+const CapacityView = lazy(() => import("@/components/capacity/capacity-view"))
 
 type DashboardView = "active" | "archived"
 
@@ -349,7 +350,17 @@ export function DashboardPage() {
         ) : null}
       </div>
 
-      {canViewBusiness ? <MonthlyRevenueChart projects={activeProjects} /> : null}
+      {canViewBusiness ? (
+        <Suspense
+          fallback={
+            <PageLoading label="Loading revenue…" className="space-y-6">
+              <Skeleton className="h-64 w-full" />
+            </PageLoading>
+          }
+        >
+          <MonthlyRevenueChart projects={activeProjects} />
+        </Suspense>
+      ) : null}
 
       {canViewBusiness ? <Card>
         <CardHeader>
@@ -372,7 +383,15 @@ export function DashboardPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <CapacityView projects={activeProjects} compact />
+          <Suspense
+            fallback={
+              <PageLoading label="Loading capacity…" className="space-y-6">
+                <Skeleton className="h-40 w-full" />
+              </PageLoading>
+            }
+          >
+            <CapacityView projects={activeProjects} compact />
+          </Suspense>
         </CardContent>
       </Card> : null}
 
@@ -567,3 +586,5 @@ export function DashboardPage() {
     </div>
   )
 }
+
+export default DashboardPage

@@ -55,3 +55,5 @@ export function TimesheetPage() {
     </div>
   )
 }
+
+export default TimesheetPage

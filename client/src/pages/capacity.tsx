@@ -91,3 +91,5 @@ export function CapacityPage() {
     </div>
   )
 }
+
+export default CapacityPage
