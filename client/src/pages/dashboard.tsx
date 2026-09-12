@@ -365,12 +365,12 @@ export function DashboardPage() {
       {canViewBusiness ? <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
+            <div className="flex flex-col gap-1.5">
+              <CardTitle className="flex items-center gap-2 leading-tight tracking-tight">
                 <Gauge className="size-4 text-muted-foreground" />
                 Studio capacity
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="pt-1 text-sm leading-relaxed">
                 Active in-flight projects and estimated hours remaining.
               </CardDescription>
             </div>

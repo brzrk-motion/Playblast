@@ -91,25 +91,19 @@ function ProjectCard({
   actionPending?: boolean
   canDuplicate: boolean
 }) {
+  const deliverableLabel = `${project.deliverableCount} ${
+    project.deliverableCount === 1 ? "deliverable" : "deliverables"
+  }`
+
   return (
     <Card className="interactive-card relative h-full border-muted">
-      <div className="absolute top-3 right-3 z-10">
-        <ProjectActionsMenu
-          projectId={project.id}
-          projectName={project.name}
-          onArchive={onArchive ? () => onArchive(project) : undefined}
-          onUnarchive={onUnarchive ? () => onUnarchive(project) : undefined}
-          canDuplicate={canDuplicate}
-          actionPending={actionPending}
-        />
-      </div>
       <Link
         to={`/projects/${encodeURIComponent(project.id)}`}
         className="block rounded-xl focus-ring"
       >
-        <CardHeader className="pb-3 pr-10">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
+        <CardHeader className="pb-3">
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
               <CardTitle className="text-base leading-snug">
                 {project.name}
               </CardTitle>
@@ -126,26 +120,30 @@ function ProjectCard({
                 </p>
               ) : null}
             </div>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-              {project.openCommentCount > 0 ? (
-                <Badge variant="default" className="gap-1">
-                  <MessageSquare className="size-3" />
-                  {project.openCommentCount}
-                </Badge>
-              ) : null}
-              <Badge variant="secondary">
-                {project.deliverableCount}{" "}
-                {project.deliverableCount === 1 ? "deliverable" : "deliverables"}
-              </Badge>
-            </div>
+            <ProjectActionsMenu
+              projectId={project.id}
+              projectName={project.name}
+              className="shrink-0"
+              onArchive={onArchive ? () => onArchive(project) : undefined}
+              onUnarchive={onUnarchive ? () => onUnarchive(project) : undefined}
+              canDuplicate={canDuplicate}
+              actionPending={actionPending}
+            />
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             {showArchivedBadge ? <ProjectArchivedBadge /> : null}
             <ProjectStatusBadge status={project.status} />
+            <Badge variant="secondary">{deliverableLabel}</Badge>
+            {project.openCommentCount > 0 ? (
+              <Badge variant="default" className="gap-1">
+                <MessageSquare className="size-3" />
+                {project.openCommentCount}
+              </Badge>
+            ) : null}
           </div>
         </CardHeader>
         <CardContent className="space-y-1 text-sm text-muted-foreground">
-              {project.budget ? (
+          {project.budget ? (
             <p>
               {formatCurrency(project.budget.spent ?? 0, project.budget.currency)}{" "}
               / {formatCurrency(project.budget.total, project.budget.currency)}
