@@ -14,6 +14,7 @@ export type SmtpTestStatus = (typeof SMTP_TEST_STATUSES)[number]
 /** SMTP settings returned by GET /api/smtp (password never included). */
 export interface SmtpSettingsResponse {
   configured: boolean
+  smtpConfiguredFromEnv: boolean
   host: string | null
   port: number | null
   username: string | null

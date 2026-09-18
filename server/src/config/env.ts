@@ -81,6 +81,84 @@ function parseNodeEnv(value: string | undefined): "production" | "development" {
   throw new Error(`Invalid NODE_ENV value: ${value}`)
 }
 
+const REQUIRED_SMTP_ENV_KEYS = [
+  "SMTP_HOST",
+  "SMTP_PORT",
+  "SMTP_SECURE",
+  "SMTP_USER",
+  "SMTP_PASS",
+  "SMTP_FROM",
+] as const
+
+function isNonEmptyEnv(value: string | undefined): value is string {
+  return value !== undefined && value.trim() !== ""
+}
+
+function isSmtpEnvComplete(): boolean {
+  return REQUIRED_SMTP_ENV_KEYS.every((key) => isNonEmptyEnv(process.env[key]))
+}
+
+function parseSmtpPort(value: string): number {
+  const port = Number(value)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`Invalid SMTP_PORT value: ${value}`)
+  }
+
+  return port
+}
+
+function parseSmtpSecure(value: string): boolean {
+  const normalized = value.trim().toLowerCase()
+  if (normalized === "true" || normalized === "1") {
+    return true
+  }
+  if (normalized === "false" || normalized === "0") {
+    return false
+  }
+
+  throw new Error(`Invalid SMTP_SECURE value: ${value}`)
+}
+
+export type SmtpEnvConfig = {
+  host: string
+  port: number
+  secure: boolean
+  user: string
+  pass: string
+  from: string
+  replyTo?: string
+}
+
+function resolveSmtpFromEnv(): SmtpEnvConfig | null {
+  if (!isSmtpEnvComplete()) {
+    return null
+  }
+
+  const replyTo = process.env.SMTP_REPLY_TO
+  return {
+    host: process.env.SMTP_HOST!.trim(),
+    port: parseSmtpPort(process.env.SMTP_PORT!.trim()),
+    secure: parseSmtpSecure(process.env.SMTP_SECURE!),
+    user: process.env.SMTP_USER!.trim(),
+    pass: process.env.SMTP_PASS!,
+    from: process.env.SMTP_FROM!.trim(),
+    ...(isNonEmptyEnv(replyTo) ? { replyTo: replyTo.trim() } : {}),
+  }
+}
+
+function resolveMailpitUrl(nodeEnv: "production" | "development"): string | undefined {
+  if (nodeEnv === "production") {
+    return undefined
+  }
+
+  const mailpitUrl = process.env.MAILPIT_URL
+  if (!isNonEmptyEnv(mailpitUrl)) {
+    return undefined
+  }
+
+  return mailpitUrl.trim()
+}
+
 export const config = {
   get port(): number {
     return parsePort(process.env.PORT, DEFAULT_PORT)
@@ -110,6 +188,15 @@ export const config = {
    */
   get proxyHops(): number {
     return parseProxyHops(process.env.PROXY_HOPS, 0)
+  },
+  get smtpConfiguredFromEnv(): boolean {
+    return isSmtpEnvComplete()
+  },
+  get smtpFromEnv(): SmtpEnvConfig | null {
+    return resolveSmtpFromEnv()
+  },
+  get mailpitUrl(): string | undefined {
+    return resolveMailpitUrl(this.nodeEnv)
   },
 }
 
