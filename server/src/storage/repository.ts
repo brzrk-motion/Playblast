@@ -430,7 +430,7 @@ export function listProjectSummaries(
 ): ProjectSummary[] {
   const db = getDb()
   const projects = clientId
-    ? listProjectsByClientId(studioId, clientId)
+    ? listProjectsByClientId(studioId, clientId, options)
     : listProjects(studioId, options)
 
   return projects.map((project) => {
@@ -2107,14 +2107,16 @@ export function getClient(id: string): Client | undefined {
 export function listProjectsByClientId(
   studioId: string,
   clientId: string,
+  options?: ListProjectsOptions,
 ): Project[] {
+  const { clause, params } = buildProjectArchiveClause(studioId, options)
   const rows = getDb()
     .prepare(
       `SELECT * FROM projects
-       WHERE clientId = ? AND studioId = ?
+       ${clause} AND clientId = ?
        ORDER BY createdAt DESC`,
     )
-    .all(clientId, studioId) as ProjectRow[]
+    .all(...params, clientId) as ProjectRow[]
 
   return rows.map(rowToProject)
 }
