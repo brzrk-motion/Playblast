@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Clapperboard, Mail, UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card"
 import { StudioIdentityPreview } from "@/components/studio/studio-profile-fields"
 import { useSession } from "@/hooks/use-session"
-import { completeStudioSetup, fetchSmtpSettings, isApiError } from "@/lib/api-http"
+import { completeStudioSetup, isApiError } from "@/lib/api-http"
 
 const ONBOARDING_STEPS = [
   {
@@ -38,29 +38,10 @@ export function SetupCompletePage() {
   const navigate = useNavigate()
   const { state, refresh } = useSession()
   const sessionStudio = state.status === "ready" ? state.session?.studio : null
+  const smtpConfiguredFromEnv =
+    state.status === "ready" ? state.setup.smtpConfiguredFromEnv : false
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [smtpConfiguredFromEnv, setSmtpConfiguredFromEnv] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function loadSmtpStatus() {
-      try {
-        const settings = await fetchSmtpSettings()
-        if (!cancelled) {
-          setSmtpConfiguredFromEnv(settings.smtpConfiguredFromEnv)
-        }
-      } catch {
-        // Fall back to showing the SMTP onboarding step when settings are unavailable.
-      }
-    }
-
-    void loadSmtpStatus()
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const onboardingSteps = ONBOARDING_STEPS.filter(
     (step) => !(smtpConfiguredFromEnv && step.title === "Configure SMTP"),

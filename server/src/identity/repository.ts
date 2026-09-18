@@ -9,6 +9,7 @@ import {
   type InvitationSummary,
 } from "@playblast/shared"
 import { getDrizzle } from "../db/drizzle.js"
+import { config } from "../config/env.js"
 import {
   auditEvents,
   invitations,
@@ -25,6 +26,7 @@ export function getSetupStatusResponse(): SetupStatusResponse {
     status,
     nextRoute: step.nextRoute,
     setupComplete: isApplicationRouteAvailable(status),
+    smtpConfiguredFromEnv: config.smtpConfiguredFromEnv,
   }
 }
 
