@@ -2104,10 +2104,23 @@ export function getClient(id: string): Client | undefined {
   return row ? rowToClient(row) : undefined
 }
 
+function enrichClientLinkedProject(project: Project): ClientWithProjects["projects"][number] {
+  const projectServices = listProjectServices(project.id)
+  const servicesEstimate =
+    projectServices.length > 0
+      ? calculateProjectServicesEstimate(projectServices)
+      : undefined
+
+  return {
+    ...project,
+    ...(servicesEstimate !== undefined ? { servicesEstimate } : {}),
+  }
+}
+
 export function listProjectsByClientId(
   studioId: string,
   clientId: string,
-): Project[] {
+): ClientWithProjects["projects"] {
   const rows = getDb()
     .prepare(
       `SELECT * FROM projects
@@ -2116,7 +2129,7 @@ export function listProjectsByClientId(
     )
     .all(clientId, studioId) as ProjectRow[]
 
-  return rows.map(rowToProject)
+  return rows.map((row) => enrichClientLinkedProject(rowToProject(row)))
 }
 
 export function getClientWithProjects(
