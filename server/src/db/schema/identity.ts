@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm"
-import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
+import { check, index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 
 export const SETUP_STATUS_VALUES = [
   "pending",
@@ -33,6 +33,8 @@ export const studios = sqliteTable(
     setupStatus: text("setup_status", { enum: SETUP_STATUS_VALUES })
       .notNull()
       .default("pending"),
+    internalHourlyCostRate: real("internal_hourly_cost_rate"),
+    weeklyCapacityHours: real("weekly_capacity_hours"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },

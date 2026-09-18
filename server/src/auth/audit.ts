@@ -15,6 +15,7 @@ export const AUDIT_EVENT_TYPES = {
   studioAvatarUploaded: "studio.avatar_uploaded",
   studioAvatarDeleted: "studio.avatar_deleted",
   studioSetupCompleted: "studio.setup_completed",
+  studioPreferencesUpdated: "studio.preferences_updated",
   inviteCreated: "team.invite_created",
   inviteResent: "team.invite_resent",
   inviteRevoked: "team.invite_revoked",
