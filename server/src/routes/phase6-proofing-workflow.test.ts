@@ -115,19 +115,16 @@ async function uploadVersion(
   filename: string,
   bytes: Buffer,
 ): Promise<{ versionId: string; filename: string }> {
-  const formData = new FormData()
-  formData.append("video", new Blob([bytes], { type: "video/mp4" }), filename)
-
-  const response = await fetch(
-    `${baseUrl}/api/deliverables/${deliverableId}/versions/${versionLabel}/upload`,
-    {
-      method: "POST",
-      headers: authHeaders(cookies, csrfToken, false),
-      body: formData,
-    },
+  const { tusUploadVersion } = await import("../test/tus-upload-helpers.js")
+  const body = await tusUploadVersion(
+    baseUrl,
+    cookies,
+    csrfToken,
+    deliverableId,
+    versionLabel,
+    filename,
+    bytes,
   )
-  assert.equal(response.status, 201)
-  const body = (await response.json()) as { versionId: string; filename: string }
   return body
 }
 
@@ -445,14 +442,15 @@ describe("Phase 6 authenticated proofing workflow", () => {
       Buffer.alloc(64, 0x33),
     )
 
-    const uploadDenied = await fetch(
-      `${baseUrl}/api/deliverables/${deliverable.id}/versions/v2/upload`,
-      {
-        method: "POST",
-        headers: authHeaders(proofingCookies, proofingCsrf, false),
-        body: new FormData(),
+    const uploadDenied = await fetch(`${baseUrl}/api/uploads/tus`, {
+      method: "POST",
+      headers: {
+        ...authHeaders(proofingCookies, proofingCsrf, false),
+        "Tus-Resumable": "1.0.0",
+        "Upload-Length": "8",
+        "Upload-Metadata": `deliverableId ${Buffer.from(deliverable.id).toString("base64")},version ${Buffer.from("v2").toString("base64")},filename ${Buffer.from("proofing.mp4").toString("base64")},filetype ${Buffer.from("video/mp4").toString("base64")}`,
       },
-    )
+    })
     assert.equal(uploadDenied.status, 403)
 
     const deliverableDenied = await fetch(

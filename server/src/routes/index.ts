@@ -18,7 +18,7 @@ import servicesRouter from "./services.js"
 import tasksRouter, { taskByIdRouter } from "./tasks.js"
 import timeLogsRouter, { timeLogByIdRouter } from "./time-logs.js"
 import timesheetRouter from "./timesheet.js"
-import uploadRouter from "./upload.js"
+import tusUploadRouter from "./tus-upload.js"
 import versionsRouter from "./versions.js"
 
 const apiRouter = Router()
@@ -59,11 +59,7 @@ securedRouter.use(
   validateDeliverableParams,
   commentsRouter,
 )
-securedRouter.use(
-  "/deliverables/:deliverableId/versions/:version/upload",
-  validateDeliverableParams,
-  uploadRouter,
-)
+securedRouter.use("/uploads/tus", tusUploadRouter)
 
 apiRouter.use(securedRouter)
 
