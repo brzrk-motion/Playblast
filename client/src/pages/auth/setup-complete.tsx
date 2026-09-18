@@ -38,8 +38,14 @@ export function SetupCompletePage() {
   const navigate = useNavigate()
   const { state, refresh } = useSession()
   const sessionStudio = state.status === "ready" ? state.session?.studio : null
+  const smtpConfiguredFromEnv =
+    state.status === "ready" ? state.setup.smtpConfiguredFromEnv : false
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  const onboardingSteps = ONBOARDING_STEPS.filter(
+    (step) => !(smtpConfiguredFromEnv && step.title === "Configure SMTP"),
+  )
 
   async function finishSetup(target: "/" | "/team") {
     setError(null)
@@ -87,7 +93,7 @@ export function SetupCompletePage() {
           <div className="space-y-3">
             <p className="text-sm font-medium">Recommended next steps</p>
             <ul className="space-y-3">
-              {ONBOARDING_STEPS.map((step) => (
+              {onboardingSteps.map((step) => (
                 <li
                   key={step.title}
                   className="border-border flex gap-3 rounded-lg border p-3"
@@ -103,8 +109,8 @@ export function SetupCompletePage() {
           </div>
 
           <p className="text-muted-foreground text-sm">
-            Operators manage Docker, backups, and HTTPS. Admins manage team, SMTP, and
-            proofing inside Playblast.
+            Operators manage Docker, backups, and HTTPS. Admins manage team
+            {smtpConfiguredFromEnv ? "" : ", SMTP,"} and proofing inside Playblast.
           </p>
 
           {error ? (

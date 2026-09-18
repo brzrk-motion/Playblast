@@ -17,6 +17,7 @@ describe("identity shared contracts", () => {
       status: "pending",
       nextRoute: "/setup",
       setupComplete: false,
+      smtpConfiguredFromEnv: false,
     }
 
     assert.equal(response.status, "pending")

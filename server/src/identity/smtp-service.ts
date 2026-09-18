@@ -9,6 +9,7 @@ import type {
   UpdateSmtpSettingsRequest,
 } from "@playblast/shared"
 import { eq } from "drizzle-orm"
+import { config, type SmtpEnvConfig } from "../config/env.js"
 import { getDrizzle } from "../db/drizzle.js"
 import { studioSmtpSettings } from "../db/schema/identity.js"
 import { decryptSecret, encryptSecret } from "./secret-crypto.js"
@@ -37,6 +38,7 @@ export class SmtpServiceError extends Error {
 function emptySettings(): SmtpSettingsResponse {
   return {
     configured: false,
+    smtpConfiguredFromEnv: false,
     host: null,
     port: null,
     username: null,
@@ -54,6 +56,7 @@ function emptySettings(): SmtpSettingsResponse {
 function mapRow(row: typeof studioSmtpSettings.$inferSelect): SmtpSettingsResponse {
   return {
     configured: true,
+    smtpConfiguredFromEnv: false,
     host: row.host,
     port: row.port,
     username: row.username,
@@ -103,6 +106,71 @@ function validateSmtpInput(input: UpdateSmtpSettingsRequest): Record<string, str
   return details
 }
 
+function resolveTlsModeFromEnv(secure: boolean, port: number): SmtpTlsMode {
+  if (secure || port === 465) {
+    return "tls"
+  }
+  if (port === 25 || port === 1025) {
+    return "none"
+  }
+  return "starttls"
+}
+
+function mapEnvSettings(
+  row: typeof studioSmtpSettings.$inferSelect | undefined,
+): SmtpSettingsResponse {
+  const env = config.smtpFromEnv!
+  return {
+    configured: true,
+    smtpConfiguredFromEnv: true,
+    host: env.host,
+    port: env.port,
+    username: env.user,
+    fromEmail: env.from,
+    tlsMode: resolveTlsModeFromEnv(env.secure, env.port),
+    instanceUrl: row?.instanceUrl ?? config.instanceUrl ?? null,
+    passwordConfigured: true,
+    testVerified: Boolean(row?.testVerifiedAt),
+    lastTestStatus: (row?.lastTestStatus as SmtpTestStatus) ?? "never",
+    lastTestAt: row?.lastTestAt ?? null,
+    lastTestError: row?.lastTestError ?? null,
+  }
+}
+
+function buildConnectionConfigFromEnv(env: SmtpEnvConfig): SmtpConnectionConfig {
+  return {
+    host: env.host,
+    port: env.port,
+    username: env.user,
+    password: env.pass,
+    fromEmail: env.from,
+    tlsMode: resolveTlsModeFromEnv(env.secure, env.port),
+    timeoutMs: SMTP_DEFAULT_TIMEOUT_MS,
+  }
+}
+
+function resolveConnectionConfig(
+  studioId: string,
+): SmtpConnectionConfig | null {
+  const env = config.smtpFromEnv
+  if (env) {
+    return buildConnectionConfigFromEnv(env)
+  }
+
+  const db = getDrizzle()
+  const row = db
+    .select()
+    .from(studioSmtpSettings)
+    .where(eq(studioSmtpSettings.studioId, studioId))
+    .get()
+
+  if (!row) {
+    return null
+  }
+
+  return buildConnectionConfig(row)
+}
+
 export function getSmtpSettings(studioId: string): SmtpSettingsResponse {
   const db = getDrizzle()
   const row = db
@@ -110,6 +178,10 @@ export function getSmtpSettings(studioId: string): SmtpSettingsResponse {
     .from(studioSmtpSettings)
     .where(eq(studioSmtpSettings.studioId, studioId))
     .get()
+
+  if (config.smtpConfiguredFromEnv) {
+    return mapEnvSettings(row)
+  }
 
   if (!row) {
     return emptySettings()
@@ -123,6 +195,13 @@ export function upsertSmtpSettings(
   input: UpdateSmtpSettingsRequest,
   existingPassword?: string,
 ): SmtpSettingsResponse {
+  if (config.smtpConfiguredFromEnv) {
+    throw new SmtpServiceError(
+      "FORBIDDEN",
+      "SMTP is preconfigured from the deployment environment and cannot be changed in the admin UI.",
+    )
+  }
+
   const details = validateSmtpInput(input)
   const password = input.password?.trim()
 
@@ -200,10 +279,21 @@ function buildConnectionConfig(
   }
 }
 
-export async function sendSmtpMessage(
+function recordEnvSmtpTestResult(
   studioId: string,
-  message: OutboundEmail,
-): Promise<{ success: true } | { success: false; error: string }> {
+  testedAt: string,
+  success: boolean,
+  error?: string,
+): void {
+  if (!config.smtpConfiguredFromEnv) {
+    return
+  }
+
+  const env = config.smtpFromEnv
+  if (!env) {
+    return
+  }
+
   const db = getDrizzle()
   const row = db
     .select()
@@ -211,12 +301,56 @@ export async function sendSmtpMessage(
     .where(eq(studioSmtpSettings.studioId, studioId))
     .get()
 
-  if (!row) {
+  if (row) {
+    db.update(studioSmtpSettings)
+      .set({
+        testVerifiedAt: success ? testedAt : null,
+        lastTestStatus: success ? "success" : "failed",
+        lastTestAt: testedAt,
+        lastTestError: success ? null : error ?? null,
+        updatedAt: testedAt,
+      })
+      .where(eq(studioSmtpSettings.studioId, studioId))
+      .run()
+    return
+  }
+
+  const instanceUrl = config.instanceUrl
+  if (!instanceUrl) {
+    return
+  }
+
+  db.insert(studioSmtpSettings)
+    .values({
+      studioId,
+      host: env.host,
+      port: env.port,
+      username: env.user,
+      passwordEncrypted: encryptSecret(env.pass),
+      fromEmail: env.from,
+      tlsMode: resolveTlsModeFromEnv(env.secure, env.port),
+      instanceUrl,
+      testVerifiedAt: success ? testedAt : null,
+      lastTestStatus: success ? "success" : "failed",
+      lastTestAt: testedAt,
+      lastTestError: success ? null : error ?? null,
+      createdAt: testedAt,
+      updatedAt: testedAt,
+    })
+    .run()
+}
+
+export async function sendSmtpMessage(
+  studioId: string,
+  message: OutboundEmail,
+): Promise<{ success: true } | { success: false; error: string }> {
+  const connection = resolveConnectionConfig(studioId)
+  if (!connection) {
     return { success: false, error: "SMTP is not configured." }
   }
 
   const transport = getSmtpTransport()
-  const result = await transport.send(buildConnectionConfig(row), message)
+  const result = await transport.send(connection, message)
 
   if (!result.accepted) {
     return {
@@ -235,14 +369,9 @@ export async function testSmtpDelivery(
 ): Promise<TestSmtpResponse> {
   const recipient = input.recipientEmail?.trim() || adminEmail
   const testedAt = new Date().toISOString()
-  const db = getDrizzle()
-  const row = db
-    .select()
-    .from(studioSmtpSettings)
-    .where(eq(studioSmtpSettings.studioId, studioId))
-    .get()
+  const connection = resolveConnectionConfig(studioId)
 
-  if (!row) {
+  if (!connection) {
     throw new SmtpServiceError("NOT_FOUND", "SMTP is not configured.")
   }
 
@@ -260,34 +389,44 @@ export async function testSmtpDelivery(
   }
 
   const transport = getSmtpTransport()
-  const result = await transport.send(buildConnectionConfig(row), message)
+  const result = await transport.send(connection, message)
 
   if (result.accepted) {
-    db.update(studioSmtpSettings)
-      .set({
-        testVerifiedAt: testedAt,
-        lastTestStatus: "success",
-        lastTestAt: testedAt,
-        lastTestError: null,
-        updatedAt: testedAt,
-      })
-      .where(eq(studioSmtpSettings.studioId, studioId))
-      .run()
+    recordEnvSmtpTestResult(studioId, testedAt, true)
+
+    if (!config.smtpConfiguredFromEnv) {
+      const db = getDrizzle()
+      db.update(studioSmtpSettings)
+        .set({
+          testVerifiedAt: testedAt,
+          lastTestStatus: "success",
+          lastTestAt: testedAt,
+          lastTestError: null,
+          updatedAt: testedAt,
+        })
+        .where(eq(studioSmtpSettings.studioId, studioId))
+        .run()
+    }
 
     return { status: "success", testedAt }
   }
 
   const error = result.errorMessage ?? "SMTP delivery failed."
-  db.update(studioSmtpSettings)
-    .set({
-      testVerifiedAt: null,
-      lastTestStatus: "failed",
-      lastTestAt: testedAt,
-      lastTestError: error,
-      updatedAt: testedAt,
-    })
-    .where(eq(studioSmtpSettings.studioId, studioId))
-    .run()
+  recordEnvSmtpTestResult(studioId, testedAt, false, error)
+
+  if (!config.smtpConfiguredFromEnv) {
+    const db = getDrizzle()
+    db.update(studioSmtpSettings)
+      .set({
+        testVerifiedAt: null,
+        lastTestStatus: "failed",
+        lastTestAt: testedAt,
+        lastTestError: error,
+        updatedAt: testedAt,
+      })
+      .where(eq(studioSmtpSettings.studioId, studioId))
+      .run()
+  }
 
   throw new SmtpServiceError("DELIVERY_FAILED", error)
 }
