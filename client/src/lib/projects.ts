@@ -1,3 +1,4 @@
+import { isProjectOverBudget } from "./financial-summary"
 import { PROJECT_STATUSES, isProjectArchived } from "../types/project"
 import type { ProjectStatus, ProjectSummary } from "../types/project"
 
@@ -107,6 +108,7 @@ export function recentlyUpdatedProjects(
 
 export type DashboardProjectFilter =
   | { type: "open_comments" }
+  | { type: "over_budget" }
   | { type: "status"; status: ProjectStatus }
   | { type: "archived" }
 
@@ -125,6 +127,10 @@ export function parseDashboardFilter(
 
   if (value === "open_comments") {
     return { type: "open_comments" }
+  }
+
+  if (value === "over_budget") {
+    return { type: "over_budget" }
   }
 
   if (value === "archived") {
@@ -149,6 +155,10 @@ export function dashboardFilterToParam(
     return "open_comments"
   }
 
+  if (filter.type === "over_budget") {
+    return "over_budget"
+  }
+
   if (filter.type === "archived") {
     return "archived"
   }
@@ -169,6 +179,10 @@ export function getDashboardFilterLabel(
     return "projects with open comments"
   }
 
+  if (filter.type === "over_budget") {
+    return "over-budget projects"
+  }
+
   if (filter.type === "archived") {
     return "archived projects"
   }
@@ -186,6 +200,10 @@ export function filterProjectsByDashboardFilter(
 
   if (filter.type === "open_comments") {
     return projects.filter((project) => project.openCommentCount > 0)
+  }
+
+  if (filter.type === "over_budget") {
+    return projects.filter((project) => isProjectOverBudget(project))
   }
 
   if (filter.type === "archived") {
