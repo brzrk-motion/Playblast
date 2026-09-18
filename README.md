@@ -1,6 +1,6 @@
 # Playblast
 
-Internal video proofing tool for BRZRK — timestamped comments, version management, side-by-side comparison, and approval workflows for reviewing CGI renders and motion work.
+Self-hosted video proofing — versions, timestamped comments, frame annotations, side-by-side compare, and approvals for reviewing CGI renders and motion work.
 
 ## Stack
 
