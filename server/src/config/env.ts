@@ -159,6 +159,15 @@ function resolveMailpitUrl(nodeEnv: "production" | "development"): string | unde
   return mailpitUrl.trim()
 }
 
+function resolveInstanceUrl(): string | undefined {
+  const instanceUrl = process.env.PLAYBLAST_INSTANCE_URL
+  if (!isNonEmptyEnv(instanceUrl)) {
+    return undefined
+  }
+
+  return instanceUrl.trim().replace(/\/$/, "")
+}
+
 export const config = {
   get port(): number {
     return parsePort(process.env.PORT, DEFAULT_PORT)
@@ -197,6 +206,9 @@ export const config = {
   },
   get mailpitUrl(): string | undefined {
     return resolveMailpitUrl(this.nodeEnv)
+  },
+  get instanceUrl(): string | undefined {
+    return resolveInstanceUrl()
   },
 }
 

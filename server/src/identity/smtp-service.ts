@@ -116,7 +116,9 @@ function resolveTlsModeFromEnv(secure: boolean, port: number): SmtpTlsMode {
   return "starttls"
 }
 
-function mapEnvSettings(instanceUrl: string | null): SmtpSettingsResponse {
+function mapEnvSettings(
+  row: typeof studioSmtpSettings.$inferSelect | undefined,
+): SmtpSettingsResponse {
   const env = config.smtpFromEnv!
   return {
     configured: true,
@@ -126,12 +128,12 @@ function mapEnvSettings(instanceUrl: string | null): SmtpSettingsResponse {
     username: env.user,
     fromEmail: env.from,
     tlsMode: resolveTlsModeFromEnv(env.secure, env.port),
-    instanceUrl,
+    instanceUrl: row?.instanceUrl ?? config.instanceUrl ?? null,
     passwordConfigured: true,
-    testVerified: true,
-    lastTestStatus: "success",
-    lastTestAt: null,
-    lastTestError: null,
+    testVerified: Boolean(row?.testVerifiedAt),
+    lastTestStatus: (row?.lastTestStatus as SmtpTestStatus) ?? "never",
+    lastTestAt: row?.lastTestAt ?? null,
+    lastTestError: row?.lastTestError ?? null,
   }
 }
 
@@ -178,7 +180,7 @@ export function getSmtpSettings(studioId: string): SmtpSettingsResponse {
     .get()
 
   if (config.smtpConfiguredFromEnv) {
-    return mapEnvSettings(row?.instanceUrl ?? null)
+    return mapEnvSettings(row)
   }
 
   if (!row) {
@@ -277,6 +279,67 @@ function buildConnectionConfig(
   }
 }
 
+function recordEnvSmtpTestResult(
+  studioId: string,
+  testedAt: string,
+  success: boolean,
+  error?: string,
+): void {
+  if (!config.smtpConfiguredFromEnv) {
+    return
+  }
+
+  const env = config.smtpFromEnv
+  if (!env) {
+    return
+  }
+
+  const db = getDrizzle()
+  const row = db
+    .select()
+    .from(studioSmtpSettings)
+    .where(eq(studioSmtpSettings.studioId, studioId))
+    .get()
+
+  if (row) {
+    db.update(studioSmtpSettings)
+      .set({
+        testVerifiedAt: success ? testedAt : null,
+        lastTestStatus: success ? "success" : "failed",
+        lastTestAt: testedAt,
+        lastTestError: success ? null : error ?? null,
+        updatedAt: testedAt,
+      })
+      .where(eq(studioSmtpSettings.studioId, studioId))
+      .run()
+    return
+  }
+
+  const instanceUrl = config.instanceUrl
+  if (!instanceUrl) {
+    return
+  }
+
+  db.insert(studioSmtpSettings)
+    .values({
+      studioId,
+      host: env.host,
+      port: env.port,
+      username: env.user,
+      passwordEncrypted: encryptSecret(env.pass),
+      fromEmail: env.from,
+      tlsMode: resolveTlsModeFromEnv(env.secure, env.port),
+      instanceUrl,
+      testVerifiedAt: success ? testedAt : null,
+      lastTestStatus: success ? "success" : "failed",
+      lastTestAt: testedAt,
+      lastTestError: success ? null : error ?? null,
+      createdAt: testedAt,
+      updatedAt: testedAt,
+    })
+    .run()
+}
+
 export async function sendSmtpMessage(
   studioId: string,
   message: OutboundEmail,
@@ -329,6 +392,8 @@ export async function testSmtpDelivery(
   const result = await transport.send(connection, message)
 
   if (result.accepted) {
+    recordEnvSmtpTestResult(studioId, testedAt, true)
+
     if (!config.smtpConfiguredFromEnv) {
       const db = getDrizzle()
       db.update(studioSmtpSettings)
@@ -347,6 +412,8 @@ export async function testSmtpDelivery(
   }
 
   const error = result.errorMessage ?? "SMTP delivery failed."
+  recordEnvSmtpTestResult(studioId, testedAt, false, error)
+
   if (!config.smtpConfiguredFromEnv) {
     const db = getDrizzle()
     db.update(studioSmtpSettings)
@@ -366,10 +433,6 @@ export async function testSmtpDelivery(
 
 export function requireVerifiedSmtp(studioId: string): void {
   const settings = getSmtpSettings(studioId)
-  if (settings.smtpConfiguredFromEnv) {
-    return
-  }
-
   if (!settings.configured || !settings.testVerified) {
     throw new SmtpServiceError(
       "VALIDATION_FAILED",

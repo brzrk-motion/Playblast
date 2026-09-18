@@ -83,7 +83,8 @@ describe("SMTP env precedence", () => {
     assert.equal(settings.fromEmail, "env@example.com")
     assert.equal(settings.tlsMode, "starttls")
     assert.equal(settings.passwordConfigured, true)
-    assert.equal(settings.testVerified, true)
+    assert.equal(settings.testVerified, false)
+    assert.equal(settings.lastTestStatus, "never")
   })
 
   it("prefers env SMTP values over stored UI settings", () => {

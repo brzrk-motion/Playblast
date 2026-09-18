@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Clapperboard, Mail, UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card"
 import { StudioIdentityPreview } from "@/components/studio/studio-profile-fields"
 import { useSession } from "@/hooks/use-session"
-import { completeStudioSetup, isApiError } from "@/lib/api-http"
+import { completeStudioSetup, fetchSmtpSettings, isApiError } from "@/lib/api-http"
 
 const ONBOARDING_STEPS = [
   {
@@ -40,6 +40,31 @@ export function SetupCompletePage() {
   const sessionStudio = state.status === "ready" ? state.session?.studio : null
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [smtpConfiguredFromEnv, setSmtpConfiguredFromEnv] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadSmtpStatus() {
+      try {
+        const settings = await fetchSmtpSettings()
+        if (!cancelled) {
+          setSmtpConfiguredFromEnv(settings.smtpConfiguredFromEnv)
+        }
+      } catch {
+        // Fall back to showing the SMTP onboarding step when settings are unavailable.
+      }
+    }
+
+    void loadSmtpStatus()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const onboardingSteps = ONBOARDING_STEPS.filter(
+    (step) => !(smtpConfiguredFromEnv && step.title === "Configure SMTP"),
+  )
 
   async function finishSetup(target: "/" | "/team") {
     setError(null)
@@ -87,7 +112,7 @@ export function SetupCompletePage() {
           <div className="space-y-3">
             <p className="text-sm font-medium">Recommended next steps</p>
             <ul className="space-y-3">
-              {ONBOARDING_STEPS.map((step) => (
+              {onboardingSteps.map((step) => (
                 <li
                   key={step.title}
                   className="border-border flex gap-3 rounded-lg border p-3"
@@ -103,8 +128,8 @@ export function SetupCompletePage() {
           </div>
 
           <p className="text-muted-foreground text-sm">
-            Operators manage Docker, backups, and HTTPS. Admins manage team, SMTP, and
-            proofing inside Playblast.
+            Operators manage Docker, backups, and HTTPS. Admins manage team
+            {smtpConfiguredFromEnv ? "" : ", SMTP,"} and proofing inside Playblast.
           </p>
 
           {error ? (

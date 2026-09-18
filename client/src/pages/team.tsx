@@ -336,6 +336,7 @@ export function TeamPage() {
   }
 
   const canInvite = Boolean(smtp?.testVerified)
+  const smtpConfiguredFromEnv = Boolean(smtp?.smtpConfiguredFromEnv)
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -348,13 +349,64 @@ export function TeamPage() {
 
       {isAdmin ? <Card>
         <CardHeader>
-          <CardTitle>SMTP configuration</CardTitle>
+          <CardTitle>
+            {smtpConfiguredFromEnv ? "SMTP delivery" : "SMTP configuration"}
+          </CardTitle>
           <CardDescription>
-            Configure your studio&apos;s email relay. Credentials are stored locally and never
-            returned by the API.
+            {smtpConfiguredFromEnv
+              ? "SMTP is preconfigured from your deployment environment. Send a test email to confirm the relay is working."
+              : "Configure your studio's email relay. Credentials are stored locally and never returned by the API."}
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {smtpConfiguredFromEnv ? (
+            <div className="grid gap-4">
+              <dl className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <dt className="text-muted-foreground text-sm">SMTP host</dt>
+                  <dd className="text-sm font-medium">{smtp?.host ?? "—"}</dd>
+                </div>
+                <div className="space-y-1">
+                  <dt className="text-muted-foreground text-sm">Port</dt>
+                  <dd className="text-sm font-medium">{smtp?.port ?? "—"}</dd>
+                </div>
+                <div className="space-y-1">
+                  <dt className="text-muted-foreground text-sm">Sender email</dt>
+                  <dd className="text-sm font-medium">{smtp?.fromEmail ?? "—"}</dd>
+                </div>
+                <div className="space-y-1">
+                  <dt className="text-muted-foreground text-sm">TLS mode</dt>
+                  <dd className="text-sm font-medium">{smtp?.tlsMode ?? "—"}</dd>
+                </div>
+              </dl>
+
+              {smtpFormError ? (
+                <p className="text-destructive text-sm">{smtpFormError}</p>
+              ) : null}
+
+              {smtp?.lastTestStatus === "failed" && smtp.lastTestError ? (
+                <p className="text-destructive text-sm">Last test failed: {smtp.lastTestError}</p>
+              ) : null}
+
+              {smtp?.testVerified ? (
+                <p className="text-muted-foreground text-sm">SMTP delivery confirmed.</p>
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  Send a test email to confirm delivery before inviting team members.
+                </p>
+              )}
+
+              <div>
+                <Button
+                  type="button"
+                  disabled={smtpTesting || !smtp?.configured}
+                  onClick={() => void handleTestSmtp()}
+                >
+                  {smtpTesting ? "Testing..." : "Send test email"}
+                </Button>
+              </div>
+            </div>
+          ) : (
           <form className="grid gap-4" onSubmit={(event) => void handleSaveSmtp(event)}>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -463,6 +515,7 @@ export function TeamPage() {
               </Button>
             </div>
           </form>
+          )}
         </CardContent>
       </Card> : null}
 
