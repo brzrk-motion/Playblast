@@ -259,3 +259,37 @@ jobs:
 
       - name: Run Docker deployment verification
         run: npm run verify:docker-deployment
+
+  smtp-mailpit:
+    name: SMTP Mailpit test-send proof
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y python3 make g++
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prove SMTP test-send lands in Mailpit
+        run: npm run verify:smtp-mailpit
+        env:
+          NODE_ENV: development
+          SMTP_HOST: 127.0.0.1
+          SMTP_PORT: "1025"
+          SMTP_SECURE: "false"
+          SMTP_USER: ci
+          SMTP_PASS: ci
+          SMTP_FROM: noreply@playblast.local
+          MAILPIT_URL: http://127.0.0.1:8025
+          PLAYBLAST_INSTANCE_URL: http://127.0.0.1:3099
+          SESSION_SECRET: ci-smtp-mailpit-test-secret-32chars
+          # Explicitly unset production SMTP overrides from repository secrets.
+          SMTP_REPLY_TO: ""
