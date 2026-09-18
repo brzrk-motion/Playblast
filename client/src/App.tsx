@@ -28,6 +28,7 @@ const ProjectsPage = lazy(() => import("@/pages/projects"))
 const ServicesPage = lazy(() => import("@/pages/services"))
 const SettingsPage = lazy(() => import("@/pages/settings"))
 const TeamPage = lazy(() => import("@/pages/team"))
+const AuditPage = lazy(() => import("@/pages/audit"))
 const TimesheetPage = lazy(() => import("@/pages/timesheet"))
 const PipelinePage = lazy(() => import("@/pages/pipeline"))
 
@@ -80,6 +81,7 @@ function App() {
                       />
                       <Route path="settings" element={<SettingsPage />} />
                       <Route path="team" element={<TeamPage />} />
+                      <Route path="audit" element={<AuditPage />} />
                       <Route path="profile" element={<ProfilePage />} />
                       <Route path="*" element={<Navigate to="/" replace />} />
                     </Route>

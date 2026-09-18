@@ -36,6 +36,8 @@ export const API_ROUTES: ApiRouteDefinition[] = [
   { method: "GET", path: "/api/studio/avatar", access: "authenticated", requiredCapabilities: ["studio.view"] },
    { method: "GET", path: "/api/users", access: "authenticated", requiredCapabilities: ["team.view"] },
   { method: "GET", path: "/api/invitations", access: "admin", requiredCapabilities: ["team.manage"] },
+  { method: "GET", path: "/api/audit-events", access: "admin", requiredCapabilities: [] },
+  { method: "GET", path: "/api/audit-events/export", access: "admin", requiredCapabilities: [] },
   { method: "GET", path: "/api/smtp", access: "admin", requiredCapabilities: ["settings.smtp"] },
   { method: "PUT", path: "/api/smtp", access: "admin", requiredCapabilities: ["settings.smtp"] },
   { method: "POST", path: "/api/smtp/test", access: "admin", requiredCapabilities: ["settings.smtp"] },
