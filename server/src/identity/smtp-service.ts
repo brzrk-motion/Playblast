@@ -9,7 +9,12 @@ import type {
   UpdateSmtpSettingsRequest,
 } from "@playblast/shared"
 import { eq } from "drizzle-orm"
-import { config, type SmtpEnvConfig } from "../config/env.js"
+import { config, isProduction, type SmtpEnvConfig } from "../config/env.js"
+import {
+  assertProductionSmtpNotCatcher,
+  getProductionCatcherRefusalMessage,
+  isSmtpCatcherEndpoint,
+} from "../config/smtp-catcher.js"
 import { getDrizzle } from "../db/drizzle.js"
 import { studioSmtpSettings } from "../db/schema/identity.js"
 import { decryptSecret, encryptSecret } from "./secret-crypto.js"
@@ -104,6 +109,28 @@ function validateSmtpInput(input: UpdateSmtpSettingsRequest): Record<string, str
   }
 
   return details
+}
+
+function validateProductionSmtpTarget(host: string, port: number): Record<string, string[]> {
+  if (!isProduction()) {
+    return {}
+  }
+
+  if (isSmtpCatcherEndpoint(host, port)) {
+    return {
+      host: [getProductionCatcherRefusalMessage(host, port)],
+    }
+  }
+
+  return {}
+}
+
+function assertProductionSmtpTarget(host: string, port: number): void {
+  if (!isProduction()) {
+    return
+  }
+
+  assertProductionSmtpNotCatcher(host, port)
 }
 
 function resolveTlsModeFromEnv(secure: boolean, port: number): SmtpTlsMode {
@@ -203,6 +230,7 @@ export function upsertSmtpSettings(
   }
 
   const details = validateSmtpInput(input)
+  Object.assign(details, validateProductionSmtpTarget(input.host.trim(), input.port))
   const password = input.password?.trim()
 
   if (!password && !existingPassword) {
@@ -349,6 +377,15 @@ export async function sendSmtpMessage(
     return { success: false, error: "SMTP is not configured." }
   }
 
+  try {
+    assertProductionSmtpTarget(connection.host, connection.port)
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Invalid SMTP configuration.",
+    }
+  }
+
   const transport = getSmtpTransport()
   const result = await transport.send(connection, message)
 
@@ -373,6 +410,22 @@ export async function testSmtpDelivery(
 
   if (!connection) {
     throw new SmtpServiceError("NOT_FOUND", "SMTP is not configured.")
+  }
+
+  try {
+    assertProductionSmtpTarget(connection.host, connection.port)
+  } catch (error) {
+    throw new SmtpServiceError(
+      "VALIDATION_FAILED",
+      error instanceof Error ? error.message : "Invalid SMTP configuration.",
+      {
+        host: [
+          error instanceof Error
+            ? error.message
+            : "Production SMTP must not point at a development email catcher.",
+        ],
+      },
+    )
   }
 
   const message: OutboundEmail = {

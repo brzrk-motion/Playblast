@@ -32,6 +32,15 @@ export SESSION_SECRET="compose-config-check-secret-32-characters-min"
 echo "Validating docker-compose.yml..."
 $COMPOSE -f docker-compose.yml config >/dev/null
 
+if [[ -f docker-compose.dev.yml ]]; then
+  echo "Validating docker-compose.dev.yml overlay..."
+  $COMPOSE -f docker-compose.yml -f docker-compose.dev.yml config >/dev/null
+  $COMPOSE -f docker-compose.yml -f docker-compose.dev.yml config | grep -q 'axllent/mailpit' || {
+    echo "error: rendered dev compose config missing Mailpit service" >&2
+    exit 1
+  }
+fi
+
 echo "Checking healthcheck and required environment..."
 $COMPOSE -f docker-compose.yml config | grep -q 'SESSION_SECRET' || {
   echo "error: rendered compose config missing SESSION_SECRET" >&2
