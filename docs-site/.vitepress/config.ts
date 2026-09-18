@@ -27,7 +27,8 @@ export default defineConfig({
   themeConfig: {
     siteTitle: 'Playblast',
     nav: [
-      { text: 'Get started', link: '/deployment/' },
+      { text: 'Install', link: '/deployment/install-linux-nas' },
+      { text: 'Deployment guide', link: '/deployment/' },
       { text: 'GitHub', link: 'https://github.com/brzrk-motion/Playblast' }
     ],
     sidebar: [

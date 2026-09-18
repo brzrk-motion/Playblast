@@ -2,6 +2,8 @@
 
 Self-hosted release and operations guides for one Playblast instance per studio.
 
+**[Install Playblast on Linux or Synology NAS →](./install-linux-nas.md)** — primary install guide for host operators.
+
 ## Start here
 
 | Guide | Audience | Purpose |
