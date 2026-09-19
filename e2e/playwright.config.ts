@@ -34,13 +34,19 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
       dependencies: ["setup"],
-      testIgnore: [/auth\.setup\.ts/, /docker-bootstrap\.spec\.ts/],
+      testIgnore: [/auth\.setup\.ts/, /docker-bootstrap\.spec\.ts/, /mailpit-smtp\.spec\.ts/],
     },
     {
       name: "docker-bootstrap",
       use: { ...devices["Desktop Chrome"] },
       testMatch: /docker-bootstrap\.spec\.ts/,
       timeout: 600_000,
+    },
+    {
+      name: "mailpit",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /mailpit-smtp\.spec\.ts/,
+      timeout: 180_000,
     },
   ],
 })

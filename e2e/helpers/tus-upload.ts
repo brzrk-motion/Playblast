@@ -1,4 +1,5 @@
-import { authHeaders } from "./api.js"
+import assert from "node:assert/strict"
+import { cookieHeader } from "./api.js"
 
 export interface TusUploadResponse {
   filename: string
@@ -46,17 +47,14 @@ export async function tusUploadVersion(
       "Tus-Resumable": "1.0.0",
       "Upload-Length": String(bytes.length),
       "Upload-Metadata": encodeTusMetadata(metadata),
-      ...authHeaders(cookies, csrfToken, false),
+      Cookie: cookieHeader(cookies),
+      "X-CSRF-Token": csrfToken,
     },
   })
-  if (createResponse.status !== 201) {
-    throw new Error(`tus create ${versionLabel} failed: ${createResponse.status}`)
-  }
+  assert.equal(createResponse.status, 201, await createResponse.text())
 
   const location = createResponse.headers.get("Location")
-  if (!location) {
-    throw new Error(`tus create ${versionLabel} missing Location header`)
-  }
+  assert.ok(location, "tus create response missing Location header")
 
   const patchResponse = await fetch(resolveTusUrl(baseUrl, location), {
     method: "PATCH",
@@ -64,14 +62,13 @@ export async function tusUploadVersion(
       "Tus-Resumable": "1.0.0",
       "Upload-Offset": "0",
       "Content-Type": "application/offset+octet-stream",
-      ...authHeaders(cookies, csrfToken, false),
+      Cookie: cookieHeader(cookies),
+      "X-CSRF-Token": csrfToken,
     },
     body: new Uint8Array(bytes),
   })
 
-  if (patchResponse.status !== 200) {
-    throw new Error(`tus patch ${versionLabel} failed: ${patchResponse.status}`)
-  }
-
-  return (await patchResponse.json()) as TusUploadResponse
+  const patchBody = await patchResponse.text()
+  assert.equal(patchResponse.status, 200, patchBody)
+  return JSON.parse(patchBody) as TusUploadResponse
 }

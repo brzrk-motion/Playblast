@@ -16,7 +16,7 @@ Self-hosted release and operations guides for one Playblast instance per studio.
 | [TLS / reverse proxy](./tls-proxy.md) | Host operator | LAN/VPN-only stance, Caddy overlay, `PROXY_HOPS` |
 | [Roles, SMTP, and recovery](./roles-smtp-recovery.md) | Admin | Capabilities, email, and credential recovery |
 | [Mailpit (dev / CI only)](./mailpit-dev.md) | Developer / CI | Local email catcher; not production deliverability |
-| [Backup and restore](./backup-restore.md) | Host operator | What to back up, restore drills, session effects |
+| [Backup and restore](./backup-restore.md) | Host operator | What to back up, restore drills, post-restore SMTP, session effects |
 | [Migrations](./migrations.md) | Host operator | Legacy SQL + Drizzle ordering, upgrade safety |
 | [Secrets and permissions](./secrets.md) | Host operator | SESSION_SECRET, recovery token, file permissions |
 | [Upgrade and rollback](./upgrade-rollback.md) | Host operator | Image upgrades, unsupported downgrades |
@@ -32,6 +32,7 @@ Run from the repository root after `npm install`. The full release-candidate com
 | `npm run verify:deployment-config` | No | Dockerfile, Compose, env examples, and docs presence |
 | `npm run verify:docker-compose` | Yes (skipped if absent) | `docker compose config` renders cleanly |
 | `npm run verify:docker-deployment` | Yes (skipped if absent) | Build, start, `/health`, and clean setup status |
+| `npm run verify:nas-deployment` | Yes (skipped if absent) | Synology-equivalent bind-mount smoke (`deploy/synology/docker-compose.synology.yml`) |
 | `npm run verify:clean-install` | Optional | Fresh volumes → setup → login → project → tus upload stub → comment; runs Docker smoke when daemon available |
 | `npm run verify:smtp-mailpit` | Optional | SMTP test-send delivery via Mailpit in CI/dev |
 | `npm run verify:backup-restore` | No | Filesystem backup → wipe → restore of DB + uploads |
@@ -42,7 +43,7 @@ Run from the repository root after `npm install`. The full release-candidate com
 
 If Docker or browser dependencies are unavailable, record those gates as environment-blocked rather than treating the remaining checks as release sign-off. See the [release candidate guide](https://github.com/brzrk-motion/Playblast/blob/development-mvp/docs/release/README.md) for the manual cross-browser, clean-machine, SMTP, NAS, and adoption gates.
 
-**Known limitation:** on box-local / agent-computer hosts without a usable `docker.sock`, `npm run verify:docker-deployment` is **SKIPPED**. CI run **34183858263** (Docker deployment smoke success, 2026-09-08 ~03:34Z UTC on PR #113) is the dated host-health signal until a daemon-capable host re-runs. Do **not** claim Gate 1 closed from a local skip.
+**Known limitation:** on box-local / agent-computer hosts without a usable `docker.sock`, `npm run verify:docker-deployment` is **SKIPPED**. Do **not** claim Gate 1 closed from a local skip. Current daemon-capable evidence: [T10 Docker deployment smoke](../soft-rc/t10-docker-deployment-evidence.md) (**passed** 2026-09-19T05:12:19Z UTC). Prior CI signal: run **34183858263** (2026-09-08 ~03:34Z UTC, PR #113).
 
 ## Support boundary
 

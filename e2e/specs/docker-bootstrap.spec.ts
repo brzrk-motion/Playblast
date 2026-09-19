@@ -288,8 +288,19 @@ services:
 
       // Reuse the pre-restart browser session before testing a fresh login.
       // This verifies Docker restart preserves the session contract, not only
-      // the database and setup state.
-      await page.goto(`${baseUrl}/projects`)
+      // the database and setup state. Lazy-loaded chunks can fail once while
+      // the container is still restarting behind the TCP proxy; retry via the
+      // chunk error boundary before asserting the shell.
+      await page.goto(`${baseUrl}/projects`, { waitUntil: "domcontentloaded" })
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const chunkFailure = page.getByText("This page failed to load")
+        if (await chunkFailure.isVisible().catch(() => false)) {
+          await page.getByRole("button", { name: "Try again" }).click()
+          await page.waitForLoadState("networkidle")
+          continue
+        }
+        break
+      }
       await expect(page).not.toHaveURL(/\/login/)
       await expect(page.getByRole("heading", { name: "Projects", level: 1 })).toBeVisible({
         timeout: 60_000,

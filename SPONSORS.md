@@ -1,25 +1,38 @@
-# Sponsors
+# Sponsors & funding
 
-Playblast is free, open-source, and self-hosted. Studios run their own instance; optional **donations** and **company sponsorships** fund general maintenance and development.
+Playblast is free, open-source, and self-hosted — built for motion-studio proofing first. Studios run their own instance on Docker or NAS; optional **donations** and **company sponsorships** help fund general maintenance and development.
 
-This matches Brzrk Interactive’s current model: no hosted SaaS, no founder-installed deployments, and **no support SLA** in the short term.
+> **Soft release candidate.** Playblast is in soft RC: usable for self-hosted pilots, still maturing. Funding channels below are **not live yet** — we are preparing Open Collective via [Open Source Collective](https://opencollective.com/opensource) (OSC) and have **no active sponsors or donation checkout** at this time.
+
+This matches Brzrk Interactive’s model: no hosted SaaS, no founder-installed deployments, and **no support SLA**.
 
 ## Why sponsor
 
-- Keep a motion-studio proofing stack that runs on your Docker host or Synology NAS
-- Fund docs, release hardening, and security response for a tool you can trust with client media
-- Strengthen an OSS alternative that leaves review media on studio-controlled infrastructure
+- Keep a proofing stack that runs on your Docker host or Synology NAS
+- Fund docs, release hardening, and security response for a tool you trust with client media
+- Strengthen OSS that leaves review media on studio-controlled infrastructure
 
-## How to sponsor
+## How to fund
 
-1. Use GitHub Sponsors for the `brzrk-motion` org once enabled (see [`.github/FUNDING.yml`](.github/FUNDING.yml)).
-2. Until Sponsors is enabled on the org, open a non-security Discussion or contact org maintainers about a company sponsorship.
-3. One-time donations are welcome the same way — they do not purchase a service.
+| Channel | Status |
+|---------|--------|
+| **Open Collective (via OSC)** | **Planned primary** — checkout opens when OSC accepts the project and publishes the canonical collective URL |
+| **GitHub Sponsors** | **Pending secondary** — org Sponsors not enabled yet; [`.github/FUNDING.yml`](.github/FUNDING.yml) is ready |
 
-## What sponsors get
+**Until checkout is live:**
 
-- Public recognition on this page (name + link) with permission
-- Transparent project reporting as the release matures
+1. Open a non-security [Discussion](https://github.com/brzrk-motion/Playblast/discussions) if you want to express interest or coordinate a company sponsorship.
+2. Do not send payment details through issues — use Discussions or maintainer contact only for non-financial coordination.
+
+We will update this page and `FUNDING.yml` with the Open Collective URL once OSC provides it. No checkout flow is linked before then.
+
+## Recognition ladder
+
+Recognition stays lightweight and honest — no pay-to-play roadmap influence.
+
+1. **Thanks** — every donation or sponsorship gets a direct thank-you from maintainers (public listing optional).
+2. **Issue & Discussion credit** — contributors who help through bugs, docs, or Discussions may be thanked in threads or release notes where it fits; no payment required.
+3. **Sponsor listing** — once funding is live, sponsors who opt in get name + link on this page (permission required).
 
 ## What sponsorship is not
 
@@ -34,6 +47,6 @@ Operators still own Docker, networking, HTTPS/VPN, backups, and SMTP. See the RE
 
 Paid support tiers are explicitly deferred until adoption evidence and founder capacity justify them.
 
-## Recognition
+## Current sponsors
 
-_No public sponsors listed yet — be the first._
+_No public sponsors or active funding channels yet._
