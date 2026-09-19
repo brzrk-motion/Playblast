@@ -1,0 +1,20 @@
+title: "[Community]: "
+labels: ["community"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        General community conversation — sponsorship interest, adoption feedback, or questions that do not fit install/ops Q&A.
+
+        Playblast is **soft RC** and **self-hosted**: no hosted SaaS, no paid support SLA, and no star-farming.
+
+        - **Install / Docker / NAS / SMTP** → use the **Q&A** category instead
+        - **Bugs with repro steps** → [Bug report issue](https://github.com/brzrk-motion/Playblast/issues/new?template=bug_report.md)
+        - **Funding** → see [SPONSORS.md](https://github.com/brzrk-motion/Playblast/blob/development-mvp/SPONSORS.md)
+  - type: textarea
+    id: message
+    attributes:
+      label: Message
+      description: Share context so maintainers and other operators can help
+    validations:
+      required: true

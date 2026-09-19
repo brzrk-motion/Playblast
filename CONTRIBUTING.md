@@ -12,6 +12,7 @@ For orientation, start with the [README](README.md). Deployment and install guid
 
 ## Ways to contribute
 
+- **Install / operator questions** — [GitHub Discussions](https://github.com/brzrk-motion/Playblast/discussions) (Q&A category); see [docs/community/getting-help.md](docs/community/getting-help.md)
 - **Bug reports** — use the [Bug report](.github/ISSUE_TEMPLATE/bug_report.md) issue template
 - **Feature ideas** — use the [Feature request](.github/ISSUE_TEMPLATE/feature_request.md) template; tie ideas to studio proofing workflows when possible
 - **Documentation** — deploy, NAS, and operator docs under `docs/` are especially welcome
@@ -21,7 +22,7 @@ Sponsorship keeps the lights on for a free self-hosted tool. See [SPONSORS.md](S
 
 ## Reporting issues
 
-Use GitHub Issues with the templates above. Good reports help maintainers reproduce problems quickly:
+Use GitHub Issues for **actionable defects and feature proposals** — not install/operator how-tos (those belong in [Discussions](https://github.com/brzrk-motion/Playblast/discussions)). Good bug reports help maintainers reproduce problems quickly:
 
 - **Version or commit** — image tag, `git rev-parse HEAD`, or release label
 - **Role** — admin, creative, or proofing when the bug involves permissions or UI

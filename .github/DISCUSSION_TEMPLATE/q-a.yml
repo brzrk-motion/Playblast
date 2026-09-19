@@ -1,0 +1,52 @@
+title: "[Install / ops]: "
+labels: ["install", "operator"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this category for **self-host install and operator questions** — Docker, Synology/NAS, SMTP, backups, and upgrades.
+
+        Playblast is in **soft release candidate**: we welcome questions but do not guarantee response times, uptime, or remote hands.
+
+        - **Actionable software defects** → [Bug report issue](https://github.com/brzrk-motion/Playblast/issues/new?template=bug_report.md)
+        - **Security vulnerabilities** → [private advisory](https://github.com/brzrk-motion/Playblast/security/advisories/new)
+        - **Docs first** → [deployment guide](https://github.com/brzrk-motion/Playblast/blob/development-mvp/docs/deployment/index.md)
+
+        Do not paste secrets, production credentials, or client deliverables.
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic
+      options:
+        - Docker install / compose
+        - Synology / NAS
+        - First-run setup / invites
+        - SMTP / email delivery
+        - Backup / restore / upgrade
+        - Roles / permissions
+        - Other operator question
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Image tag, `git rev-parse HEAD`, or release label
+      placeholder: e.g. playblast:latest, v0.1.0-rc.1
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What are you trying to do, and where are you stuck?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Environment
+      description: Host OS, Docker version, deploy path (dev / Docker / NAS), and any relevant logs (redacted)
+      placeholder: |
+        - Host: Ubuntu 22.04 / Synology DSM 7.x
+        - Deploy: docker compose
+        - Role: admin
+        - Error/log excerpt (no secrets):

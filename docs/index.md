@@ -17,6 +17,18 @@ Product overview and workflow details live on [brzrkmotion.com/playblast](https:
 | [Operator vs application Admin](./deployment/operator-responsibilities) | Host operator + Admin |
 | [TLS / reverse proxy](./deployment/tls-proxy) | Host operator |
 
+## Community & help
+
+Playblast is in **soft release candidate** — no paid support SLA.
+
+| Need | Where |
+|------|-------|
+| Install, Docker/NAS, SMTP, backups | [GitHub Discussions](https://github.com/brzrk-motion/Playblast/discussions) |
+| Software defects (repro steps) | [GitHub Issues](https://github.com/brzrk-motion/Playblast/issues) |
+| Security | [Private advisory](https://github.com/brzrk-motion/Playblast/security/advisories/new) |
+
+Full routing: [Getting help](./community/getting-help.md).
+
 ## Support boundary
 
-Playblast is free, open-source, and self-hosted. Studios operate their own Docker host, networking, HTTPS/VPN, SMTP delivery, backups, and recovery. Report defects through the [public issue tracker](https://github.com/brzrk-motion/Playblast/issues).
+Playblast is free, open-source, and self-hosted. Studios operate their own Docker host, networking, HTTPS/VPN, SMTP delivery, backups, and recovery.
