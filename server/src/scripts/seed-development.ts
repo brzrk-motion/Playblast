@@ -131,8 +131,8 @@ export function seedDevelopmentDatabase(uploadDir = config.uploadDir): boolean {
 
     const insertLead = db.prepare(
       `INSERT INTO leads
-       (id, name, company, email, phone, source, status, notes, lastContactedAt, replied, createdAt, updatedAt, studioId)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, name, company, email, phone, source, status, notes, lastContactedAt, replied, assignedToUserId, createdAt, updatedAt, studioId)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     insertLead.run(
       "lead-kinetic",
@@ -145,6 +145,7 @@ export function seedDevelopmentDatabase(uploadDir = config.uploadDir): boolean {
       "Interested in a quarterly launch package.",
       "2026-09-09T15:00:00.000Z",
       1,
+      "dev-account-executive",
       "2026-08-14T10:00:00.000Z",
       now,
       SEEDED_STUDIO_ID,
@@ -160,6 +161,7 @@ export function seedDevelopmentDatabase(uploadDir = config.uploadDir): boolean {
       "Asked for a reel and rough range for a product film.",
       "2026-09-06T11:30:00.000Z",
       1,
+      "dev-account-executive",
       "2026-08-28T09:30:00.000Z",
       now,
       SEEDED_STUDIO_ID,
@@ -175,6 +177,7 @@ export function seedDevelopmentDatabase(uploadDir = config.uploadDir): boolean {
       "Follow up after the September brand workshop.",
       "2026-09-03T14:00:00.000Z",
       0,
+      "dev-account-executive",
       "2026-09-01T08:00:00.000Z",
       now,
       SEEDED_STUDIO_ID,
@@ -190,6 +193,7 @@ export function seedDevelopmentDatabase(uploadDir = config.uploadDir): boolean {
       "New inquiry for a holiday campaign.",
       null,
       0,
+      "dev-account-executive",
       "2026-09-10T16:00:00.000Z",
       now,
       SEEDED_STUDIO_ID,
@@ -205,6 +209,7 @@ export function seedDevelopmentDatabase(uploadDir = config.uploadDir): boolean {
       "Budget moved to a later quarter.",
       "2026-08-22T10:00:00.000Z",
       0,
+      "dev-account-executive",
       "2026-08-05T12:00:00.000Z",
       now,
       SEEDED_STUDIO_ID,

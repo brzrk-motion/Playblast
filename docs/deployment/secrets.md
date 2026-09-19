@@ -41,18 +41,19 @@ If enabled without `PLAYBLAST_AUTH_USER` and `PLAYBLAST_AUTH_PASSWORD`, producti
 
 ## SMTP credentials
 
-Two supported paths (choose one per instance):
+SMTP is configured **after first-run setup** (not in the setup wizard). Three supported paths:
 
-| Path | Where secrets live | When to use |
-|------|-------------------|-------------|
-| **Team UI** (default) | Encrypted in SQLite (`data/`) | Most self-hosted studios; configure after first-run setup on **Team** |
-| **Environment** (optional) | Host `.env` / Container Manager env | CI, GitOps, or operators who prefer 12-factor config |
+| Method | Storage | Team UI |
+|--------|---------|---------|
+| Environment (`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`) | Host environment | Read-only delivery card |
+| Team settings (Admin) | Local SQLite database | Editable form |
+| Mailpit dev (`MAILPIT_URL` in development only) | Not stored; routes to local catcher | Read-only delivery card |
 
-Required env keys for the environment path: `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`. Optional: `SMTP_REPLY_TO`, `PLAYBLAST_INSTANCE_URL`.
+Optional env keys: `SMTP_REPLY_TO`, `PLAYBLAST_INSTANCE_URL`. When the full env set is present, Admin UI SMTP fields are read-only and env values take precedence. Partial env sets are ignored — configure via Team instead.
 
-When the full env set is present, Admin UI SMTP fields are read-only and env values take precedence. Partial env sets are ignored — configure via Team instead.
+Include the database backup when protecting UI-configured SMTP. Do not commit SMTP passwords to compose files or git.
 
-Do not commit SMTP passwords to compose files or git. Include `data/` in backups when using the Team UI path.
+Local Mailpit workflow: [mailpit-dev.md](mailpit-dev.md).
 
 ## File permissions
 

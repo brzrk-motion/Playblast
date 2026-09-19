@@ -39,8 +39,8 @@ This gate:
 
 | Check | Date (UTC) | Host | Result | Notes |
 |-------|------------|------|--------|-------|
-| Filesystem clean-install smoke | 2026-09-19T03:07:23Z | Cloud agent VM (`linear/t7-clean-install-evidence-c0de`) | **Passed** | `npm run verify:clean-install` — setup pending→complete, login, project, stub upload, comment; SMTP on Team route only |
-| Docker container clean-install | 2026-09-19T03:07:23Z | Cloud agent VM | **Skipped** | No Docker daemon (`docker.sock` unavailable); not Gate closure |
+| Filesystem clean-install smoke | 2026-09-19T04:47:52Z | Cloud agent VM (`linear/t7-clean-install-evidence-c0de`, merged `development-mvp`) | **Passed** | `npm run verify:clean-install` — setup pending→complete, login, project, tus stub upload, comment; SMTP on Team route only |
+| Docker container clean-install | 2026-09-19T04:47:52Z | Cloud agent VM | **Skipped** | No Docker daemon (`docker.sock` unavailable); not Gate closure |
 | Docs-only operator walkthrough | | External operator host | **Open** | Requires fresh VM/NAS following [install](../deployment/install-linux-nas.md) + [onboarding](../deployment/onboarding-walkthrough.md) only |
 
 **Do not** record passwords, tokens, SMTP secrets, or invite links in this table.

@@ -17,21 +17,17 @@ Admins invite Account Executive, Creative, and Proofing users from **Team**. Inv
 
 SMTP is **not** part of the first-run setup wizard. After setup completes, configure email from **Team** (`/team`) or via deployment environment variables (see below).
 
-### Team UI path (default)
+### UI-configured SMTP
 
 1. Sign in as Admin → **Team**.
 2. Open SMTP settings.
 3. Enter host, port, TLS mode, username, and password for your studio's mail relay.
-4. Run **Test delivery** to a reachable inbox.
-5. Save settings before sending invitations.
+4. Save settings, then run **Send test email** to a reachable inbox.
+5. Send invitations after test delivery succeeds.
 
-If SMTP is unavailable, the instance remains usable for signed-in users, but new email invitations will not deliver until test delivery succeeds.
+### Environment-preconfigured SMTP
 
-SMTP credentials configured in the UI live in the local database. Back up `data/` to protect them.
-
-### Environment path (optional 12-factor override)
-
-When **all** required SMTP variables are set in the deployment environment, Playblast treats SMTP as preconfigured (`smtpConfiguredFromEnv: true`). The Team UI shows read-only settings and blocks UI updates; invitations still require a successful test delivery.
+When the operator sets all required `SMTP_*` environment variables, the Team SMTP card is read-only (`smtpConfiguredFromEnv: true`). Admins still run **Send test email** to verify delivery before inviting users.
 
 | Variable | Required for env SMTP | Purpose |
 |----------|----------------------|---------|
@@ -47,6 +43,14 @@ When **all** required SMTP variables are set in the deployment environment, Play
 Set these in `.env` beside `docker-compose.yml` or in Container Manager env files — never commit values to git. See [secrets and permissions](./secrets.md) and root `.env.example`.
 
 If only some SMTP variables are set, Playblast ignores the partial env block and falls back to Team UI configuration.
+
+### Local development with Mailpit
+
+When `MAILPIT_URL` is set in development and env SMTP is absent, Playblast routes mail to a local Mailpit catcher. See [mailpit-dev.md](mailpit-dev.md).
+
+If SMTP is unavailable, the instance remains usable for signed-in users, but new email invitations will not deliver until test delivery succeeds.
+
+UI-configured SMTP credentials live in the local database. Back up `data/` to protect them.
 
 ## Admin recovery
 

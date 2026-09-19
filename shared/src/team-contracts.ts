@@ -15,6 +15,8 @@ export type SmtpTestStatus = (typeof SMTP_TEST_STATUSES)[number]
 export interface SmtpSettingsResponse {
   configured: boolean
   smtpConfiguredFromEnv: boolean
+  /** Development-only Mailpit catcher when MAILPIT_URL is set and env SMTP is absent. */
+  smtpConfiguredFromMailpitDev: boolean
   host: string | null
   port: number | null
   username: string | null

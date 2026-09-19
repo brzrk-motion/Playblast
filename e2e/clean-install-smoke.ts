@@ -25,6 +25,74 @@ async function expectJson<T>(
   return (await response.json()) as T
 }
 
+function encodeTusMetadata(metadata: Record<string, string>): string {
+  return Object.entries(metadata)
+    .map(([key, value]) => `${key} ${Buffer.from(value, "utf8").toString("base64")}`)
+    .join(",")
+}
+
+function resolveTusUrl(location: string): string {
+  if (location.startsWith("http://") || location.startsWith("https://")) {
+    return location
+  }
+
+  return new URL(location, baseUrl).toString()
+}
+
+async function tusUploadStub(
+  cookies: string[],
+  csrfToken: string,
+  deliverableId: string,
+  versionLabel: string,
+  filename: string,
+  bytes: Buffer,
+): Promise<{ versionId: string }> {
+  const metadata = {
+    deliverableId,
+    version: versionLabel,
+    filename,
+    filetype: "video/mp4",
+  }
+
+  const createResponse = await fetch(`${baseUrl}/api/uploads/tus`, {
+    method: "POST",
+    headers: {
+      "Tus-Resumable": "1.0.0",
+      "Upload-Length": String(bytes.length),
+      "Upload-Metadata": encodeTusMetadata(metadata),
+      ...authHeaders(cookies, csrfToken, false),
+    },
+  })
+
+  if (createResponse.status !== 201) {
+    const body = await createResponse.text().catch(() => "")
+    throw new Error(`POST /api/uploads/tus returned ${createResponse.status}: ${body.slice(0, 200)}`)
+  }
+
+  const location = createResponse.headers.get("Location")
+  if (!location) {
+    throw new Error("POST /api/uploads/tus missing Location header")
+  }
+
+  const patchResponse = await fetch(resolveTusUrl(location), {
+    method: "PATCH",
+    headers: {
+      "Tus-Resumable": "1.0.0",
+      "Upload-Offset": "0",
+      "Content-Type": "application/offset+octet-stream",
+      ...authHeaders(cookies, csrfToken, false),
+    },
+    body: new Uint8Array(bytes),
+  })
+
+  if (patchResponse.status !== 200) {
+    const body = await patchResponse.text().catch(() => "")
+    throw new Error(`PATCH tus upload returned ${patchResponse.status}: ${body.slice(0, 200)}`)
+  }
+
+  return (await patchResponse.json()) as { versionId: string }
+}
+
 async function main() {
   const health = await fetch(`${baseUrl}/health`)
   const healthBody = await expectJson<{ status: string; database?: string }>(
@@ -138,25 +206,13 @@ async function main() {
   const versionLabel = "v1"
   const videoFilename = "clean-install-smoke.mp4"
   const videoBytes = Buffer.alloc(512, 0x42)
-  const formData = new FormData()
-  formData.append(
-    "video",
-    new Blob([videoBytes], { type: "video/mp4" }),
+  const upload = await tusUploadStub(
+    sessionCookies,
+    sessionCsrf,
+    deliverable.id,
+    versionLabel,
     videoFilename,
-  )
-
-  const uploadResponse = await fetch(
-    `${baseUrl}/api/deliverables/${deliverable.id}/versions/${versionLabel}/upload`,
-    {
-      method: "POST",
-      headers: authHeaders(sessionCookies, sessionCsrf, false),
-      body: formData,
-    },
-  )
-  const upload = await expectJson<{ versionId: string }>(
-    "POST upload stub video",
-    uploadResponse,
-    201,
+    videoBytes,
   )
 
   const commentResponse = await fetch(`${baseUrl}/api/comments`, {
@@ -174,7 +230,7 @@ async function main() {
   console.log(`  setup: pending → complete`)
   console.log(`  login: ${admin.email}`)
   console.log(`  project: ${project.id}`)
-  console.log(`  upload: ${versionLabel} (${videoFilename})`)
+  console.log(`  upload: ${versionLabel} (${videoFilename}) via tus`)
   console.log(`  smtp: Team settings route reachable (not configured)`)
 }
 
