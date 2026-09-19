@@ -19,6 +19,17 @@ For orientation, start with the [README](README.md). Deployment and install guid
 
 Sponsorship keeps the lights on for a free self-hosted tool. See [SPONSORS.md](SPONSORS.md).
 
+## Community support routing
+
+| Topic | Where to post |
+|-------|----------------|
+| Install, upgrade, Docker/NAS, SMTP, or workflow questions | [GitHub Discussions → Q&A](https://github.com/brzrk-motion/Playblast/discussions/new?category=q-a) |
+| Reproducible defects | [GitHub Issues → Bug report](https://github.com/brzrk-motion/Playblast/issues/new?template=bug_report.md) |
+| Security vulnerabilities | [Private advisory](SECURITY.md) — never a public issue or Discussion |
+| Feature ideas (optional chat) | Issues template above, or Discussions → Ideas |
+
+Start with [deployment docs](docs/deployment/index.md) when self-hosting; Discussions are for questions the docs do not answer.
+
 ## Reporting issues
 
 Use GitHub Issues with the templates above. Good reports help maintainers reproduce problems quickly:

@@ -112,7 +112,13 @@ See [.env.example](.env.example) and [docs/deployment/secrets.md](docs/deploymen
 
 ## Support boundary
 
-Self-hosted operators own Docker, networking, HTTPS/VPN, backups, and SMTP deliverability. Playblast provides application setup, roles, proofing, and Admin CRM/finance — not remote hands or paid support. Report defects via the project's public issue tracker. Security issues: see [SECURITY.md](SECURITY.md).
+Self-hosted operators own Docker, networking, HTTPS/VPN, backups, and SMTP deliverability. Playblast provides application setup, roles, proofing, and Admin CRM/finance — not remote hands or paid support.
+
+| Need | Channel |
+|------|---------|
+| Install or operator questions | [Discussions → Q&A](https://github.com/brzrk-motion/Playblast/discussions/new?category=q-a) |
+| Reproducible defects | [Issues → Bug report](https://github.com/brzrk-motion/Playblast/issues/new?template=bug_report.md) |
+| Security | [SECURITY.md](SECURITY.md) (private advisory) |
 
 ## MVP reference
 
@@ -120,7 +126,7 @@ Implementation phases and acceptance criteria: [docs/Playblast-MVP-Audit.md](doc
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Security reports: [SECURITY.md](SECURITY.md). Direction and non-goals: [ROADMAP.md](ROADMAP.md). MVP phases: [docs/Playblast-MVP-Audit.md](docs/Playblast-MVP-Audit.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Community: [Discussions](https://github.com/brzrk-motion/Playblast/discussions) for install/setup questions; [Issues](https://github.com/brzrk-motion/Playblast/issues) for defects. Security reports: [SECURITY.md](SECURITY.md). Direction and non-goals: [ROADMAP.md](ROADMAP.md). MVP phases: [docs/Playblast-MVP-Audit.md](docs/Playblast-MVP-Audit.md).
 
 ## License
 

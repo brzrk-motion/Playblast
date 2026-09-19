@@ -30,6 +30,7 @@
     "verify:smtp-mailpit": "bash scripts/verify-smtp-mailpit.sh",
     "verify:secrets": "bash scripts/verify-secrets-in-repo.sh",
     "verify:license": "bash scripts/verify-license.sh",
+    "verify:github-discussions": "bash scripts/verify-github-discussions.sh",
     "verify:browser-qa": "bash scripts/verify-browser-qa.sh",
     "verify:browser-qa:fallback": "bash scripts/verify-browser-qa-fallback.sh",
     "install:e2e": "playwright install chromium --with-deps",
