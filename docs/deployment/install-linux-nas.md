@@ -175,7 +175,7 @@ Normal access uses Playblast login sessions, not deployment-wide Basic Auth.
 | `SESSION_SECRET is required in production` | Set `SESSION_SECRET` in `.env` (32+ characters). |
 | `EACCES` on uploads or data | Fix host folder permissions for the container user. |
 | Can't reach the web UI | Confirm host port, firewall, and LAN IP. If `curl localhost` fails but `curl 127.0.0.1` works, use IPv4 explicitly. |
-| Uploads fail for large files | Increase `MAX_UPLOAD_SIZE`; raise reverse-proxy body limits if fronting the app. |
+| Uploads fail for large files | Increase `MAX_UPLOAD_SIZE`; raise reverse-proxy body limits and timeouts (6h recommended) if fronting the app. Version uploads use tus at `/api/uploads/tus` and can resume after network drops. |
 | `exec format error` | Rebuild image with matching `PLATFORM` (`linux/amd64` vs `linux/arm64`). |
 | Setup page unreachable | Ensure `/api/setup/status` is reachable; emergency Basic Auth (if enabled) allows setup paths. |
 

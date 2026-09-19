@@ -26,6 +26,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { ArchiveProjectDialog } from "@/components/project/archive-project-dialog"
 import { ProjectArchivedBadge } from "@/components/project/project-archived-badge"
 import { ProjectCardSkeleton } from "@/components/dashboard/project-card-skeleton"
@@ -39,14 +46,16 @@ import {
   type ProjectFormValues,
 } from "@/lib/project-form"
 import { createProject, archiveProject, listClients, listProjects, unarchiveProject } from "@/lib/api"
-import { clientsById } from "@/lib/clients"
+import { clientOptionLabel, clientsById } from "@/lib/clients"
 import { formatCurrency } from "@/lib/budget"
 import {
+  CLIENT_FILTER_PARAM,
   DASHBOARD_FILTER_PARAM,
   filterProjectsByDashboardFilter,
   filterProjectsByName,
   getDashboardFilterLabel,
   isProjectArchived,
+  parseClientFilterFromSearchParams,
   parseDashboardFilterFromSearchParams,
   PROJECT_SORT_LABELS,
   sortProjects,
@@ -183,6 +192,11 @@ export function ProjectsPage() {
     [searchParams],
   )
 
+  const selectedClientId = useMemo(
+    () => parseClientFilterFromSearchParams(searchParams),
+    [searchParams],
+  )
+
   const showingArchived = activeFilter?.type === "archived"
 
   const clearFilter = useCallback(() => {
@@ -191,10 +205,42 @@ export function ProjectsPage() {
     setSearchParams(next, { replace: true })
   }, [searchParams, setSearchParams])
 
+  const clearClientFilter = useCallback(() => {
+    const next = new URLSearchParams(searchParams)
+    next.delete(CLIENT_FILTER_PARAM)
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
+
+  const handleClientFilterChange = useCallback(
+    (value: string) => {
+      const next = new URLSearchParams(searchParams)
+      if (value === "all") {
+        next.delete(CLIENT_FILTER_PARAM)
+      } else {
+        next.set(CLIENT_FILTER_PARAM, value)
+      }
+      setSearchParams(next, { replace: true })
+    },
+    [searchParams, setSearchParams],
+  )
+
+  const listProjectsOptions = useMemo(() => {
+    const options: { archived?: boolean; clientId?: string } = {}
+    if (showingArchived) {
+      options.archived = true
+    }
+    if (selectedClientId) {
+      options.clientId = selectedClientId
+    }
+    return Object.keys(options).length > 0 ? options : undefined
+  }, [showingArchived, selectedClientId])
+
   const loadProjects = useCallback(async () => {
     try {
-      const projectData = await listProjects(showingArchived ? { archived: true } : undefined)
-      const clientData = canViewBusiness ? await listClients() : []
+      const [projectData, clientData] = await Promise.all([
+        listProjects(listProjectsOptions),
+        listClients(),
+      ])
       setProjects(projectData)
       setClients(clientData)
       setError(null)
@@ -205,15 +251,17 @@ export function ProjectsPage() {
     } finally {
       setLoading(false)
     }
-  }, [canViewBusiness, showingArchived])
+  }, [listProjectsOptions])
 
   useEffect(() => {
     let cancelled = false
 
     async function fetchProjects() {
       try {
-        const projectData = await listProjects(showingArchived ? { archived: true } : undefined)
-        const clientData = canViewBusiness ? await listClients() : []
+        const [projectData, clientData] = await Promise.all([
+          listProjects(listProjectsOptions),
+          listClients(),
+        ])
         if (!cancelled) {
           setProjects(projectData)
           setClients(clientData)
@@ -237,7 +285,7 @@ export function ProjectsPage() {
     return () => {
       cancelled = true
     }
-  }, [canViewBusiness, showingArchived])
+  }, [listProjectsOptions])
 
   async function handleCreateProject(values: ProjectFormValues) {
     const payload = projectFormToPayload(values)
@@ -305,6 +353,10 @@ export function ProjectsPage() {
     }
   }
 
+  const selectedClient = selectedClientId
+    ? clientLookup.get(selectedClientId)
+    : undefined
+
   const filteredProjects = useMemo(
     () =>
       sortProjects(
@@ -342,7 +394,9 @@ export function ProjectsPage() {
               <CardDescription>
                 {activeFilter
                   ? `Showing ${getDashboardFilterLabel(activeFilter)}`
-                  : "Search and sort your project portfolio"}
+                  : selectedClient
+                    ? `Showing projects for ${clientOptionLabel(selectedClient)}`
+                    : "Search and sort your project portfolio"}
               </CardDescription>
             </div>
             <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
@@ -362,6 +416,25 @@ export function ProjectsPage() {
                   aria-label="Search projects by name or client"
                 />
               </div>
+              <Select
+                value={selectedClientId ?? "all"}
+                onValueChange={handleClientFilterChange}
+              >
+                <SelectTrigger
+                  className="w-full shrink-0 sm:w-[14rem]"
+                  aria-label="Filter projects by client"
+                >
+                  <SelectValue placeholder="All clients" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All clients</SelectItem>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {clientOptionLabel(client)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="shrink-0">
@@ -447,6 +520,11 @@ export function ProjectsPage() {
                 {activeFilter ? (
                   <Button variant="outline" onClick={clearFilter}>
                     Clear filter
+                  </Button>
+                ) : null}
+                {selectedClientId ? (
+                  <Button variant="outline" onClick={clearClientFilter}>
+                    Clear client filter
                   </Button>
                 ) : null}
               </div>

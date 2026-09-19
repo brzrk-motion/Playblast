@@ -1,4 +1,7 @@
+import { and, eq } from "drizzle-orm"
 import { Router } from "express"
+import { users } from "../db/schema/identity.js"
+import { getDrizzle } from "../db/drizzle.js"
 import { requireCapability } from "../middleware/authorization.js"
 import {
   createContactLog,
@@ -24,6 +27,44 @@ import { requireLeadStudio, requireStudioSession } from "./route-helpers.js"
 
 function getLeadIdParam(req: { params: { id?: string | string[] } }): string {
   return getParam(req.params.id ?? "")
+}
+
+function isActiveStudioUser(studioId: string, userId: string): boolean {
+  const row = getDrizzle()
+    .select({ id: users.id })
+    .from(users)
+    .where(
+      and(
+        eq(users.studioId, studioId),
+        eq(users.id, userId),
+        eq(users.disabled, false),
+      ),
+    )
+    .get()
+
+  return row !== undefined
+}
+
+function parseAssignedToFilter(
+  value: unknown,
+  context: { studioId: string; userId: string },
+): { assignedToUserId: string } | { error: string } | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+
+  if (typeof value !== "string" || !value.trim()) {
+    return { error: "assignedToUserId must be a non-empty string." }
+  }
+
+  const trimmed = value.trim()
+  const resolvedUserId = trimmed === "me" ? context.userId : trimmed
+
+  if (!isActiveStudioUser(context.studioId, resolvedUserId)) {
+    return { error: "assignedToUserId must reference an active studio user." }
+  }
+
+  return { assignedToUserId: resolvedUserId }
 }
 
 function parseRepliedFilter(
@@ -54,7 +95,11 @@ leadsRouter.get("/", (req, res) => {
     return
   }
 
-  const filters: { status?: LeadStatus; replied?: boolean } = {}
+  const filters: {
+    status?: LeadStatus
+    replied?: boolean
+    assignedToUserId?: string
+  } = {}
 
   if (req.query.status !== undefined) {
     if (!isLeadStatus(req.query.status)) {
@@ -74,6 +119,15 @@ leadsRouter.get("/", (req, res) => {
   }
   if (repliedFilter) {
     filters.replied = repliedFilter.replied
+  }
+
+  const assignedFilter = parseAssignedToFilter(req.query.assignedToUserId, context)
+  if (assignedFilter && "error" in assignedFilter) {
+    res.status(400).json({ error: assignedFilter.error })
+    return
+  }
+  if (assignedFilter) {
+    filters.assignedToUserId = assignedFilter.assignedToUserId
   }
 
   res.json(listLeads(context.studioId, filters))
@@ -110,12 +164,37 @@ leadsRouter.post("/", (req, res) => {
     return
   }
 
+  let assignedToUserId = context.userId
+  if (req.body?.assignedToUserId !== undefined) {
+    if (context.role !== "admin") {
+      res.status(403).json({ error: "Only admins can assign leads to another user." })
+      return
+    }
+
+    if (
+      typeof req.body.assignedToUserId !== "string" ||
+      !req.body.assignedToUserId.trim()
+    ) {
+      res.status(400).json({ error: "assignedToUserId must be a non-empty string." })
+      return
+    }
+
+    assignedToUserId = req.body.assignedToUserId.trim()
+    if (!isActiveStudioUser(context.studioId, assignedToUserId)) {
+      res.status(400).json({
+        error: "assignedToUserId must reference an active studio user.",
+      })
+      return
+    }
+  }
+
   const lead = createLead({
     studioId: context.studioId,
     name,
     email,
     status: req.body?.status,
     replied: req.body?.replied,
+    assignedToUserId,
     company:
       typeof req.body?.company === "string" ? req.body.company.trim() : undefined,
     phone: typeof req.body?.phone === "string" ? req.body.phone.trim() : undefined,
@@ -320,6 +399,34 @@ leadsRouter.patch("/:id", (req, res) => {
       typeof req.body.lastContactedAt === "string" && req.body.lastContactedAt
         ? req.body.lastContactedAt
         : null
+  }
+
+  if (req.body?.assignedToUserId !== undefined) {
+    if (context.role !== "admin") {
+      res.status(403).json({ error: "Only admins can reassign leads." })
+      return
+    }
+
+    if (req.body.assignedToUserId === null) {
+      input.assignedToUserId = null
+    } else if (
+      typeof req.body.assignedToUserId === "string" &&
+      req.body.assignedToUserId.trim()
+    ) {
+      const nextAssignee = req.body.assignedToUserId.trim()
+      if (!isActiveStudioUser(context.studioId, nextAssignee)) {
+        res.status(400).json({
+          error: "assignedToUserId must reference an active studio user.",
+        })
+        return
+      }
+      input.assignedToUserId = nextAssignee
+    } else {
+      res.status(400).json({
+        error: "assignedToUserId must be a non-empty string or null.",
+      })
+      return
+    }
   }
 
   if (Object.keys(input).length === 0) {
