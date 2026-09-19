@@ -70,12 +70,15 @@ server {
   # ssl_certificate / ssl_certificate_key: operator-managed
 
   client_max_body_size 6g;
-  proxy_read_timeout 3600s;
-  proxy_send_timeout 3600s;
+  proxy_read_timeout 6h;
+  proxy_send_timeout 6h;
+  proxy_connect_timeout 60s;
 
   location / {
     proxy_pass http://127.0.0.1:3000;
     proxy_http_version 1.1;
+    proxy_request_buffering off;
+    proxy_buffering off;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Host $host;
     proxy_set_header X-Forwarded-Proto $scheme;
@@ -91,6 +94,8 @@ Do not put this server on the public internet without valid certificates and a m
 
 - Prefer Synology’s reverse proxy / certificate UI **or** the Caddy overlay if you run Compose projects with multiple services.
 - If you terminate TLS with DSM reverse proxy (not the Compose overlay), set `PROXY_HOPS=1` in the Playblast service environment so Express trusts the single forward hop.
+- For multi-GB proofing uploads, raise DSM reverse-proxy timeouts and body limits to match `MAX_UPLOAD_SIZE` (default 5000 MB). In **Control Panel → Login Portal → Advanced → Reverse Proxy**, edit the Playblast host rule and increase the proxy/read timeout to at least **21600** seconds (6 hours). If uploads still stall, bypass DSM proxy for the upload path and use the Compose Caddy overlay on a dedicated hostname instead.
+- Playblast version uploads use the tus resumable protocol at `/api/uploads/tus`. Proxies must allow `POST`, `PATCH`, `HEAD`, and `OPTIONS` on that path without buffering the full request body.
 - Keep Hyper Backup on `data/` + `uploads/` regardless of TLS path ([backup-restore.md](./backup-restore.md)).
 
 ## `PROXY_HOPS` and Express trust proxy

@@ -43,6 +43,8 @@ import {
   type ContactLog,
   type ContactLogType,
 } from "@/types/contact-log"
+import type { UserSummary } from "@playblast/shared"
+import { leadOwnerLabel } from "@/lib/leads"
 import type { Lead, LeadWithContactLog } from "@/types/lead"
 
 interface LeadDetailSheetProps {
@@ -53,6 +55,7 @@ interface LeadDetailSheetProps {
   onLeadDeleted?: () => void
   onEdit?: (lead: Lead) => void
   onConvert?: (lead: Lead) => void
+  usersById?: Map<string, UserSummary>
 }
 
 function DetailRow({
@@ -78,6 +81,7 @@ export function LeadDetailSheet({
   onLeadDeleted,
   onEdit,
   onConvert,
+  usersById = new Map(),
 }: LeadDetailSheetProps) {
   const [lead, setLead] = useState<LeadWithContactLog | null>(null)
   const [loading, setLoading] = useState(false)
@@ -343,6 +347,9 @@ export function LeadDetailSheet({
                     )}
                   </DetailRow>
                   <DetailRow label="Source">{lead.source ?? "—"}</DetailRow>
+                  <DetailRow label="Owner">
+                    {leadOwnerLabel(lead.assignedToUserId, usersById)}
+                  </DetailRow>
                   <DetailRow label="Notes">{lead.notes ?? "—"}</DetailRow>
                 </dl>
               </section>
