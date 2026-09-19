@@ -632,7 +632,7 @@ The following execution view is the implementation order for the detailed backlo
 #### Integration/verification
 
 - [ ] Complete a clean-machine operator walkthrough using only public documentation and no maintainer/developer intervention.
-- [ ] Run Docker Compose and documented Synology/Linux installation checks.
+- [x] Run Docker Compose and documented Synology/Linux installation checks. Evidence: [T8 NAS deploy](./release/soft-rc-evidence/t8-synology-nas-deploy.md) (2026-09-19; bind-mount smoke + tar load; Hyper Backup drill remains operator-owned).
 - [ ] Run clean install, upgrade, backup, restore, recovery, SMTP capture/delivery, and media tests.
 - [ ] Verify no centralized brzrk network dependency or credential is required in an offline/self-hosted run.
 
