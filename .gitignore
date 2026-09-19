@@ -1,6 +1,9 @@
 # Dependencies
 node_modules
 
+# Local tool caches
+.cache/
+
 # Build output
 dist
 dist-ssr
@@ -9,8 +12,12 @@ server/data/*
 !server/data/store.json
 !server/data/seed-client-management.sql
 
-# Deployment artifacts
-deploy
+# Deployment artifacts (keep tracked compose/config under deploy/caddy and deploy/synology)
+deploy/*
+!deploy/caddy/
+!deploy/synology/
+!deploy/caddy/**
+!deploy/synology/**
 test-results
 playwright-report
 e2e/.runtime

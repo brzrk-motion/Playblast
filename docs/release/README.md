@@ -49,7 +49,7 @@ Docker-specific gates are skipped when the Docker daemon is unavailable; CI runs
 
 On box-local / agent-computer environments where `docker.sock` is unavailable (or not usable by the agent), `npm run verify:docker-deployment` is **SKIPPED**. That local skip is **not** Gate 1 closure.
 
-Until a daemon-capable host re-runs the smoke locally, the dated host-health signal is GitHub Actions CI run **34183858263** — Docker deployment smoke **success** on 2026-09-08 ~03:34Z UTC (PR #113, merge `0234811`). Do not treat CI alone as closing Gate 1 for release sign-off without that re-run (or an equivalent operator host check).
+**Current dated host signal:** daemon-capable re-run **passed** on 2026-09-19T05:12:19Z UTC (Ubuntu 24.04 cloud agent VM, Docker 29.1.3; see [docs/soft-rc/t10-docker-deployment-evidence.md](../soft-rc/t10-docker-deployment-evidence.md)). Prior CI signal: GitHub Actions run **34183858263** (2026-09-08 ~03:34Z UTC, PR #113).
 
 ## Automated verification matrix
 
@@ -62,6 +62,7 @@ Until a daemon-capable host re-runs the smoke locally, the dated host-health sig
 | Dependency audit | `npm audit --omit=dev --audit-level=high` | No |
 | Secret scan | `npm run verify:secrets` | No |
 | Backup/restore | `npm run verify:backup-restore` | No |
+| T9 backup + SMTP recovery evidence | [soft-rc-evidence-t9-backup-smtp-recovery.md](./soft-rc-evidence-t9-backup-smtp-recovery.md) | No |
 | Deployment config | `npm run verify:deployment-config` | No |
 | Compose render | `npm run verify:docker-compose` | Yes |
 | Docker smoke | `npm run verify:docker-deployment` | Yes |
@@ -76,8 +77,9 @@ These remain **operator or maintainer responsibilities** and are documented expl
 |------|------------|
 | Cross-browser desktop QA (Firefox, Safari, Edge) | Requires additional browser installs or farm |
 | Clean-machine install from docs only | Needs a fresh VM or NAS without dev tooling |
-| Live SMTP delivery to a real mailbox | Operator relay credentials; never commit or log |
+| Live SMTP delivery to a real mailbox | Operator relay credentials; never commit or log. Record evidence in [soft-rc/t6-live-mailbox-invite-evidence.md](../soft-rc/t6-live-mailbox-invite-evidence.md) (BRZ-238). Mailpit/CI catcher success does **not** substitute. |
 | NAS Hyper Backup / container volume drills | Hardware-specific; see deployment docs |
+| Synology / NAS bind-mount deploy | Automated: `npm run verify:nas-deployment`; evidence: [T8 NAS deploy](./soft-rc-evidence/t8-synology-nas-deploy.md) (2026-09-19) |
 | Self-hosted adopter recruitment | External studios; no fabricated metrics |
 | Donations / sponsorship tracking | External funding evidence |
 | Public issue triage at scale | Process, not a code gate |

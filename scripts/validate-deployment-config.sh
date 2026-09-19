@@ -118,6 +118,10 @@ pass "onboarding walkthrough exists"
 [[ -f docs/soft-rc/t7-clean-install-evidence.md ]] || fail "T7 clean-install evidence doc is missing"
 pass "T7 clean-install verification script and evidence doc exist"
 
+[[ -f docs/soft-rc/t6-live-mailbox-invite-evidence.md ]] || fail "T6 live mailbox invite evidence doc is missing"
+[[ -f docs/soft-rc/README.md ]] || fail "soft-rc evidence index is missing"
+pass "T6 live mailbox invite evidence doc exists"
+
 [[ -f docs/deployment/tls-proxy.md ]] || fail "TLS/reverse-proxy documentation is missing"
 pass "TLS/reverse-proxy documentation exists"
 
@@ -127,6 +131,16 @@ pass "docker-compose.proxy.yml overlay exists and sets PROXY_HOPS"
 
 [[ -f deploy/caddy/Caddyfile ]] || fail "deploy/caddy/Caddyfile is missing"
 pass "Caddyfile for TLS overlay exists"
+
+[[ -f deploy/synology/docker-compose.synology.yml ]] || fail "deploy/synology/docker-compose.synology.yml is missing"
+[[ -f deploy/synology/.env.example ]] || fail "deploy/synology/.env.example is missing"
+pass "Synology NAS compose sample and env example exist"
+
+[[ -f scripts/verify-nas-deployment.sh ]] || fail "scripts/verify-nas-deployment.sh is missing"
+pass "NAS deployment verification script exists"
+
+[[ -f docs/release/soft-rc-evidence/t8-synology-nas-deploy.md ]] || fail "T8 NAS soft-RC evidence doc is missing"
+pass "T8 NAS soft-RC evidence documentation exists"
 
 [[ -f docs-site/.vitepress/config.ts ]] || fail "docs-site VitePress config is missing"
 grep -q "link: '/deployment/image-publish'" docs-site/.vitepress/config.ts \

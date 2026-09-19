@@ -24,7 +24,7 @@ const ONBOARDING_STEPS = [
     icon: UserPlus,
     title: "Invite your team",
     description:
-      "Invite Creative and Proofing members from Team. Share the invite link if email is not ready yet.",
+      "After SMTP is verified, invite Creative and Proofing members from Team. Invitations are sent by email.",
   },
   {
     icon: Clapperboard,
@@ -121,18 +121,18 @@ export function SetupCompletePage() {
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               className="flex-1"
-              onClick={() => void finishSetup("/")}
+              onClick={() => void finishSetup("/team")}
               disabled={submitting}
             >
-              {submitting ? "Opening Playblast..." : "Continue to Playblast"}
+              {submitting ? "Opening Team..." : "Open Team"}
             </Button>
             <Button
               variant="outline"
               className="flex-1"
-              onClick={() => void finishSetup("/team")}
+              onClick={() => void finishSetup("/")}
               disabled={submitting}
             >
-              Open Team first
+              Continue to Playblast
             </Button>
           </div>
         </CardContent>

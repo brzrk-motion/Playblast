@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test"
+import { expect, test } from "@playwright/test"
 import fs from "node:fs"
 import net, { type Server } from "node:net"
 import os from "node:os"
@@ -7,6 +7,11 @@ import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
 import { E2E_ADMIN } from "../credentials.js"
 import { completeFirstRunSetup, openAccountMenu } from "../helpers/auth.js"
+import {
+  expectAuthenticatedProjectsPage,
+  expectBootstrapSetupPage,
+  waitForApplicationApi,
+} from "../helpers/navigation.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 
@@ -70,68 +75,6 @@ function containerIpOnNetwork(containerId: string, network: string): string {
     throw new Error(`container ${containerId} has no IP on ${network}`)
   }
   return ip
-}
-
-async function waitForApplicationApi(
-  baseUrl: string,
-  options: {
-    setupStatus?: "pending" | "complete"
-    timeoutMs?: number
-  } = {},
-): Promise<void> {
-  const { setupStatus = "complete", timeoutMs = 120_000 } = options
-  const started = Date.now()
-
-  while (Date.now() - started < timeoutMs) {
-    try {
-      const [health, setup] = await Promise.all([
-        fetch(`${baseUrl}/health`),
-        fetch(`${baseUrl}/api/setup/status`),
-      ])
-      if (!health.ok || !setup.ok) {
-        throw new Error("health or setup request failed")
-      }
-
-      const healthBody = (await health.json()) as { status?: string }
-      const setupBody = (await setup.json()) as { status?: string }
-      if (healthBody.status === "ok" && setupBody.status === setupStatus) {
-        return
-      }
-    } catch {
-      // retry until timeout
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-  }
-
-  throw new Error(
-    `application API did not reach setup=${setupStatus} within ${timeoutMs}ms`,
-  )
-}
-
-async function expectAuthenticatedProjectsPage(
-  page: Page,
-  baseUrl: string,
-): Promise<void> {
-  await page.goto(`${baseUrl}/projects`, { waitUntil: "domcontentloaded" })
-  await expect(page).not.toHaveURL(/\/login/)
-  await expect(page.getByText("Docker E2E Studio").first()).toBeVisible({
-    timeout: 60_000,
-  })
-
-  // Projects is a lazy route; retry once the shell is hydrated after container restart.
-  await expect(async () => {
-    if (
-      !(await page
-        .getByRole("heading", { name: "Projects", level: 1 })
-        .isVisible()
-        .catch(() => false))
-    ) {
-      await page.reload({ waitUntil: "domcontentloaded" })
-    }
-    await expect(page.getByRole("heading", { name: "Projects", level: 1 })).toBeVisible({
-      timeout: 15_000,
-    })
-  }).toPass({ timeout: 60_000 })
 }
 
 function startLoopbackProxy(upstreamHost: string): Promise<{ server: Server; port: number }> {
@@ -278,15 +221,10 @@ services:
         )
       }
 
-      const setup = await fetch(`${baseUrl}/api/setup/status`)
-      expect(setup.status).toBe(200)
-      const setupBody = (await setup.json()) as { status: string }
-      expect(setupBody.status).toBe("pending")
+      await waitForApplicationApi(baseUrl, { setupStatus: "pending" })
 
-      await page.goto(`${baseUrl}/setup`)
-      await expect(page.getByRole("button", { name: "Create admin account" })).toBeVisible({
-        timeout: 60_000,
-      })
+      await page.goto(`${baseUrl}/setup`, { waitUntil: "domcontentloaded" })
+      await expectBootstrapSetupPage(page)
       await expect(page.getByText("Claim this self-hosted Playblast instance")).toBeVisible()
       await page.getByLabel("Your name").fill("Invalid Setup")
       await page.getByLabel("Email").fill("not-an-email")
@@ -333,7 +271,8 @@ services:
 
       // Reuse the pre-restart browser session before testing a fresh login.
       // This verifies Docker restart preserves the session contract, not only
-      // the database and setup state.
+      // the database and setup state. Lazy-loaded chunks can fail once while
+      // the container is still restarting behind the TCP proxy.
       await expectAuthenticatedProjectsPage(page, baseUrl)
 
       await openAccountMenu(page)
@@ -341,6 +280,7 @@ services:
 
       await page.context().clearCookies()
       await page.goto(`${baseUrl}/login`)
+      await expect(page.getByLabel("Email")).toBeVisible({ timeout: 60_000 })
       await page.getByLabel("Email").fill(`docker-${E2E_ADMIN.email}`)
       await page.getByLabel("Password", { exact: true }).fill(E2E_ADMIN.password)
       await page.getByRole("button", { name: "Sign in" }).click()
