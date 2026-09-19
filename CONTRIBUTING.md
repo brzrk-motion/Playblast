@@ -2,7 +2,7 @@
 
 Thanks for helping improve Playblast — self-hosted video proofing for motion studios, maintained by Brzrk Interactive as sponsorship-first MIT OSS.
 
-By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md). To report unacceptable behavior, see the **Reporting** section in that document.
 
 ## Ways to contribute
 
