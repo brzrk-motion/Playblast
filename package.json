@@ -1,5 +1,6 @@
 {
   "name": "playblast",
+  "description": "Proofing-first self-hosted OSS for motion studios — timestamped comments, version compare, and approval workflows.",
   "private": true,
   "version": "0.1.0-rc.1",
   "license": "MIT",
@@ -30,6 +31,7 @@
     "verify:smtp-mailpit": "bash scripts/verify-smtp-mailpit.sh",
     "verify:secrets": "bash scripts/verify-secrets-in-repo.sh",
     "verify:license": "bash scripts/verify-license.sh",
+    "verify:github-repo-description": "bash scripts/verify-github-repo-description.sh",
     "verify:browser-qa": "bash scripts/verify-browser-qa.sh",
     "verify:browser-qa:fallback": "bash scripts/verify-browser-qa-fallback.sh",
     "install:e2e": "playwright install chromium --with-deps",
