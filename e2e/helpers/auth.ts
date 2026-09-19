@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test"
 import { expect } from "@playwright/test"
+import { expectBootstrapSetupPage, retryChunkLoadErrors } from "./navigation.js"
 
 export async function loginAs(
   page: Page,
@@ -38,8 +39,8 @@ export async function completeFirstRunSetup(
   baseURL = "",
 ): Promise<void> {
   const root = baseURL.replace(/\/$/, "")
-  await page.goto(`${root}/setup`)
-  await expect(page.getByRole("button", { name: "Create admin account" })).toBeVisible()
+  await page.goto(`${root}/setup`, { waitUntil: "domcontentloaded" })
+  await expectBootstrapSetupPage(page)
   await expect(page.getByText("Claim this self-hosted Playblast instance")).toBeVisible()
 
   await page.getByLabel("Your name").fill(input.name)
@@ -68,10 +69,7 @@ export async function configureSmtpViaUi(
 
   const smtpHost = page.locator("#smtp-host")
   if (!(await smtpHost.isVisible().catch(() => false))) {
-    const retry = page.getByRole("button", { name: "Try again" })
-    if (await retry.isVisible().catch(() => false)) {
-      await retry.click()
-    }
+    await retryChunkLoadErrors(page)
   }
   await expect(smtpHost).toBeVisible({ timeout: 20_000 })
 

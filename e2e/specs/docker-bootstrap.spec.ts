@@ -7,6 +7,11 @@ import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
 import { E2E_ADMIN } from "../credentials.js"
 import { completeFirstRunSetup, openAccountMenu } from "../helpers/auth.js"
+import {
+  expectAuthenticatedProjectsPage,
+  expectBootstrapSetupPage,
+  waitForApplicationApi,
+} from "../helpers/navigation.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 
@@ -216,15 +221,10 @@ services:
         )
       }
 
-      const setup = await fetch(`${baseUrl}/api/setup/status`)
-      expect(setup.status).toBe(200)
-      const setupBody = (await setup.json()) as { status: string }
-      expect(setupBody.status).toBe("pending")
+      await waitForApplicationApi(baseUrl, { setupStatus: "pending" })
 
-      await page.goto(`${baseUrl}/setup`)
-      await expect(page.getByRole("button", { name: "Create admin account" })).toBeVisible({
-        timeout: 60_000,
-      })
+      await page.goto(`${baseUrl}/setup`, { waitUntil: "domcontentloaded" })
+      await expectBootstrapSetupPage(page)
       await expect(page.getByText("Claim this self-hosted Playblast instance")).toBeVisible()
       await page.getByLabel("Your name").fill("Invalid Setup")
       await page.getByLabel("Email").fill("not-an-email")
@@ -267,44 +267,13 @@ services:
         throw new Error(`docker compose restart failed:\n${restart.stdout}\n${restart.stderr}`)
       }
 
-      const restartedAt = Date.now()
-      let restarted = false
-      while (Date.now() - restartedAt < 120_000) {
-        try {
-          const health = await fetch(`${baseUrl}/health`)
-          if (health.ok) {
-            restarted = true
-            break
-          }
-        } catch {
-          // retry
-        }
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-      }
-      expect(restarted).toBe(true)
-      const persistedSetup = await fetch(`${baseUrl}/api/setup/status`)
-      expect(persistedSetup.status).toBe(200)
-      expect(((await persistedSetup.json()) as { status: string }).status).toBe("complete")
+      await waitForApplicationApi(baseUrl, { setupStatus: "complete", timeoutMs: 120_000 })
 
       // Reuse the pre-restart browser session before testing a fresh login.
       // This verifies Docker restart preserves the session contract, not only
       // the database and setup state. Lazy-loaded chunks can fail once while
-      // the container is still restarting behind the TCP proxy; retry via the
-      // chunk error boundary before asserting the shell.
-      await page.goto(`${baseUrl}/projects`, { waitUntil: "domcontentloaded" })
-      for (let attempt = 0; attempt < 5; attempt += 1) {
-        const chunkFailure = page.getByText("This page failed to load")
-        if (await chunkFailure.isVisible().catch(() => false)) {
-          await page.getByRole("button", { name: "Try again" }).click()
-          await page.waitForLoadState("networkidle")
-          continue
-        }
-        break
-      }
-      await expect(page).not.toHaveURL(/\/login/)
-      await expect(page.getByRole("heading", { name: "Projects", level: 1 })).toBeVisible({
-        timeout: 60_000,
-      })
+      // the container is still restarting behind the TCP proxy.
+      await expectAuthenticatedProjectsPage(page, baseUrl)
 
       await openAccountMenu(page)
       await expect(page.getByText("Docker E2E Studio").first()).toBeVisible()
