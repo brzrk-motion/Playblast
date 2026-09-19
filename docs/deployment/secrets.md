@@ -41,17 +41,17 @@ If enabled without `PLAYBLAST_AUTH_USER` and `PLAYBLAST_AUTH_PASSWORD`, producti
 
 ## SMTP credentials
 
-SMTP is configured **after first-run setup** (not in the setup wizard). Three supported paths:
+SMTP is configured **after first-run setup** (not in the setup wizard). Three supported paths (see [roles, SMTP, and recovery](./roles-smtp-recovery.md)):
 
-| Method | Storage | Team UI |
-|--------|---------|---------|
-| Environment (`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`) | Host environment | Read-only delivery card |
-| Team settings (Admin) | Local SQLite database | Editable form |
-| Mailpit dev (`MAILPIT_URL` in development only) | Not stored; routes to local catcher | Read-only delivery card |
+| Method | Storage | Team UI | Backup |
+|--------|---------|---------|--------|
+| Environment (`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`) | Host environment | Read-only delivery card | Include `.env` in secure operator backup |
+| Team settings (Admin) | Local SQLite database | Editable form | Include `data/` in filesystem backup |
+| Mailpit dev (`MAILPIT_URL` in development only) | Not stored; routes to local catcher | Read-only delivery card | N/A (dev/CI only) |
 
 Optional env keys: `SMTP_REPLY_TO`, `PLAYBLAST_INSTANCE_URL`. When the full env set is present, Admin UI SMTP fields are read-only and env values take precedence. Partial env sets are ignored — configure via Team instead.
 
-Include the database backup when protecting UI-configured SMTP. Do not commit SMTP passwords to compose files or git.
+Do not commit SMTP passwords to compose files or git. After restore, re-run SMTP test delivery from **Team** regardless of path.
 
 Local Mailpit workflow: [mailpit-dev.md](mailpit-dev.md).
 
@@ -76,7 +76,8 @@ Local Mailpit workflow: [mailpit-dev.md](mailpit-dev.md).
 |--------|----------------------|---------------------------|
 | `SESSION_SECRET` | No (not in DB) | Yes |
 | Recovery token | No | Yes |
-| SMTP password | Yes (in DB) | No (configured in app) |
+| SMTP password (Team UI) | Yes (encrypted in DB) | No |
+| SMTP password (env path) | No | Yes (`SMTP_PASS` in `.env`) |
 | User passwords | Hashed in DB only | N/A |
 
 After restoring an old database while using a **new** `SESSION_SECRET`, existing session cookies become invalid.

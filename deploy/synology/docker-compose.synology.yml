@@ -1,0 +1,36 @@
+# Synology Container Manager / NAS bind-mount deployment.
+# Copy this file and deploy/synology/.env.example to the NAS (e.g. /volume1/docker/playblast/).
+# Load the image first: sudo docker load < playblast.tar.gz
+#
+# See docs/deployment/install-linux-nas.md and docs/release/soft-rc-evidence/t8-synology-nas-deploy.md.
+
+services:
+  playblast:
+    image: playblast:latest
+    container_name: playblast
+    ports:
+      - "${PLAYBLAST_HOST_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOST: "0.0.0.0"
+      PROXY_HOPS: ${PROXY_HOPS:-0}
+      UPLOAD_DIR: /app/uploads
+      DB_PATH: /app/data/playblast.db
+      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-5000}
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env (32+ characters)}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-168}
+      PLAYBLAST_ADMIN_RECOVERY_TOKEN: ${PLAYBLAST_ADMIN_RECOVERY_TOKEN:-}
+      PLAYBLAST_EMERGENCY_BASIC_AUTH: ${PLAYBLAST_EMERGENCY_BASIC_AUTH:-false}
+      PLAYBLAST_AUTH_USER: ${PLAYBLAST_AUTH_USER:-}
+      PLAYBLAST_AUTH_PASSWORD: ${PLAYBLAST_AUTH_PASSWORD:-}
+    volumes:
+      - ${PLAYBLAST_DATA_DIR:-/volume1/docker/playblast/data}:/app/data
+      - ${PLAYBLAST_UPLOADS_DIR:-/volume1/docker/playblast/uploads}:/app/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

@@ -1,3 +1,10 @@
-# GitHub Sponsors must be enabled for the brzrk-motion organization
-# before this funding link becomes active in the repository UI.
+# Funding links for the GitHub repository UI.
+#
+# Open Collective (via OSC) is the planned primary channel. Add the canonical
+# opencollective URL here only after OSC accepts the project — do not link
+# checkout before then.
+#
+# opencollective: <pending OSC acceptance>
+#
+# GitHub Sponsors is secondary and pending org enablement.
 github: [brzrk-motion]

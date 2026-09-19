@@ -6,6 +6,7 @@ import {
   ensureDevelopmentDemoVideos,
   seedDevelopmentDatabase,
 } from "./scripts/seed-development.js"
+import { isE2ETestRuntime } from "./e2e-runtime.js"
 import { closeDatabase, initDatabase } from "./storage/db.js"
 
 const startup = validateStartup()
@@ -16,10 +17,10 @@ if (!startup.ok) {
 
 const uploadDir = ensureUploadDir()
 initDatabase()
-if (seedDevelopmentDatabase()) {
+if (!isE2ETestRuntime() && seedDevelopmentDatabase()) {
   console.log("Development database seeded. Demo logins: admin@playblast.local and taylor@playblast.local / PlayblastDev2026")
 }
-if (ensureDevelopmentDemoVideos()) {
+if (!isE2ETestRuntime() && ensureDevelopmentDemoVideos()) {
   console.log("Development demo videos restored.")
 }
 const app = createApp()
