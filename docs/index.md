@@ -17,6 +17,14 @@ Product overview and workflow details live on [brzrkmotion.com/playblast](https:
 | [Operator vs application Admin](./deployment/operator-responsibilities) | Host operator + Admin |
 | [TLS / reverse proxy](./deployment/tls-proxy) | Host operator |
 
+## Community
+
+| Topic | Channel |
+|-------|---------|
+| Install or operator questions | [Discussions → Q&A](https://github.com/brzrk-motion/Playblast/discussions/new?category=q-a) |
+| Reproducible defects | [Issues → Bug report](https://github.com/brzrk-motion/Playblast/issues/new?template=bug_report.md) |
+| Security | [Private advisory](https://github.com/brzrk-motion/Playblast/security/advisories/new) |
+
 ## Support boundary
 
-Playblast is free, open-source, and self-hosted. Studios operate their own Docker host, networking, HTTPS/VPN, SMTP delivery, backups, and recovery. Report defects through the [public issue tracker](https://github.com/brzrk-motion/Playblast/issues).
+Playblast is free, open-source, and self-hosted. Studios operate their own Docker host, networking, HTTPS/VPN, SMTP delivery, backups, and recovery. Use Discussions for questions the docs do not answer; file Issues for actionable defects.

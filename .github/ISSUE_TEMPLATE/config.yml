@@ -1,8 +1,11 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Ask a question (Discussions)
+    url: https://github.com/brzrk-motion/Playblast/discussions/new?category=q-a
+    about: Install help, workflow questions, and adoption chat — not for bugs or security reports.
   - name: Security vulnerability
     url: https://github.com/brzrk-motion/Playblast/security/advisories/new
     about: Report exploitable security issues privately — do not file a public issue.
   - name: Deployment / operator docs
-    url: https://github.com/brzrk-motion/Playblast/blob/development-mvp/docs/deployment/index.md
+    url: https://brzrk-motion.github.io/Playblast/deployment/install-linux-nas
     about: Self-hosted Docker and Synology install guides.
