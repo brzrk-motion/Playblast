@@ -121,27 +121,16 @@ describe("pilot authenticated E2E smoke", () => {
     const versionLabel = "v1"
     const videoFilename = "pilot-smoke.mp4"
     const videoBytes = Buffer.alloc(512, 0x42)
-    const formData = new FormData()
-    formData.append(
-      "video",
-      new Blob([videoBytes], { type: "video/mp4" }),
+    const { tusUploadVersion } = await import("../test/tus-upload-helpers.js")
+    const upload = await tusUploadVersion(
+      baseUrl,
+      adminCookies,
+      adminCsrf,
+      deliverable.id,
+      versionLabel,
       videoFilename,
+      videoBytes,
     )
-
-    const uploadResponse = await fetch(
-      `${baseUrl}/api/deliverables/${deliverable.id}/versions/${versionLabel}/upload`,
-      {
-        method: "POST",
-        headers: authHeaders(adminCookies, adminCsrf, false),
-        body: formData,
-      },
-    )
-    assert.equal(uploadResponse.status, 201)
-    const upload = (await uploadResponse.json()) as {
-      versionId: string
-      filename: string
-      size: number
-    }
     assert.equal(upload.filename, videoFilename)
     assert.equal(upload.size, videoBytes.length)
     assert.ok(upload.versionId)

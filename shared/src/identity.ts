@@ -45,6 +45,17 @@ export interface StudioProfileResponse {
   updatedAt: string
 }
 
+/** Studio-wide business preferences (GET /api/studio/preferences). */
+export interface StudioPreferencesResponse {
+  internalHourlyCostRate: number | null
+  weeklyCapacityHours: number | null
+}
+
+export interface UpdateStudioPreferencesRequest {
+  internalHourlyCostRate?: number | null
+  weeklyCapacityHours?: number | null
+}
+
 /** Team user listing contract (GET /api/users). */
 export interface UserSummary {
   id: string

@@ -2,8 +2,10 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 
 import {
+  CLIENT_FILTER_PARAM,
   dashboardFilterToParam,
   filterProjectsByDashboardFilter,
+  parseClientFilterFromSearchParams,
   parseDashboardFilter,
 } from "../../../client/src/lib/projects.ts"
 import type { ProjectSummary } from "../../../client/src/types/project.ts"
@@ -138,4 +140,11 @@ test("filterProjectsByDashboardFilter filters over-budget active projects", () =
     filtered.map((project) => project.id),
     ["over"],
   )
+})
+
+test("parseClientFilterFromSearchParams reads client query param", () => {
+  const params = new URLSearchParams()
+  params.set(CLIENT_FILTER_PARAM, "client-uuid")
+  assert.equal(parseClientFilterFromSearchParams(params), "client-uuid")
+  assert.equal(parseClientFilterFromSearchParams(new URLSearchParams()), null)
 })
