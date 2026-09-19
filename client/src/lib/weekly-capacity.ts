@@ -1,12 +1,26 @@
-import { createLocalStorageNumberStore } from "@/hooks/use-local-storage-number"
+import {
+  ensureStudioPreferencesLoaded,
+  readStudioPreferences,
+  useStudioPreferencesState,
+  writeStudioPreferences,
+} from "@/lib/studio-preferences-store"
 
-export const WEEKLY_CAPACITY_STORAGE_KEY = "playblast-weekly-capacity-hours"
+export async function getWeeklyCapacityHours(): Promise<number | null> {
+  const preferences = readStudioPreferences() ?? await ensureStudioPreferencesLoaded()
+  return preferences.weeklyCapacityHours
+}
 
-const store = createLocalStorageNumberStore(
-  WEEKLY_CAPACITY_STORAGE_KEY,
-  "playblast-weekly-capacity-change",
-)
+export async function setWeeklyCapacityHours(hours: number | null): Promise<void> {
+  await writeStudioPreferences({ weeklyCapacityHours: hours })
+}
 
-export const getWeeklyCapacityHours = store.read
-export const setWeeklyCapacityHours = store.write
-export const useWeeklyCapacityHours = store.useValue
+export function useWeeklyCapacityHours(): number | null {
+  const state = useStudioPreferencesState()
+
+  if (state.status !== "ready") {
+    void ensureStudioPreferencesLoaded()
+    return null
+  }
+
+  return state.preferences.weeklyCapacityHours
+}

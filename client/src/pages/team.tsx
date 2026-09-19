@@ -337,6 +337,8 @@ export function TeamPage() {
 
   const canInvite = Boolean(smtp?.testVerified)
   const smtpConfiguredFromEnv = Boolean(smtp?.smtpConfiguredFromEnv)
+  const smtpConfiguredFromMailpitDev = Boolean(smtp?.smtpConfiguredFromMailpitDev)
+  const smtpReadOnly = smtpConfiguredFromEnv || smtpConfiguredFromMailpitDev
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -350,16 +352,18 @@ export function TeamPage() {
       {isAdmin ? <Card>
         <CardHeader>
           <CardTitle>
-            {smtpConfiguredFromEnv ? "SMTP delivery" : "SMTP configuration"}
+            {smtpReadOnly ? "SMTP delivery" : "SMTP configuration"}
           </CardTitle>
           <CardDescription>
             {smtpConfiguredFromEnv
               ? "SMTP is preconfigured from your deployment environment. Send a test email to confirm the relay is working."
-              : "Configure your studio's email relay. Credentials are stored locally and never returned by the API."}
+              : smtpConfiguredFromMailpitDev
+                ? "Development mode routes outbound mail through the local Mailpit catcher. Send a test email, then open Mailpit to inspect captured messages."
+                : "Configure your studio's email relay. Credentials are stored locally and never returned by the API."}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {smtpConfiguredFromEnv ? (
+          {smtpReadOnly ? (
             <div className="grid gap-4">
               <dl className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">

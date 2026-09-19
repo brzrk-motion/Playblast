@@ -1,0 +1,2 @@
+-- Migration 009: lead assignment / ownership (T13)
+-- Column and index are applied in db.ts when missing on existing databases.

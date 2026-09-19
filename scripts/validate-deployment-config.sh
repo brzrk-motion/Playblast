@@ -29,6 +29,18 @@ if grep -q 'PLAYBLAST_AUTH_USER: \${PLAYBLAST_AUTH_USER:\?Set PLAYBLAST_AUTH_USE
 fi
 pass "docker-compose.yml requires SESSION_SECRET and configures file watch rebuilds"
 
+[[ -f docker-compose.dev.yml ]] || fail "docker-compose.dev.yml is missing"
+grep -q 'axllent/mailpit' docker-compose.dev.yml || fail "docker-compose.dev.yml must include axllent/mailpit"
+grep -q '1025:1025' docker-compose.dev.yml || fail "docker-compose.dev.yml must publish Mailpit SMTP on 1025"
+grep -q '8025:8025' docker-compose.dev.yml || fail "docker-compose.dev.yml must publish Mailpit UI on 8025"
+if grep -qi 'mailpit' docker-compose.yml; then
+  fail "docker-compose.yml must not include Mailpit or other catcher services"
+fi
+pass "docker-compose.dev.yml includes Mailpit and production compose has no catcher"
+
+[[ -f docs/deployment/mailpit-dev.md ]] || fail "docs/deployment/mailpit-dev.md is missing"
+pass "Mailpit dev documentation exists"
+
 [[ -f docker-compose.env.example ]] || fail "docker-compose.env.example is missing"
 grep -q 'SESSION_SECRET=' docker-compose.env.example || fail "docker-compose.env.example must document SESSION_SECRET"
 pass "docker-compose.env.example documents SESSION_SECRET"
@@ -48,6 +60,10 @@ for var in \
   PLAYBLAST_AUTH_USER \
   PLAYBLAST_AUTH_PASSWORD \
   PLAYBLAST_ADMIN_RECOVERY_TOKEN \
+  PLAYBLAST_EMAIL_CATCHER \
+  MAILPIT_URL \
+  MAILPIT_SMTP_PORT \
+  SMTP_HOST \
   VITE_DEFAULT_VIDEO_FPS
 do
   grep -q "$var" .env.example || fail ".env.example must document $var"
@@ -97,6 +113,11 @@ pass "secrets documentation exists"
 [[ -f docs/deployment/onboarding-walkthrough.md ]] || fail "onboarding walkthrough is missing"
 pass "onboarding walkthrough exists"
 
+[[ -f scripts/verify-clean-install.sh ]] || fail "verify-clean-install.sh is missing"
+[[ -f e2e/clean-install-smoke.ts ]] || fail "e2e/clean-install-smoke.ts is missing"
+[[ -f docs/soft-rc/t7-clean-install-evidence.md ]] || fail "T7 clean-install evidence doc is missing"
+pass "T7 clean-install verification script and evidence doc exist"
+
 [[ -f docs/deployment/tls-proxy.md ]] || fail "TLS/reverse-proxy documentation is missing"
 pass "TLS/reverse-proxy documentation exists"
 
@@ -112,9 +133,9 @@ grep -q "link: '/deployment/image-publish'" docs-site/.vitepress/config.ts \
   || fail "docs-site sidebar must include image-publish"
 grep -q "link: '/deployment/tls-proxy'" docs-site/.vitepress/config.ts \
   || fail "docs-site sidebar must include tls-proxy"
-grep -q "link: '/deployment/operator-checklist'" docs-site/.vitepress/config.ts \
-  || fail "docs-site sidebar must include operator-checklist"
-pass "docs-site sidebar includes image-publish, tls-proxy, and operator-checklist"
+grep -q "link: '/deployment/mailpit-dev'" docs-site/.vitepress/config.ts \
+  || fail "docs-site sidebar must include mailpit-dev"
+pass "docs-site sidebar includes image-publish, tls-proxy, mailpit-dev, and operator-checklist"
 
 [[ -f CHANGELOG.md ]] || fail "CHANGELOG.md is missing"
 pass "CHANGELOG.md exists"

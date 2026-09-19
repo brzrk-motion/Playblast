@@ -12,6 +12,13 @@ const previousDbPath = process.env.DB_PATH
 const previousEmergencyAuth = process.env.PLAYBLAST_EMERGENCY_BASIC_AUTH
 const previousAuthUser = process.env.PLAYBLAST_AUTH_USER
 const previousAuthPassword = process.env.PLAYBLAST_AUTH_PASSWORD
+const previousSmtpHost = process.env.SMTP_HOST
+const previousSmtpPort = process.env.SMTP_PORT
+const previousSmtpSecure = process.env.SMTP_SECURE
+const previousSmtpUser = process.env.SMTP_USER
+const previousSmtpPass = process.env.SMTP_PASS
+const previousSmtpFrom = process.env.SMTP_FROM
+const previousEmailCatcher = process.env.PLAYBLAST_EMAIL_CATCHER
 
 let tempDir = ""
 
@@ -24,6 +31,13 @@ beforeEach(() => {
   delete process.env.PLAYBLAST_EMERGENCY_BASIC_AUTH
   delete process.env.PLAYBLAST_AUTH_USER
   delete process.env.PLAYBLAST_AUTH_PASSWORD
+  delete process.env.SMTP_HOST
+  delete process.env.SMTP_PORT
+  delete process.env.SMTP_SECURE
+  delete process.env.SMTP_USER
+  delete process.env.SMTP_PASS
+  delete process.env.SMTP_FROM
+  delete process.env.PLAYBLAST_EMAIL_CATCHER
 })
 
 afterEach(() => {
@@ -41,6 +55,20 @@ afterEach(() => {
   else process.env.PLAYBLAST_AUTH_USER = previousAuthUser
   if (previousAuthPassword === undefined) delete process.env.PLAYBLAST_AUTH_PASSWORD
   else process.env.PLAYBLAST_AUTH_PASSWORD = previousAuthPassword
+  if (previousSmtpHost === undefined) delete process.env.SMTP_HOST
+  else process.env.SMTP_HOST = previousSmtpHost
+  if (previousSmtpPort === undefined) delete process.env.SMTP_PORT
+  else process.env.SMTP_PORT = previousSmtpPort
+  if (previousSmtpSecure === undefined) delete process.env.SMTP_SECURE
+  else process.env.SMTP_SECURE = previousSmtpSecure
+  if (previousSmtpUser === undefined) delete process.env.SMTP_USER
+  else process.env.SMTP_USER = previousSmtpUser
+  if (previousSmtpPass === undefined) delete process.env.SMTP_PASS
+  else process.env.SMTP_PASS = previousSmtpPass
+  if (previousSmtpFrom === undefined) delete process.env.SMTP_FROM
+  else process.env.SMTP_FROM = previousSmtpFrom
+  if (previousEmailCatcher === undefined) delete process.env.PLAYBLAST_EMAIL_CATCHER
+  else process.env.PLAYBLAST_EMAIL_CATCHER = previousEmailCatcher
   fs.rmSync(tempDir, { recursive: true, force: true })
 })
 
@@ -65,6 +93,30 @@ describe("validateStartup", () => {
     assert.equal(result.ok, false)
     if (!result.ok) {
       assert.equal(result.code, "EMERGENCY_BASIC_AUTH_INCOMPLETE")
+    }
+  })
+
+  it("fails when production SMTP points at Mailpit", () => {
+    process.env.SMTP_HOST = "mailpit"
+    process.env.SMTP_PORT = "1025"
+    process.env.SMTP_SECURE = "false"
+    process.env.SMTP_USER = "dev"
+    process.env.SMTP_PASS = "dev"
+    process.env.SMTP_FROM = "noreply@example.com"
+
+    const result = validateStartup()
+    assert.equal(result.ok, false)
+    if (!result.ok) {
+      assert.equal(result.code, "SMTP_CATCHER_FORBIDDEN")
+    }
+  })
+
+  it("fails when PLAYBLAST_EMAIL_CATCHER is enabled in production", () => {
+    process.env.PLAYBLAST_EMAIL_CATCHER = "mailpit"
+    const result = validateStartup()
+    assert.equal(result.ok, false)
+    if (!result.ok) {
+      assert.equal(result.code, "SMTP_CATCHER_FORBIDDEN")
     }
   })
 })

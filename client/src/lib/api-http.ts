@@ -1,9 +1,11 @@
 import {
   isApiErrorEnvelope,
   type AcceptInvitationRequest,
+  type AuditEventType,
   type ApiErrorCode,
   type ApiErrorEnvelope,
   type AuthSuccessResponse,
+  type ListAuditEventsResponse,
   type ChangePasswordRequest,
   type CreateBootstrapAdminRequest,
   type CreateInvitationRequest,
@@ -17,7 +19,9 @@ import {
   type SetupStatusResponse,
   type SmtpSettingsResponse,
   type SmtpTlsMode,
+  type StudioPreferencesResponse,
   type StudioProfileResponse,
+  type UpdateStudioPreferencesRequest,
   type TestSmtpRequest,
   type TestSmtpResponse,
   type UpdateSmtpSettingsRequest,
@@ -178,6 +182,19 @@ export async function updateStudioProfile(
   })
 }
 
+export async function fetchStudioPreferences(): Promise<StudioPreferencesResponse> {
+  return apiFetch<StudioPreferencesResponse>("/api/studio/preferences")
+}
+
+export async function updateStudioPreferences(
+  input: UpdateStudioPreferencesRequest,
+): Promise<StudioPreferencesResponse> {
+  return apiFetch<StudioPreferencesResponse>("/api/studio/preferences", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  })
+}
+
 export async function completeStudioSetup(): Promise<StudioProfileResponse> {
   return apiFetch<StudioProfileResponse>("/api/setup/complete", {
     method: "POST",
@@ -258,6 +275,59 @@ export async function fetchUsers(): Promise<UserSummary[]> {
 
 export async function fetchInvitations(): Promise<InvitationSummary[]> {
   return apiFetch<InvitationSummary[]>("/api/invitations")
+}
+
+export async function fetchAuditEvents(input?: {
+  limit?: number
+  offset?: number
+  eventType?: AuditEventType
+}): Promise<ListAuditEventsResponse> {
+  const params = new URLSearchParams()
+  if (input?.limit !== undefined) {
+    params.set("limit", String(input.limit))
+  }
+  if (input?.offset !== undefined) {
+    params.set("offset", String(input.offset))
+  }
+  if (input?.eventType) {
+    params.set("eventType", input.eventType)
+  }
+
+  const query = params.toString()
+  const path = query ? `/api/audit-events?${query}` : "/api/audit-events"
+  return apiFetch<ListAuditEventsResponse>(path)
+}
+
+export async function downloadAuditEventsExport(
+  eventType?: AuditEventType,
+): Promise<void> {
+  const params = new URLSearchParams()
+  if (eventType) {
+    params.set("eventType", eventType)
+  }
+
+  const query = params.toString()
+  const path = query ? `/api/audit-events/export?${query}` : "/api/audit-events/export"
+  const response = await fetch(path, {
+    credentials: "include",
+    headers: buildApiHeaders(false),
+  })
+
+  if (!response.ok) {
+    await parseApiResponse<void>(response)
+    return
+  }
+
+  const blob = await response.blob()
+  const disposition = response.headers.get("Content-Disposition")
+  const filenameMatch = disposition?.match(/filename="([^"]+)"/)
+  const filename = filenameMatch?.[1] ?? "playblast-audit-events.csv"
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
 }
 
 export async function fetchRoleCapabilities(): Promise<RoleCapabilitiesResponse> {

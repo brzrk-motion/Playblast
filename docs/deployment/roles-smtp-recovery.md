@@ -15,15 +15,42 @@ Admins invite Account Executive, Creative, and Proofing users from **Team**. Inv
 
 ## SMTP setup (Admin)
 
+SMTP is **not** part of the first-run setup wizard. After setup completes, configure email from **Team** (`/team`) or via deployment environment variables (see below).
+
+### UI-configured SMTP
+
 1. Sign in as Admin → **Team**.
 2. Open SMTP settings.
 3. Enter host, port, TLS mode, username, and password for your studio's mail relay.
-4. Run **Test delivery** to a reachable inbox.
-5. Save settings before sending invitations.
+4. Save settings, then run **Send test email** to a reachable inbox.
+5. Send invitations after test delivery succeeds.
+
+### Environment-preconfigured SMTP
+
+When the operator sets all required `SMTP_*` environment variables, the Team SMTP card is read-only (`smtpConfiguredFromEnv: true`). Admins still run **Send test email** to verify delivery before inviting users.
+
+| Variable | Required for env SMTP | Purpose |
+|----------|----------------------|---------|
+| `SMTP_HOST` | Yes | Relay hostname |
+| `SMTP_PORT` | Yes | Relay port (1–65535) |
+| `SMTP_SECURE` | Yes | `true`/`false` for implicit TLS |
+| `SMTP_USER` | Yes | SMTP username |
+| `SMTP_PASS` | Yes | SMTP password |
+| `SMTP_FROM` | Yes | Sender address |
+| `SMTP_REPLY_TO` | No | Optional reply-to header |
+| `PLAYBLAST_INSTANCE_URL` | Recommended | Public URL embedded in invitation links |
+
+Set these in `.env` beside `docker-compose.yml` or in Container Manager env files — never commit values to git. See [secrets and permissions](./secrets.md) and root `.env.example`.
+
+If only some SMTP variables are set, Playblast ignores the partial env block and falls back to Team UI configuration.
+
+### Local development with Mailpit
+
+When `MAILPIT_URL` is set in development and env SMTP is absent, Playblast routes mail to a local Mailpit catcher. See [mailpit-dev.md](mailpit-dev.md).
 
 If SMTP is unavailable, the instance remains usable for signed-in users, but new email invitations will not deliver until test delivery succeeds.
 
-SMTP credentials live in the local database. Back up `data/` to protect them.
+UI-configured SMTP credentials live in the local database. Back up `data/` to protect them.
 
 ## Admin recovery
 

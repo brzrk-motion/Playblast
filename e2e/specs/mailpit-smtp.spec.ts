@@ -2,7 +2,9 @@
  * Optional follow-up E2E (BRZ-195): Admin SMTP test-send via Team UI, asserted through
  * the Mailpit HTTP API — not UI scraping and not file capture.
  *
- * Invite flows continue to use PLAYBLAST_SMTP_CAPTURE_DIR in auth.setup.ts.
+ * Uses Mailpit dev routing (MAILPIT_URL + NODE_ENV=development) so production catcher
+ * refusal does not block localhost:1025. Invite flows continue to use file capture
+ * in auth.setup.ts.
  *
  * Run: npm run test:e2e:mailpit (starts Mailpit via Docker when available)
  * Or set MAILPIT_URL and run: npx playwright test --project=mailpit
@@ -14,8 +16,6 @@ import {
   deleteAllMailpitMessages,
   getMailpitMessage,
   isMailpitReachable,
-  resolveMailpitSmtpHost,
-  resolveMailpitSmtpPort,
   resolveMailpitUrlFromEnv,
   waitForMailpitMessage,
 } from "../helpers/mailpit.js"
@@ -50,7 +50,7 @@ test.describe("Admin SMTP via Mailpit API", () => {
     }
   })
 
-  test("Admin configures SMTP and test-send is captured by Mailpit", async ({ page }) => {
+  test("Admin sends test email through Mailpit dev routing", async ({ page }) => {
     test.skip(
       !mailpitUrl,
       "MAILPIT_URL is not set — optional Mailpit E2E skipped (see npm run test:e2e:mailpit)",
@@ -58,8 +58,6 @@ test.describe("Admin SMTP via Mailpit API", () => {
     test.skip(!mailpitAvailable, "Mailpit is not reachable at MAILPIT_URL")
 
     const activeServer = server!
-    const smtpHost = resolveMailpitSmtpHost(mailpitUrl!)
-    const smtpPort = String(resolveMailpitSmtpPort())
 
     await completeFirstRunSetup(
       page,
@@ -76,18 +74,10 @@ test.describe("Admin SMTP via Mailpit API", () => {
     await expect(page.getByRole("heading", { name: "Team", level: 1 })).toBeVisible({
       timeout: 20_000,
     })
+    await expect(
+      page.getByText(/routes outbound mail through the local Mailpit catcher/i),
+    ).toBeVisible({ timeout: 20_000 })
 
-    const smtpHostInput = page.locator("#smtp-host")
-    await expect(smtpHostInput).toBeVisible({ timeout: 20_000 })
-    await smtpHostInput.fill(smtpHost)
-    await page.locator("#smtp-port").fill(smtpPort)
-    await page.locator("#smtp-password").fill("mailpit-e2e-fixture-password")
-    await page.locator("#smtp-from").fill("noreply@mailpit-e2e.fixture")
-    await page.locator("#smtp-tls").click()
-    await page.getByRole("option", { name: "none", exact: true }).click()
-    await page.locator("#smtp-instance-url").fill(activeServer.baseUrl)
-    await page.getByRole("button", { name: "Save SMTP settings" }).click()
-    await expect(page.getByText("Validation failed.")).toHaveCount(0)
     await page.getByRole("button", { name: "Send test email" }).click()
     await expect(page.getByRole("button", { name: "Invite member" })).toBeEnabled({
       timeout: 15_000,

@@ -83,6 +83,11 @@ function pickPort(): number {
 }
 
 export async function startMailpitE2EServer(): Promise<MailpitE2EServer> {
+  const mailpitUrl = process.env.MAILPIT_URL?.trim()
+  if (!mailpitUrl) {
+    throw new Error("MAILPIT_URL is required to start the Mailpit E2E server")
+  }
+
   const port = pickPort()
   const baseUrl = `http://127.0.0.1:${port}`
   await assertPortAvailable(port)
@@ -101,7 +106,9 @@ export async function startMailpitE2EServer(): Promise<MailpitE2EServer> {
     cwd: repoRoot,
     env: {
       ...process.env,
-      NODE_ENV: "production",
+      NODE_ENV: "development",
+      MAILPIT_URL: mailpitUrl,
+      PLAYBLAST_INSTANCE_URL: baseUrl,
       PORT: String(port),
       DB_PATH: dbPath,
       UPLOAD_DIR: uploadDir,
