@@ -163,6 +163,9 @@ jobs:
       - name: Scan for accidental secrets
         run: npm run verify:secrets
 
+      - name: Verify MIT LICENSE
+        run: npm run verify:license
+
   deployment-config:
     name: Deployment config
     runs-on: ubuntu-latest
