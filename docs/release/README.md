@@ -77,7 +77,7 @@ These remain **operator or maintainer responsibilities** and are documented expl
 |------|------------|
 | Cross-browser desktop QA (Firefox, Safari, Edge) | Requires additional browser installs or farm |
 | Clean-machine install from docs only | Needs a fresh VM or NAS without dev tooling |
-| Live SMTP delivery to a real mailbox | Operator relay credentials; never commit or log |
+| Live SMTP delivery to a real mailbox | Operator relay credentials; never commit or log. Record evidence in [soft-rc/t6-live-mailbox-invite-evidence.md](../soft-rc/t6-live-mailbox-invite-evidence.md) (BRZ-238). Mailpit/CI catcher success does **not** substitute. |
 | NAS Hyper Backup / container volume drills | Hardware-specific; see deployment docs |
 | Synology / NAS bind-mount deploy | Automated: `npm run verify:nas-deployment`; evidence: [T8 NAS deploy](./soft-rc-evidence/t8-synology-nas-deploy.md) (2026-09-19) |
 | Self-hosted adopter recruitment | External studios; no fabricated metrics |

@@ -118,6 +118,10 @@ pass "onboarding walkthrough exists"
 [[ -f docs/soft-rc/t7-clean-install-evidence.md ]] || fail "T7 clean-install evidence doc is missing"
 pass "T7 clean-install verification script and evidence doc exist"
 
+[[ -f docs/soft-rc/t6-live-mailbox-invite-evidence.md ]] || fail "T6 live mailbox invite evidence doc is missing"
+[[ -f docs/soft-rc/README.md ]] || fail "soft-rc evidence index is missing"
+pass "T6 live mailbox invite evidence doc exists"
+
 [[ -f docs/deployment/tls-proxy.md ]] || fail "TLS/reverse-proxy documentation is missing"
 pass "TLS/reverse-proxy documentation exists"
 
