@@ -32,6 +32,7 @@ Run from the repository root after `npm install`. The full release-candidate com
 | `npm run verify:deployment-config` | No | Dockerfile, Compose, env examples, and docs presence |
 | `npm run verify:docker-compose` | Yes (skipped if absent) | `docker compose config` renders cleanly |
 | `npm run verify:docker-deployment` | Yes (skipped if absent) | Build, start, `/health`, and clean setup status |
+| `npm run verify:nas-deployment` | Yes (skipped if absent) | Synology-equivalent bind-mount smoke (`deploy/synology/docker-compose.synology.yml`) |
 | `npm run verify:clean-install` | Optional | Fresh volumes → setup → login → project → tus upload stub → comment; runs Docker smoke when daemon available |
 | `npm run verify:smtp-mailpit` | Optional | SMTP test-send delivery via Mailpit in CI/dev |
 | `npm run verify:backup-restore` | No | Filesystem backup → wipe → restore of DB + uploads |

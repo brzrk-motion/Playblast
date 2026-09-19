@@ -108,38 +108,20 @@ Grant read/write to your user and Container Manager (Control Panel → Shared Fo
 
 ### Compose project
 
-In **Container Manager → Project → Create**, use bind mounts and session-based auth:
+Canonical NAS files in the repository:
 
-```yaml
-services:
-  playblast:
-    image: playblast:latest
-    container_name: playblast
-    ports:
-      - "3000:3000"
-    environment:
-      NODE_ENV: production
-      PORT: "3000"
-      HOST: "0.0.0.0"
-      UPLOAD_DIR: /app/uploads
-      DB_PATH: /app/data/playblast.db
-      MAX_UPLOAD_SIZE: "5000"
-      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET}
-      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-168}
-      PLAYBLAST_ADMIN_RECOVERY_TOKEN: ${PLAYBLAST_ADMIN_RECOVERY_TOKEN:-}
-    volumes:
-      - /volume1/docker/playblast/uploads:/app/uploads
-      - /volume1/docker/playblast/data:/app/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-```
+| File | Copy to NAS |
+|------|-------------|
+| [`deploy/synology/docker-compose.synology.yml`](../../deploy/synology/docker-compose.synology.yml) | Project compose (e.g. `/volume1/docker/playblast/docker-compose.yml`) |
+| [`deploy/synology/.env.example`](../../deploy/synology/.env.example) | Rename to `.env` and set `SESSION_SECRET` |
+
+In **Container Manager → Project → Create**, paste or upload the compose file, set the project path to your bind-mount folder, and load `playblast:latest` before starting.
 
 Store `SESSION_SECRET` in a `.env` file beside the compose file (Container Manager supports env files for projects). Do not commit secrets.
+
+Optional env overrides: `PLAYBLAST_HOST_PORT`, `PLAYBLAST_DATA_DIR`, `PLAYBLAST_UPLOADS_DIR`, `PROXY_HOPS` (set `1` when DSM reverse proxy terminates TLS). See the `.env.example` comments.
+
+Soft-RC verification evidence: [T8 NAS deploy](../release/soft-rc-evidence/t8-synology-nas-deploy.md).
 
 ### Why build off the NAS?
 
@@ -147,7 +129,20 @@ Compiling native modules (`better-sqlite3`) during `npm ci` is memory-intensive.
 
 ### Port and firewall
 
-If port 3000 is taken, change the host side of the mapping (e.g. `"3001:3000"`). Allow the chosen port in DSM firewall rules. Prefer HTTPS or VPN for remote access — see [operator responsibilities](./operator-responsibilities.md) and [TLS / reverse proxy](./tls-proxy.md) (LAN/VPN-only stance + optional Caddy overlay).
+If port 3000 is taken, set `PLAYBLAST_HOST_PORT=3001` in `.env` (or change the host side of the port mapping). Allow the chosen port in DSM firewall rules. Prefer HTTPS or VPN for remote access — see [operator responsibilities](./operator-responsibilities.md) and [TLS / reverse proxy](./tls-proxy.md) (LAN/VPN-only stance + optional Caddy overlay).
+
+### Reverse proxy and large uploads
+
+Version uploads use tus at `/api/uploads/tus` and can resume after network drops. DSM reverse proxy and nginx defaults still use **small body limits** and **short read timeouts**, which break multi-GB CGI renders and long tus PATCH sessions.
+
+| Check | Recommendation |
+|-------|----------------|
+| Body size | Set DSM/nginx `client_max_body_size` (or equivalent) to at least `MAX_UPLOAD_SIZE` (default 5000 MB). |
+| Timeouts | Use **3600s** read/send timeouts on the proxy for long uploads. |
+| `PROXY_HOPS` | Set `PROXY_HOPS=1` on the Playblast service when DSM terminates TLS in front of the container. |
+| App env | Raise `MAX_UPLOAD_SIZE` only together with proxy limits — both must allow the file size. |
+
+Full pitfall matrix: [T8 NAS evidence — proxy timeouts](../release/soft-rc-evidence/t8-synology-nas-deploy.md#pre-tus-proxy-timeout-pitfalls-large-uploads). Caddy/nginx examples: [TLS / reverse proxy](./tls-proxy.md).
 
 ## Environment variables
 
@@ -175,7 +170,9 @@ Normal access uses Playblast login sessions, not deployment-wide Basic Auth.
 | `SESSION_SECRET is required in production` | Set `SESSION_SECRET` in `.env` (32+ characters). |
 | `EACCES` on uploads or data | Fix host folder permissions for the container user. |
 | Can't reach the web UI | Confirm host port, firewall, and LAN IP. If `curl localhost` fails but `curl 127.0.0.1` works, use IPv4 explicitly. |
-| Uploads fail for large files | Increase `MAX_UPLOAD_SIZE`; raise reverse-proxy body limits and timeouts (6h recommended) if fronting the app. Version uploads use tus at `/api/uploads/tus` and can resume after network drops. |
+| Uploads fail for large files | Increase `MAX_UPLOAD_SIZE`; raise reverse-proxy body limits and timeouts (6h recommended) if fronting the app. Version uploads use tus at `/api/uploads/tus` — see [reverse-proxy notes](#reverse-proxy-and-large-uploads). |
+| Login fails over plain HTTP | Production cookies are `Secure`; terminate HTTPS at DSM or use the Caddy overlay. |
+| UI hangs adding annotations over HTTP IP | Browsers block `crypto.randomUUID()` outside a secure context; use HTTPS. |
 | `exec format error` | Rebuild image with matching `PLATFORM` (`linux/amd64` vs `linux/arm64`). |
 | Setup page unreachable | Ensure `/api/setup/status` is reachable; emergency Basic Auth (if enabled) allows setup paths. |
 
