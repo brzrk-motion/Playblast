@@ -38,4 +38,4 @@ Do **not** file public issues for exploitable vulnerabilities. Follow [SECURITY.
 
 ## License
 
-Contributions are accepted under the MIT license covering this repository.
+Contributions are accepted under the [MIT license](LICENSE) covering this repository (copyright brzrk-motion).
