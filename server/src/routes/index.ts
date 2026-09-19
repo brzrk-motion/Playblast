@@ -7,6 +7,7 @@ import { protectedApiMiddleware } from "../middleware/authorization.js"
 import commentsRouter, { commentByIdRouter } from "./comments.js"
 import clientsRouter from "./clients.js"
 import deliverablesRouter, { deliverableByIdRouter } from "./deliverables.js"
+import auditRouter from "./audit.js"
 import identityRouter from "./identity.js"
 import teamRouter from "./team.js"
 import projectInvoicesRouter, { invoiceByIdRouter } from "./invoices.js"
@@ -24,6 +25,7 @@ import versionsRouter from "./versions.js"
 const apiRouter = Router()
 
 apiRouter.use(identityRouter)
+apiRouter.use(auditRouter)
 apiRouter.use(teamRouter)
 
 const securedRouter = Router()
