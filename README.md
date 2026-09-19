@@ -36,6 +36,16 @@ npm run dev
 - Client: http://localhost:5173 (proxies `/api` and `/video` to the server)
 - Server: http://localhost:3000
 
+### Optional: Mailpit email catcher (dev / CI)
+
+For invitation and SMTP testing without sending real email, use the Docker dev overlay with Mailpit (SMTP `1025`, UI at `http://localhost:8025`). Mailpit is **dev/CI only** — it does not prove production deliverability.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+See [docs/deployment/mailpit-dev.md](docs/deployment/mailpit-dev.md) for env wiring and production guardrails.
+
 ## Production deployment
 
 Playblast runs as a single Docker container serving API + static client on port `3000`, with persistent volumes for:

@@ -6,7 +6,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
 import { E2E_ADMIN } from "../credentials.js"
-import { completeFirstRunSetup } from "../helpers/auth.js"
+import { completeFirstRunSetup, openAccountMenu } from "../helpers/auth.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 
@@ -287,6 +287,11 @@ services:
       // the database and setup state.
       await page.goto(`${baseUrl}/projects`)
       await expect(page).not.toHaveURL(/\/login/)
+      await expect(page.getByRole("heading", { name: "Projects", level: 1 })).toBeVisible({
+        timeout: 60_000,
+      })
+
+      await openAccountMenu(page)
       await expect(page.getByText("Docker E2E Studio").first()).toBeVisible()
 
       await page.context().clearCookies()
@@ -295,6 +300,7 @@ services:
       await page.getByLabel("Password", { exact: true }).fill(E2E_ADMIN.password)
       await page.getByRole("button", { name: "Sign in" }).click()
       await page.waitForURL((url) => !url.pathname.startsWith("/login"))
+      await openAccountMenu(page)
       await expect(page.getByText("Docker E2E Studio").first()).toBeVisible()
     } finally {
       const cleanupErrors: string[] = []
