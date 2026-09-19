@@ -131,9 +131,9 @@ Compiling native modules (`better-sqlite3`) during `npm ci` is memory-intensive.
 
 If port 3000 is taken, set `PLAYBLAST_HOST_PORT=3001` in `.env` (or change the host side of the port mapping). Allow the chosen port in DSM firewall rules. Prefer HTTPS or VPN for remote access — see [operator responsibilities](./operator-responsibilities.md) and [TLS / reverse proxy](./tls-proxy.md) (LAN/VPN-only stance + optional Caddy overlay).
 
-### Reverse proxy and large uploads (pre-tus)
+### Reverse proxy and large uploads
 
-Until resumable tus uploads ship, video files upload as a single HTTP POST. DSM reverse proxy and nginx defaults often use **small body limits** and **short read timeouts**, which break multi-GB CGI renders.
+Version uploads use tus at `/api/uploads/tus` and can resume after network drops. DSM reverse proxy and nginx defaults still use **small body limits** and **short read timeouts**, which break multi-GB CGI renders and long tus PATCH sessions.
 
 | Check | Recommendation |
 |-------|----------------|
@@ -142,7 +142,7 @@ Until resumable tus uploads ship, video files upload as a single HTTP POST. DSM 
 | `PROXY_HOPS` | Set `PROXY_HOPS=1` on the Playblast service when DSM terminates TLS in front of the container. |
 | App env | Raise `MAX_UPLOAD_SIZE` only together with proxy limits — both must allow the file size. |
 
-Full pitfall matrix: [T8 NAS evidence — pre-tus proxy timeouts](../release/soft-rc-evidence/t8-synology-nas-deploy.md#pre-tus-proxy-timeout-pitfalls-large-uploads). Caddy/nginx examples: [TLS / reverse proxy](./tls-proxy.md).
+Full pitfall matrix: [T8 NAS evidence — proxy timeouts](../release/soft-rc-evidence/t8-synology-nas-deploy.md#pre-tus-proxy-timeout-pitfalls-large-uploads). Caddy/nginx examples: [TLS / reverse proxy](./tls-proxy.md).
 
 ## Environment variables
 
@@ -170,7 +170,7 @@ Normal access uses Playblast login sessions, not deployment-wide Basic Auth.
 | `SESSION_SECRET is required in production` | Set `SESSION_SECRET` in `.env` (32+ characters). |
 | `EACCES` on uploads or data | Fix host folder permissions for the container user. |
 | Can't reach the web UI | Confirm host port, firewall, and LAN IP. If `curl localhost` fails but `curl 127.0.0.1` works, use IPv4 explicitly. |
-| Uploads fail for large files | Increase `MAX_UPLOAD_SIZE` **and** reverse-proxy body limits/timeouts (see [pre-tus proxy notes](#reverse-proxy-and-large-uploads-pre-tus)). |
+| Uploads fail for large files | Increase `MAX_UPLOAD_SIZE`; raise reverse-proxy body limits and timeouts (6h recommended) if fronting the app. Version uploads use tus at `/api/uploads/tus` — see [reverse-proxy notes](#reverse-proxy-and-large-uploads). |
 | Login fails over plain HTTP | Production cookies are `Secure`; terminate HTTPS at DSM or use the Caddy overlay. |
 | UI hangs adding annotations over HTTP IP | Browsers block `crypto.randomUUID()` outside a secure context; use HTTPS. |
 | `exec format error` | Rebuild image with matching `PLATFORM` (`linux/amd64` vs `linux/arm64`). |

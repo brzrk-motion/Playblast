@@ -7,6 +7,7 @@ import { protectedApiMiddleware } from "../middleware/authorization.js"
 import commentsRouter, { commentByIdRouter } from "./comments.js"
 import clientsRouter from "./clients.js"
 import deliverablesRouter, { deliverableByIdRouter } from "./deliverables.js"
+import auditRouter from "./audit.js"
 import identityRouter from "./identity.js"
 import teamRouter from "./team.js"
 import projectInvoicesRouter, { invoiceByIdRouter } from "./invoices.js"
@@ -18,12 +19,13 @@ import servicesRouter from "./services.js"
 import tasksRouter, { taskByIdRouter } from "./tasks.js"
 import timeLogsRouter, { timeLogByIdRouter } from "./time-logs.js"
 import timesheetRouter from "./timesheet.js"
-import uploadRouter from "./upload.js"
+import tusUploadRouter from "./tus-upload.js"
 import versionsRouter from "./versions.js"
 
 const apiRouter = Router()
 
 apiRouter.use(identityRouter)
+apiRouter.use(auditRouter)
 apiRouter.use(teamRouter)
 
 const securedRouter = Router()
@@ -59,11 +61,7 @@ securedRouter.use(
   validateDeliverableParams,
   commentsRouter,
 )
-securedRouter.use(
-  "/deliverables/:deliverableId/versions/:version/upload",
-  validateDeliverableParams,
-  uploadRouter,
-)
+securedRouter.use("/uploads/tus", tusUploadRouter)
 
 apiRouter.use(securedRouter)
 

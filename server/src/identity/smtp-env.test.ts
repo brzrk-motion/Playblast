@@ -77,6 +77,7 @@ describe("SMTP env precedence", () => {
     const settings = getSmtpSettings(studioId)
     assert.equal(settings.configured, true)
     assert.equal(settings.smtpConfiguredFromEnv, true)
+    assert.equal(settings.smtpConfiguredFromMailpitDev, false)
     assert.equal(settings.host, "env-smtp.example.com")
     assert.equal(settings.port, 587)
     assert.equal(settings.username, "env-user")
@@ -159,6 +160,7 @@ describe("SMTP env precedence", () => {
 
     assert.equal(settings.configured, true)
     assert.equal(settings.smtpConfiguredFromEnv, false)
+    assert.equal(settings.smtpConfiguredFromMailpitDev, false)
     assert.equal(settings.host, "ui-smtp.example.com")
   })
 })

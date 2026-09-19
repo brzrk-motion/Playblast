@@ -49,6 +49,7 @@ export interface Lead {
   notes?: string
   lastContactedAt?: string
   replied: boolean
+  assignedToUserId?: string
   createdAt: string
   updatedAt: string
 }
@@ -67,6 +68,7 @@ export interface CreateLeadInput {
   notes?: string
   lastContactedAt?: string
   replied?: boolean
+  assignedToUserId?: string
 }
 
 export interface UpdateLeadInput {
@@ -79,4 +81,5 @@ export interface UpdateLeadInput {
   notes?: string | null
   lastContactedAt?: string | null
   replied?: boolean
+  assignedToUserId?: string | null
 }

@@ -1,6 +1,7 @@
 import path from "node:path"
 import { loadEnvFile } from "node:process"
 import { fileURLToPath } from "node:url"
+import { resolveDefaultSmtpHost } from "./smtp-catcher.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(__dirname, "../../..")
@@ -95,7 +96,9 @@ function isNonEmptyEnv(value: string | undefined): value is string {
 }
 
 function isSmtpEnvComplete(): boolean {
-  return REQUIRED_SMTP_ENV_KEYS.every((key) => isNonEmptyEnv(process.env[key]))
+  return resolveEffectiveSmtpHost() !== undefined
+    && REQUIRED_SMTP_ENV_KEYS.filter((key) => key !== "SMTP_HOST")
+      .every((key) => isNonEmptyEnv(process.env[key]))
 }
 
 function parseSmtpPort(value: string): number {
@@ -129,14 +132,32 @@ export type SmtpEnvConfig = {
   replyTo?: string
 }
 
+function resolveEffectiveSmtpHost(): string | undefined {
+  if (process.env.SMTP_HOST !== undefined) {
+    if (!isNonEmptyEnv(process.env.SMTP_HOST)) {
+      return undefined
+    }
+
+    return process.env.SMTP_HOST.trim()
+  }
+
+  return resolveDefaultSmtpHost(parseNodeEnv(process.env.NODE_ENV))
+}
+
 function resolveSmtpFromEnv(): SmtpEnvConfig | null {
-  if (!isSmtpEnvComplete()) {
+  const host = resolveEffectiveSmtpHost()
+  if (!host) {
+    return null
+  }
+
+  const requiredWithoutHost = REQUIRED_SMTP_ENV_KEYS.filter((key) => key !== "SMTP_HOST")
+  if (!requiredWithoutHost.every((key) => isNonEmptyEnv(process.env[key]))) {
     return null
   }
 
   const replyTo = process.env.SMTP_REPLY_TO
   return {
-    host: process.env.SMTP_HOST!.trim(),
+    host,
     port: parseSmtpPort(process.env.SMTP_PORT!.trim()),
     secure: parseSmtpSecure(process.env.SMTP_SECURE!),
     user: process.env.SMTP_USER!.trim(),

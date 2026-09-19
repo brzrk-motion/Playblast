@@ -81,6 +81,14 @@ export const NAV_ITEMS: NavItemDefinition[] = [
     notes: "Admin-only; includes SMTP configuration.",
   },
   {
+    id: "audit",
+    title: "Audit log",
+    url: "/audit",
+    section: "main",
+    visibility: { admin: "visible", account_executive: "hidden", creative: "hidden", proofing: "hidden" },
+    notes: "Admin-readable security and administration events.",
+  },
+  {
     id: "settings",
     title: "Settings",
     url: "/settings",

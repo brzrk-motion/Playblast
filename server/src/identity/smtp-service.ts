@@ -9,10 +9,22 @@ import type {
   UpdateSmtpSettingsRequest,
 } from "@playblast/shared"
 import { eq } from "drizzle-orm"
-import { config, type SmtpEnvConfig } from "../config/env.js"
+import { config, isProduction, type SmtpEnvConfig } from "../config/env.js"
+import {
+  assertProductionSmtpNotCatcher,
+  getProductionCatcherRefusalMessage,
+  isSmtpCatcherEndpoint,
+} from "../config/smtp-catcher.js"
 import { getDrizzle } from "../db/drizzle.js"
 import { studioSmtpSettings } from "../db/schema/identity.js"
 import { decryptSecret, encryptSecret } from "./secret-crypto.js"
+import {
+  buildMailpitSmtpConnectionConfig,
+  isMailpitReachable,
+  MAILPIT_DEFAULT_FROM_EMAIL,
+  resolveMailpitSmtpPort,
+  resolveMailpitSmtpHost,
+} from "./mailpit.js"
 import {
   getSmtpTransport,
   SMTP_DEFAULT_TIMEOUT_MS,
@@ -35,10 +47,39 @@ export class SmtpServiceError extends Error {
   }
 }
 
+function isMailpitDevTransportEligible(): boolean {
+  return (
+    config.nodeEnv === "development" &&
+    Boolean(config.mailpitUrl) &&
+    !config.smtpConfiguredFromEnv
+  )
+}
+
+function hasExplicitUiSmtpConfiguration(
+  row: typeof studioSmtpSettings.$inferSelect | undefined,
+): boolean {
+  if (!row?.passwordEncrypted) {
+    return false
+  }
+
+  try {
+    return decryptSecret(row.passwordEncrypted).length > 0
+  } catch {
+    return false
+  }
+}
+
+function shouldUseMailpitDevTransport(
+  row: typeof studioSmtpSettings.$inferSelect | undefined,
+): boolean {
+  return isMailpitDevTransportEligible() && !hasExplicitUiSmtpConfiguration(row)
+}
+
 function emptySettings(): SmtpSettingsResponse {
   return {
     configured: false,
     smtpConfiguredFromEnv: false,
+    smtpConfiguredFromMailpitDev: false,
     host: null,
     port: null,
     username: null,
@@ -57,6 +98,7 @@ function mapRow(row: typeof studioSmtpSettings.$inferSelect): SmtpSettingsRespon
   return {
     configured: true,
     smtpConfiguredFromEnv: false,
+    smtpConfiguredFromMailpitDev: false,
     host: row.host,
     port: row.port,
     username: row.username,
@@ -106,6 +148,28 @@ function validateSmtpInput(input: UpdateSmtpSettingsRequest): Record<string, str
   return details
 }
 
+function validateProductionSmtpTarget(host: string, port: number): Record<string, string[]> {
+  if (!isProduction()) {
+    return {}
+  }
+
+  if (isSmtpCatcherEndpoint(host, port)) {
+    return {
+      host: [getProductionCatcherRefusalMessage(host, port)],
+    }
+  }
+
+  return {}
+}
+
+function assertProductionSmtpTarget(host: string, port: number): void {
+  if (!isProduction()) {
+    return
+  }
+
+  assertProductionSmtpNotCatcher(host, port)
+}
+
 function resolveTlsModeFromEnv(secure: boolean, port: number): SmtpTlsMode {
   if (secure || port === 465) {
     return "tls"
@@ -116,6 +180,28 @@ function resolveTlsModeFromEnv(secure: boolean, port: number): SmtpTlsMode {
   return "starttls"
 }
 
+function mapMailpitDevSettings(
+  row: typeof studioSmtpSettings.$inferSelect | undefined,
+): SmtpSettingsResponse {
+  const mailpitUrl = config.mailpitUrl!
+  return {
+    configured: true,
+    smtpConfiguredFromEnv: false,
+    smtpConfiguredFromMailpitDev: true,
+    host: resolveMailpitSmtpHost(mailpitUrl),
+    port: resolveMailpitSmtpPort(),
+    username: null,
+    fromEmail: row?.fromEmail ?? MAILPIT_DEFAULT_FROM_EMAIL,
+    tlsMode: "none",
+    instanceUrl: row?.instanceUrl ?? config.instanceUrl ?? null,
+    passwordConfigured: false,
+    testVerified: Boolean(row?.testVerifiedAt),
+    lastTestStatus: (row?.lastTestStatus as SmtpTestStatus) ?? "never",
+    lastTestAt: row?.lastTestAt ?? null,
+    lastTestError: row?.lastTestError ?? null,
+  }
+}
+
 function mapEnvSettings(
   row: typeof studioSmtpSettings.$inferSelect | undefined,
 ): SmtpSettingsResponse {
@@ -123,6 +209,7 @@ function mapEnvSettings(
   return {
     configured: true,
     smtpConfiguredFromEnv: true,
+    smtpConfiguredFromMailpitDev: false,
     host: env.host,
     port: env.port,
     username: env.user,
@@ -164,6 +251,13 @@ function resolveConnectionConfig(
     .where(eq(studioSmtpSettings.studioId, studioId))
     .get()
 
+  if (shouldUseMailpitDevTransport(row)) {
+    return buildMailpitSmtpConnectionConfig(
+      config.mailpitUrl!,
+      row?.fromEmail ?? MAILPIT_DEFAULT_FROM_EMAIL,
+    )
+  }
+
   if (!row) {
     return null
   }
@@ -181,6 +275,10 @@ export function getSmtpSettings(studioId: string): SmtpSettingsResponse {
 
   if (config.smtpConfiguredFromEnv) {
     return mapEnvSettings(row)
+  }
+
+  if (shouldUseMailpitDevTransport(row)) {
+    return mapMailpitDevSettings(row)
   }
 
   if (!row) {
@@ -203,6 +301,7 @@ export function upsertSmtpSettings(
   }
 
   const details = validateSmtpInput(input)
+  Object.assign(details, validateProductionSmtpTarget(input.host.trim(), input.port))
   const password = input.password?.trim()
 
   if (!password && !existingPassword) {
@@ -279,21 +378,21 @@ function buildConnectionConfig(
   }
 }
 
-function recordEnvSmtpTestResult(
+function recordManagedSmtpTestResult(
   studioId: string,
   testedAt: string,
   success: boolean,
+  values: {
+    host: string
+    port: number
+    username: string | null
+    passwordEncrypted: string
+    fromEmail: string
+    tlsMode: SmtpTlsMode
+    instanceUrl: string
+  },
   error?: string,
 ): void {
-  if (!config.smtpConfiguredFromEnv) {
-    return
-  }
-
-  const env = config.smtpFromEnv
-  if (!env) {
-    return
-  }
-
   const db = getDrizzle()
   const row = db
     .select()
@@ -315,21 +414,16 @@ function recordEnvSmtpTestResult(
     return
   }
 
-  const instanceUrl = config.instanceUrl
-  if (!instanceUrl) {
-    return
-  }
-
   db.insert(studioSmtpSettings)
     .values({
       studioId,
-      host: env.host,
-      port: env.port,
-      username: env.user,
-      passwordEncrypted: encryptSecret(env.pass),
-      fromEmail: env.from,
-      tlsMode: resolveTlsModeFromEnv(env.secure, env.port),
-      instanceUrl,
+      host: values.host,
+      port: values.port,
+      username: values.username,
+      passwordEncrypted: values.passwordEncrypted,
+      fromEmail: values.fromEmail,
+      tlsMode: values.tlsMode,
+      instanceUrl: values.instanceUrl,
       testVerifiedAt: success ? testedAt : null,
       lastTestStatus: success ? "success" : "failed",
       lastTestAt: testedAt,
@@ -340,6 +434,79 @@ function recordEnvSmtpTestResult(
     .run()
 }
 
+function recordEnvSmtpTestResult(
+  studioId: string,
+  testedAt: string,
+  success: boolean,
+  error?: string,
+): void {
+  if (!config.smtpConfiguredFromEnv) {
+    return
+  }
+
+  const env = config.smtpFromEnv
+  if (!env) {
+    return
+  }
+
+  const instanceUrl = config.instanceUrl
+  if (!instanceUrl) {
+    return
+  }
+
+  recordManagedSmtpTestResult(
+    studioId,
+    testedAt,
+    success,
+    {
+      host: env.host,
+      port: env.port,
+      username: env.user,
+      passwordEncrypted: encryptSecret(env.pass),
+      fromEmail: env.from,
+      tlsMode: resolveTlsModeFromEnv(env.secure, env.port),
+      instanceUrl,
+    },
+    error,
+  )
+}
+
+function recordMailpitDevTestResult(
+  studioId: string,
+  testedAt: string,
+  success: boolean,
+  error?: string,
+): void {
+  const row = getDrizzle()
+    .select()
+    .from(studioSmtpSettings)
+    .where(eq(studioSmtpSettings.studioId, studioId))
+    .get()
+
+  if (!shouldUseMailpitDevTransport(row)) {
+    return
+  }
+
+  const mailpitUrl = config.mailpitUrl!
+  const instanceUrl = config.instanceUrl ?? "http://localhost:5173"
+
+  recordManagedSmtpTestResult(
+    studioId,
+    testedAt,
+    success,
+    {
+      host: resolveMailpitSmtpHost(mailpitUrl),
+      port: resolveMailpitSmtpPort(),
+      username: null,
+      passwordEncrypted: encryptSecret(""),
+      fromEmail: MAILPIT_DEFAULT_FROM_EMAIL,
+      tlsMode: "none",
+      instanceUrl,
+    },
+    error,
+  )
+}
+
 export async function sendSmtpMessage(
   studioId: string,
   message: OutboundEmail,
@@ -347,6 +514,15 @@ export async function sendSmtpMessage(
   const connection = resolveConnectionConfig(studioId)
   if (!connection) {
     return { success: false, error: "SMTP is not configured." }
+  }
+
+  try {
+    assertProductionSmtpTarget(connection.host, connection.port)
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Invalid SMTP configuration.",
+    }
   }
 
   const transport = getSmtpTransport()
@@ -375,6 +551,38 @@ export async function testSmtpDelivery(
     throw new SmtpServiceError("NOT_FOUND", "SMTP is not configured.")
   }
 
+  try {
+    assertProductionSmtpTarget(connection.host, connection.port)
+  } catch (error) {
+    throw new SmtpServiceError(
+      "VALIDATION_FAILED",
+      error instanceof Error ? error.message : "Invalid SMTP configuration.",
+      {
+        host: [
+          error instanceof Error
+            ? error.message
+            : "Production SMTP must not point at a development email catcher.",
+        ],
+      },
+    )
+  }
+
+  if (shouldUseMailpitDevTransport(
+    getDrizzle()
+      .select()
+      .from(studioSmtpSettings)
+      .where(eq(studioSmtpSettings.studioId, studioId))
+      .get(),
+  )) {
+    const reachable = await isMailpitReachable(config.mailpitUrl!)
+    if (!reachable) {
+      throw new SmtpServiceError(
+        "DELIVERY_FAILED",
+        "Mailpit is not reachable. Start Mailpit locally and confirm MAILPIT_URL points at its web API.",
+      )
+    }
+  }
+
   const message: OutboundEmail = {
     to: recipient,
     subject: "Playblast SMTP test",
@@ -393,8 +601,18 @@ export async function testSmtpDelivery(
 
   if (result.accepted) {
     recordEnvSmtpTestResult(studioId, testedAt, true)
+    recordMailpitDevTestResult(studioId, testedAt, true)
 
-    if (!config.smtpConfiguredFromEnv) {
+    if (
+      !config.smtpConfiguredFromEnv &&
+      !shouldUseMailpitDevTransport(
+        getDrizzle()
+          .select()
+          .from(studioSmtpSettings)
+          .where(eq(studioSmtpSettings.studioId, studioId))
+          .get(),
+      )
+    ) {
       const db = getDrizzle()
       db.update(studioSmtpSettings)
         .set({
@@ -413,8 +631,18 @@ export async function testSmtpDelivery(
 
   const error = result.errorMessage ?? "SMTP delivery failed."
   recordEnvSmtpTestResult(studioId, testedAt, false, error)
+  recordMailpitDevTestResult(studioId, testedAt, false, error)
 
-  if (!config.smtpConfiguredFromEnv) {
+  if (
+    !config.smtpConfiguredFromEnv &&
+    !shouldUseMailpitDevTransport(
+      getDrizzle()
+        .select()
+        .from(studioSmtpSettings)
+        .where(eq(studioSmtpSettings.studioId, studioId))
+        .get(),
+    )
+  ) {
     const db = getDrizzle()
     db.update(studioSmtpSettings)
       .set({

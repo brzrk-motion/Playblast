@@ -1,12 +1,26 @@
-import { createLocalStorageNumberStore } from "@/hooks/use-local-storage-number"
+import {
+  ensureStudioPreferencesLoaded,
+  readStudioPreferences,
+  useStudioPreferencesState,
+  writeStudioPreferences,
+} from "@/lib/studio-preferences-store"
 
-export const INTERNAL_HOURLY_COST_RATE_STORAGE_KEY = "playblast-internal-hourly-cost-rate"
+export async function getInternalHourlyCostRate(): Promise<number | null> {
+  const preferences = readStudioPreferences() ?? await ensureStudioPreferencesLoaded()
+  return preferences.internalHourlyCostRate
+}
 
-const store = createLocalStorageNumberStore(
-  INTERNAL_HOURLY_COST_RATE_STORAGE_KEY,
-  "playblast-internal-hourly-cost-rate-change",
-)
+export async function setInternalHourlyCostRate(rate: number | null): Promise<void> {
+  await writeStudioPreferences({ internalHourlyCostRate: rate })
+}
 
-export const getInternalHourlyCostRate = store.read
-export const setInternalHourlyCostRate = store.write
-export const useInternalHourlyCostRate = store.useValue
+export function useInternalHourlyCostRate(): number | null {
+  const state = useStudioPreferencesState()
+
+  if (state.status !== "ready") {
+    void ensureStudioPreferencesLoaded()
+    return null
+  }
+
+  return state.preferences.internalHourlyCostRate
+}

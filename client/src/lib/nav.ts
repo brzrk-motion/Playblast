@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Settings,
   TrendingUp,
+  ScrollText,
   UserCog,
   Users,
 } from "lucide-react"
@@ -27,6 +28,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   timesheet: Clock,
   capacity: Gauge,
   team: UserCog,
+  audit: ScrollText,
   settings: Settings,
 }
 
@@ -76,6 +78,7 @@ export function getPageHeader(pathname: string): { title: string; subtitle?: str
       pipeline: "Revenue by project stage",
       capacity: "Active workload & hours remaining",
       team: "Users, roles, and invitations",
+      audit: "Security and administration events",
     }
     const subtitle = subtitles[matched.id]
     return subtitle ? { title: matched.title, subtitle } : { title: matched.title }
@@ -105,6 +108,9 @@ export function isNavItemActive(pathname: string, url: string): boolean {
   }
   if (url === "/team") {
     return pathname === "/team" || pathname.startsWith("/team/")
+  }
+  if (url === "/audit") {
+    return pathname === "/audit" || pathname.startsWith("/audit/")
   }
   return pathname === url
 }
