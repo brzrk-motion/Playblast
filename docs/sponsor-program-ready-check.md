@@ -92,14 +92,14 @@ Complete **before** opening public sponsor checkout (BRZ-230):
 
 ---
 
-## Checkout open gate (explicit — not part of BRZ-228)
+## Checkout open gate (BRZ-230)
 
-Do **not** flip fund CTAs or social promotion until James signs off **and** BRZ-230 copy is approved:
+Do **not** flip fund CTAs or social promotion until James signs off **and** BRZ-230 copy is approved. Full checklist: [fund-sponsor-cta-gate.md](./fund-sponsor-cta-gate.md).
 
 - [ ] James approves checkout open.
-- [ ] Motion updates fund/playblast CTA copy per brief.
+- [ ] Motion CTA copy approved (Linear doc).
 - [ ] `brzrk-site` fund status panel updated from “Checkout: Not open” to live state.
-- [ ] BRZ-230 completed.
+- [ ] `npm run verify:fund-cta-gate` passes in live mode after deploy.
 
 ---
 
