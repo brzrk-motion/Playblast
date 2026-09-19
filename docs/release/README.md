@@ -65,6 +65,7 @@ Until a daemon-capable host re-runs the smoke locally, the dated host-health sig
 | Deployment config | `npm run verify:deployment-config` | No |
 | Compose render | `npm run verify:docker-compose` | Yes |
 | Docker smoke | `npm run verify:docker-deployment` | Yes |
+| Clean install (T7) | `npm run verify:clean-install` | Optional |
 | Browser QA (Chromium) | `npm run verify:browser-qa` | No |
 
 ## Manual and external gates (not automated)

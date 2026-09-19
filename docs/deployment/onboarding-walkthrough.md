@@ -45,8 +45,10 @@ Route: `/setup/complete`
 Setup checklist on this screen:
 
 - Invite Creative and Proofing teammates from **Team**
-- Configure SMTP before sending email invitations
+- Configure SMTP on **Team** (not in the setup wizard) before sending email invitations
 - Create a project and upload a first deliverable to validate proofing
+
+**SMTP paths:** default is Team UI after setup. Operators may instead set the full SMTP env block in `.env` (see [roles, SMTP, and recovery](./roles-smtp-recovery.md)).
 
 ## 5. Configure SMTP and invite (Admin)
 

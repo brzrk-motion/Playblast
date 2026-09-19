@@ -113,6 +113,11 @@ pass "secrets documentation exists"
 [[ -f docs/deployment/onboarding-walkthrough.md ]] || fail "onboarding walkthrough is missing"
 pass "onboarding walkthrough exists"
 
+[[ -f scripts/verify-clean-install.sh ]] || fail "verify-clean-install.sh is missing"
+[[ -f e2e/clean-install-smoke.ts ]] || fail "e2e/clean-install-smoke.ts is missing"
+[[ -f docs/soft-rc/t7-clean-install-evidence.md ]] || fail "T7 clean-install evidence doc is missing"
+pass "T7 clean-install verification script and evidence doc exist"
+
 [[ -f docs/deployment/tls-proxy.md ]] || fail "TLS/reverse-proxy documentation is missing"
 pass "TLS/reverse-proxy documentation exists"
 
