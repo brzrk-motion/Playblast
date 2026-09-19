@@ -105,10 +105,6 @@ test("filterProjectsByDashboardFilter filters by status", () => {
   )
 })
 
-test("filterProjectsByDashboardFilter returns all projects when filter is null", () => {
-  assert.equal(filterProjectsByDashboardFilter(projects, null).length, 3)
-})
-
 test("filterProjectsByDashboardFilter filters over-budget active projects", () => {
   const financialProjects: ProjectSummary[] = [
     {
@@ -140,6 +136,10 @@ test("filterProjectsByDashboardFilter filters over-budget active projects", () =
     filtered.map((project) => project.id),
     ["over"],
   )
+})
+
+test("filterProjectsByDashboardFilter returns all projects when filter is null", () => {
+  assert.equal(filterProjectsByDashboardFilter(projects, null).length, 3)
 })
 
 test("parseClientFilterFromSearchParams reads client query param", () => {
