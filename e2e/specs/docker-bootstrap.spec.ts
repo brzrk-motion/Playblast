@@ -287,15 +287,9 @@ services:
       // the database and setup state.
       await page.goto(`${baseUrl}/projects`)
       await expect(page).not.toHaveURL(/\/login/)
-
-      await expect.poll(async () => {
-        const response = await page.request.get(`${baseUrl}/api/session`)
-        if (!response.ok()) {
-          return ""
-        }
-        const body = (await response.json()) as { studio?: { name?: string } }
-        return body.studio?.name ?? ""
-      }).toBe("Docker E2E Studio")
+      await expect(page.getByRole("heading", { name: "Projects", level: 1 })).toBeVisible({
+        timeout: 60_000,
+      })
 
       await openAccountMenu(page)
       await expect(page.getByText("Docker E2E Studio").first()).toBeVisible()
