@@ -15,15 +15,25 @@ Admins invite Account Executive, Creative, and Proofing users from **Team**. Inv
 
 ## SMTP setup (Admin)
 
+### UI-configured SMTP
+
 1. Sign in as Admin → **Team**.
 2. Open SMTP settings.
 3. Enter host, port, TLS mode, username, and password for your studio's mail relay.
-4. Run **Test delivery** to a reachable inbox.
-5. Save settings before sending invitations.
+4. Save settings, then run **Send test email** to a reachable inbox.
+5. Send invitations after test delivery succeeds.
+
+### Environment-preconfigured SMTP
+
+When the operator sets all required `SMTP_*` environment variables, the Team SMTP card is read-only. Admins still run **Send test email** to verify delivery before inviting users.
+
+### Local development with Mailpit
+
+When `MAILPIT_URL` is set in development and env SMTP is absent, Playblast routes mail to a local Mailpit catcher. See [mailpit-dev.md](mailpit-dev.md).
 
 If SMTP is unavailable, the instance remains usable for signed-in users, but new email invitations will not deliver until test delivery succeeds.
 
-SMTP credentials live in the local database. Back up `data/` to protect them.
+UI-configured SMTP credentials live in the local database. Back up `data/` to protect them.
 
 ## Admin recovery
 

@@ -13,6 +13,7 @@ Self-hosted release and operations guides for one Playblast instance per studio.
 | [Operator checklist (backup / upgrade)](./operator-checklist.md) | Host operator | One-page maintenance-day runbook |
 | [TLS / reverse proxy](./tls-proxy.md) | Host operator | LAN/VPN-only stance, Caddy overlay, `PROXY_HOPS` |
 | [Roles, SMTP, and recovery](./roles-smtp-recovery.md) | Admin | Capabilities, email, and credential recovery |
+| [Local Mailpit development](./mailpit-dev.md) | Developer | Capture outbound mail in development |
 | [Backup and restore](./backup-restore.md) | Host operator | What to back up, restore drills, session effects |
 | [Migrations](./migrations.md) | Host operator | Legacy SQL + Drizzle ordering, upgrade safety |
 | [Secrets and permissions](./secrets.md) | Host operator | SESSION_SECRET, recovery token, file permissions |
