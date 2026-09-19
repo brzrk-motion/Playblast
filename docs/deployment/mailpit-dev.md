@@ -1,28 +1,61 @@
-# Local Mailpit development
+# Mailpit (development and CI only)
 
-Mailpit captures outbound SMTP in development without delivering real email. Use it when exercising Team SMTP test-send, invitations, and password recovery flows on a workstation.
+Mailpit is an **email catcher** for local development and automated tests. It captures outbound SMTP messages so you can inspect invitations without sending real email.
 
-Mailpit is **not** a production mail service. Production deployments must use a real SMTP relay configured through environment variables or the Team UI.
+Mailpit is **not** a production mail relay. A successful invite captured in Mailpit does **not** prove production deliverability.
 
-## Quick start
+## Docker Compose (recommended local stack)
 
-1. Install and start Mailpit (Docker example):
+Start Playblast with the development overlay:
 
 ```bash
-docker run --rm -p 8025:8025 -p 1025:1025 axllent/mailpit
+cp docker-compose.env.example .env
+# Set SESSION_SECRET in .env (32+ random characters)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
-2. Add to your repo-root `.env`:
+The dev overlay adds an `axllent/mailpit` service and wires Playblast to it:
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| Mailpit SMTP | `1025` | Receives outbound mail from Playblast |
+| Mailpit UI | `8025` | Web inbox at `http://localhost:8025` |
+
+Production `docker-compose.yml` does **not** include Mailpit. Never add a catcher service to Synology or production compose files.
+
+## Environment wiring
+
+### Compose dev overlay
+
+When using the dev overlay, Playblast receives:
+
+| Variable | Dev value | Notes |
+|----------|-----------|-------|
+| `SMTP_HOST` | `mailpit` | Docker service name on the compose network |
+| `SMTP_PORT` | `1025` | Mailpit SMTP listener |
+| `SMTP_SECURE` | `false` | Plain SMTP inside the compose network |
+| `SMTP_USER` / `SMTP_PASS` | any value | Mailpit accepts unauthenticated local SMTP |
+| `SMTP_FROM` | `noreply@playblast.local` | Shown in captured messages |
+| `MAILPIT_URL` | `http://mailpit:8025` | Server-side API base (ignored when `NODE_ENV=production`) |
+| `PLAYBLAST_INSTANCE_URL` | `http://localhost:3000` | Used in invitation links |
+
+### Host `npm run dev`
+
+For `npm run dev` on the host (without Docker), point SMTP at a local Mailpit instance:
 
 ```bash
 MAILPIT_URL=http://localhost:8025
 ```
 
-3. Start Playblast (`npm run dev`).
+Start Mailpit (Docker example):
 
-4. Sign in as Admin → **Team**. When `MAILPIT_URL` is set and full `SMTP_*` env vars are absent, Playblast routes outbound mail to Mailpit automatically in development. The SMTP card is read-only and includes **Send test email**.
+```bash
+docker run --rm -p 8025:8025 -p 1025:1025 axllent/mailpit
+```
 
-5. Open the Mailpit web UI at http://localhost:8025 to inspect captured messages.
+When `MAILPIT_URL` is set and full `SMTP_*` env vars are absent, Playblast routes outbound mail to Mailpit automatically in development. The Team SMTP card is read-only and includes **Send test email**.
+
+When `NODE_ENV=development` (or `PLAYBLAST_EMAIL_CATCHER=mailpit`) and `SMTP_HOST` is unset, the server may default `SMTP_HOST` to `mailpit`. That default is **never** applied in production.
 
 ## How routing works
 
@@ -32,9 +65,7 @@ MAILPIT_URL=http://localhost:8025
 | `MAILPIT_URL` set, `NODE_ENV=development`, no env SMTP, no UI SMTP saved | Mailpit dev catcher (read-only Team UI) |
 | Admin saved SMTP in Team settings | SQLite UI settings (editable form) |
 
-`MAILPIT_URL` is ignored when `NODE_ENV=production`.
-
-Default Mailpit SMTP target:
+Default Mailpit SMTP target when routing from `MAILPIT_URL`:
 
 | Setting | Default |
 |---------|---------|
@@ -45,6 +76,24 @@ Default Mailpit SMTP target:
 | From | `dev@localhost` |
 
 Before test-send or invitation delivery, Playblast checks that the Mailpit web API responds at `MAILPIT_URL`. If Mailpit is not running, test-send returns a clear delivery error.
+
+## Production guardrails
+
+Production startup **refuses** SMTP configuration that points at known catchers, including:
+
+- host `mailpit` (any port)
+- `localhost`, `127.0.0.1`, or `::1` on port `1025`
+
+`MAILPIT_URL` and `PLAYBLAST_EMAIL_CATCHER` are ignored in production. Setting `PLAYBLAST_EMAIL_CATCHER=mailpit` in production also prevents startup.
+
+Configure a real studio relay (Google Workspace, Microsoft 365, Brevo SMTP, etc.) for production invitations. See [Roles, SMTP, and recovery](./roles-smtp-recovery.md).
+
+## Workflow
+
+1. Start the dev compose stack or local Mailpit (above).
+2. Complete Playblast setup and open **Team** → run **Send test email**.
+3. Open the Mailpit UI at `http://localhost:8025` and confirm the test message arrived.
+4. Send an invitation and verify the captured invite in Mailpit.
 
 ## Test hooks
 
@@ -63,8 +112,7 @@ File capture for automated tests (no live Mailpit required) uses `PLAYBLAST_SMTP
 
 Saving SMTP credentials in Team settings always takes precedence over Mailpit dev routing. Use that path when you need to test TLS modes, authentication, or a non-default Mailpit port.
 
-## Related issues
+## References
 
-- Compose service and production guardrails: BRZ-193
-- CI Mailpit job: BRZ-194
-- Playwright assertions via Mailpit API: BRZ-195
+- [Mailpit project](https://mailpit.axllent.org/)
+- [Mailpit SMTP configuration](https://mailpit.axllent.org/docs/configuration/smtp)

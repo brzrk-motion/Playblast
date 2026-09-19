@@ -1,4 +1,4 @@
-import { isEstimateOverBudget } from "./budget"
+import { isProjectOverBudget } from "./financial-summary"
 import { PROJECT_STATUSES, isProjectArchived } from "../types/project"
 import type { ProjectStatus, ProjectSummary } from "../types/project"
 
@@ -211,14 +211,7 @@ export function filterProjectsByDashboardFilter(
   }
 
   if (filter.type === "over_budget") {
-    return projects.filter((project) => {
-      if (isProjectArchived(project) || project.status === "completed") {
-        return false
-      }
-
-      const estimate = project.servicesEstimate ?? 0
-      return isEstimateOverBudget(project.budget?.total, estimate)
-    })
+    return projects.filter((project) => isProjectOverBudget(project))
   }
 
   if (filter.type === "archived") {

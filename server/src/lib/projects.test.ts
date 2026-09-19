@@ -106,31 +106,35 @@ test("filterProjectsByDashboardFilter filters by status", () => {
 })
 
 test("filterProjectsByDashboardFilter filters over-budget active projects", () => {
-  const portfolio: ProjectSummary[] = [
-    ...projects,
+  const financialProjects: ProjectSummary[] = [
     {
-      id: "4",
-      name: "Over budget",
-      createdAt: "2026-01-01T00:00:00.000Z",
-      status: "active",
-      deliverableCount: 0,
-      versionCount: 0,
-      updatedAt: "2026-03-01T00:00:00.000Z",
-      openCommentCount: 0,
-      deliverableStatusCounts: emptyStatusCounts(),
-      nextMilestone: null,
-      servicesEstimate: 5000,
-      budget: { total: 4000, currency: "USD" },
+      ...projects[0],
+      id: "over",
+      servicesEstimate: 12_000,
+      budget: { total: 10_000, currency: "USD" },
+    },
+    {
+      ...projects[1],
+      id: "under",
+      servicesEstimate: 3_000,
+      budget: { total: 5_000, currency: "USD" },
+    },
+    {
+      ...projects[2],
+      id: "completed-over",
+      status: "completed",
+      servicesEstimate: 20_000,
+      budget: { total: 1_000, currency: "USD" },
     },
   ]
 
-  const filtered = filterProjectsByDashboardFilter(portfolio, {
+  const filtered = filterProjectsByDashboardFilter(financialProjects, {
     type: "over_budget",
   })
 
   assert.deepEqual(
     filtered.map((project) => project.id),
-    ["4"],
+    ["over"],
   )
 })
 

@@ -1,31 +1,22 @@
----
-layout: home
-hero:
-  name: Playblast
-  text: Self-hosted video proofing
-  tagline: Review CGI renders and motion work with timestamped comments, versions, comparisons, and approvals.
-  actions:
-    - theme: brand
-      text: Install Playblast
-      link: /deployment/install-linux-nas
-    - theme: alt
-      text: Read the onboarding guide
-      link: /deployment/onboarding-walkthrough
-features:
-  - title: Keep your data on your infrastructure
-    details: One studio per instance, with SQLite and media stored on your own host or NAS.
-  - title: Give every reviewer the right access
-    details: Admin, Account Executive, Creative, and Proofing roles are enforced by the server.
-  - title: Operate without a cloud dependency
-    details: No hosted account, license server, or centralized Playblast service is required.
----
+# Playblast documentation
 
-## Find your path
+Self-hosted deployment and operations guides for one Playblast instance per studio.
 
-- **Host operator:** start with [installation](./deployment/install-linux-nas), [TLS / reverse proxy](./deployment/tls-proxy), and [operator responsibilities](./deployment/operator-responsibilities).
-- **Studio Admin:** follow the [first-run onboarding](./deployment/onboarding-walkthrough), then configure [roles, SMTP, and recovery](./deployment/roles-smtp-recovery).
-- **Creative or Proofing user:** ask your studio Admin for an invitation, then use the in-app workflow guide provided by your team.
+Product overview and workflow details live on [brzrkmotion.com/playblast](https://brzrkmotion.com/playblast). This site is install and operator documentation only — not a marketing landing page.
+
+## Install
+
+**[Install Playblast on Linux or Synology NAS →](./deployment/install-linux-nas)** — build the Docker image, ship it to your host, and complete first-run setup.
+
+## Operator guides
+
+| Guide | Audience |
+|-------|----------|
+| [Deployment overview](./deployment/) | Host operator — full guide index |
+| [First-run onboarding](./deployment/onboarding-walkthrough) | Studio Admin |
+| [Operator vs application Admin](./deployment/operator-responsibilities) | Host operator + Admin |
+| [TLS / reverse proxy](./deployment/tls-proxy) | Host operator |
 
 ## Support boundary
 
-Playblast is free, open-source, and self-hosted. Studios operate their own Docker host, networking, HTTPS/VPN, SMTP delivery, backups, and recovery process. Report defects through the [public issue tracker](https://github.com/brzrk-motion/Playblast/issues).
+Playblast is free, open-source, and self-hosted. Studios operate their own Docker host, networking, HTTPS/VPN, SMTP delivery, backups, and recovery. Report defects through the [public issue tracker](https://github.com/brzrk-motion/Playblast/issues).

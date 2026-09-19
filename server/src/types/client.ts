@@ -55,8 +55,14 @@ export interface ClientListItem extends Client {
   lifetimeValue: ClientLifetimeValue
 }
 
+/** Linked project on client detail, including services estimate when attached. */
+export interface ClientLinkedProject extends Project {
+  /** Total services estimate when at least one service is attached. */
+  servicesEstimate?: number
+}
+
 export interface ClientWithProjects extends Client {
-  projects: Project[]
+  projects: ClientLinkedProject[]
   lifetimeValue: ClientLifetimeValue
   /** Sum of outstanding invoice balances across all linked projects. */
   outstandingBalance?: number

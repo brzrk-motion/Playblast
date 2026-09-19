@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
+import type { UserSummary } from "@playblast/shared"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import {
   Check,
@@ -47,15 +48,19 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { useSession } from "@/hooks/use-session"
 import {
   createLead,
   deleteLead,
   listLeads,
   updateLead,
 } from "@/lib/api"
+import { fetchUsers } from "@/lib/api-http"
 import { formatRelativeDate } from "@/lib/dates"
 import {
   filterLeadsBySearch,
+  leadOwnerLabel,
+  leadOwnerOptions,
   LEAD_STATUS_LABELS,
 } from "@/lib/leads"
 import { toast } from "sonner"
@@ -66,15 +71,19 @@ import type { Lead, LeadStatus } from "@/types/lead"
 import { LEAD_STATUSES } from "@/types/lead"
 
 type RepliedFilter = "all" | "yes" | "no"
+type OwnerFilter = "all" | "me" | string
 
 export function LeadsTab() {
   const navigate = useNavigate()
+  const { state, role } = useSession()
   const [searchParams, setSearchParams] = useSearchParams()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all")
   const [repliedFilter, setRepliedFilter] = useState<RepliedFilter>("all")
+  const [ownerFilter, setOwnerFilter] = useState<OwnerFilter>("all")
+  const [users, setUsers] = useState<UserSummary[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -84,6 +93,15 @@ export function LeadsTab() {
   const [viewLeadId, setViewLeadId] = useState<string | null>(null)
   const [convertLead, setConvertLead] = useState<Lead | null>(null)
 
+  const currentUserId =
+    state.status === "ready" ? state.session?.user.id ?? null : null
+  const isAdmin = role === "admin"
+  const ownerOptions = useMemo(() => leadOwnerOptions(users), [users])
+  const usersById = useMemo(
+    () => new Map(users.map((user) => [user.id, user])),
+    [users],
+  )
+
   const fetchLeads = useCallback(
     async (options?: { showLoading?: boolean }) => {
       if (options?.showLoading) {
@@ -91,7 +109,11 @@ export function LeadsTab() {
       }
 
       try {
-        const filters: { status?: LeadStatus; replied?: boolean } = {}
+        const filters: {
+          status?: LeadStatus
+          replied?: boolean
+          assignedToUserId?: string
+        } = {}
         if (statusFilter !== "all") {
           filters.status = statusFilter
         }
@@ -99,6 +121,11 @@ export function LeadsTab() {
           filters.replied = true
         } else if (repliedFilter === "no") {
           filters.replied = false
+        }
+        if (ownerFilter === "me") {
+          filters.assignedToUserId = "me"
+        } else if (ownerFilter !== "all") {
+          filters.assignedToUserId = ownerFilter
         }
 
         const data = await listLeads(filters)
@@ -112,15 +139,39 @@ export function LeadsTab() {
         setLoading(false)
       }
     },
-    [repliedFilter, statusFilter],
+    [ownerFilter, repliedFilter, statusFilter],
   )
+
+  useEffect(() => {
+    let cancelled = false
+
+    void fetchUsers()
+      .then((data) => {
+        if (!cancelled) {
+          setUsers(data)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setUsers([])
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
 
     async function load() {
       try {
-        const filters: { status?: LeadStatus; replied?: boolean } = {}
+        const filters: {
+          status?: LeadStatus
+          replied?: boolean
+          assignedToUserId?: string
+        } = {}
         if (statusFilter !== "all") {
           filters.status = statusFilter
         }
@@ -128,6 +179,11 @@ export function LeadsTab() {
           filters.replied = true
         } else if (repliedFilter === "no") {
           filters.replied = false
+        }
+        if (ownerFilter === "me") {
+          filters.assignedToUserId = "me"
+        } else if (ownerFilter !== "all") {
+          filters.assignedToUserId = ownerFilter
         }
 
         const data = await listLeads(filters)
@@ -153,7 +209,7 @@ export function LeadsTab() {
     return () => {
       cancelled = true
     }
-  }, [repliedFilter, statusFilter])
+  }, [ownerFilter, repliedFilter, statusFilter])
 
   const leadIdFromUrl = searchParams.get("lead")
   const activeViewLeadId = viewLeadId ?? leadIdFromUrl
@@ -219,7 +275,9 @@ export function LeadsTab() {
     try {
       const updated = await updateLead(
         selectedLead.id,
-        leadFormToPayload(values),
+        isAdmin
+          ? leadFormToPayload(values, { includeAssignee: true })
+          : leadFormToPayload(values),
       )
       toast.success("Lead updated")
       setEditModalOpen(false)
@@ -297,6 +355,26 @@ export function LeadsTab() {
             </SelectContent>
           </Select>
 
+          <Select
+            value={ownerFilter}
+            onValueChange={(value) => setOwnerFilter(value as OwnerFilter)}
+          >
+            <SelectTrigger className="w-full sm:w-[11rem]" aria-label="Filter by owner">
+              <SelectValue placeholder="Owner" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All owners</SelectItem>
+              {currentUserId ? (
+                <SelectItem value="me">My leads</SelectItem>
+              ) : null}
+              {ownerOptions.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <ToggleGroup
             type="single"
             value={repliedFilter}
@@ -366,6 +444,7 @@ export function LeadsTab() {
                   <TableHead>Name</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Owner</TableHead>
                   <TableHead>Last Contacted</TableHead>
                   <TableHead>Replied</TableHead>
                   <TableHead>Source</TableHead>
@@ -388,6 +467,9 @@ export function LeadsTab() {
                     <TableCell>{lead.company ?? "—"}</TableCell>
                     <TableCell>
                       <LeadStatusBadge status={lead.status} />
+                    </TableCell>
+                    <TableCell>
+                      {leadOwnerLabel(lead.assignedToUserId, usersById)}
                     </TableCell>
                     <TableCell>
                       {formatRelativeDate(lead.lastContactedAt)}
@@ -479,6 +561,8 @@ export function LeadsTab() {
         lead={selectedLead}
         submitting={submitting}
         error={formError}
+        showAssignee={isAdmin}
+        assigneeOptions={ownerOptions}
         onSubmit={(values) => void handleEdit(values)}
       />
 
@@ -522,6 +606,7 @@ export function LeadsTab() {
           openEditModal(lead)
         }}
         onConvert={openConvertModal}
+        usersById={usersById}
       />
     </div>
   )

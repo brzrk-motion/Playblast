@@ -620,6 +620,7 @@ export function uploadVersion(
 export interface ListLeadsFilters {
   status?: Lead["status"]
   replied?: boolean
+  assignedToUserId?: string
 }
 
 export async function listLeads(
@@ -631,6 +632,9 @@ export async function listLeads(
   }
   if (filters.replied !== undefined) {
     params.set("replied", String(filters.replied))
+  }
+  if (filters.assignedToUserId) {
+    params.set("assignedToUserId", filters.assignedToUserId)
   }
 
   const query = params.toString()

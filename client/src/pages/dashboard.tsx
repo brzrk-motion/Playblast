@@ -31,13 +31,18 @@ import {
   budgetHealth,
   formatCurrency,
 } from "@/lib/budget"
-import { summarizeFinancials } from "@/lib/financial-summary"
+import {
+  countProjectsOverBudget,
+  totalActiveEstimate,
+  totalBudgetCommitted,
+} from "@/lib/financial-summary"
 import {
   countDeliverablesInReview,
   countProjectsByStatus,
   recentlyUpdatedProjects,
   totalOpenComments,
 } from "@/lib/projects"
+import { cn } from "@/lib/utils"
 import {
   resolveAsyncViewState,
   reviewEmptyCopy,
@@ -45,7 +50,6 @@ import {
 } from "@/lib/review-feedback"
 import { toast } from "sonner"
 import { humanizeApiError } from "@/lib/toast"
-import { cn } from "@/lib/utils"
 import { useCapability } from "@/hooks/use-capability"
 import type { ProjectSummary } from "@/types/project"
 
@@ -75,29 +79,23 @@ interface StatCardProps {
   value: number | string
   description: string
   to?: string
-  className?: string
-  valueClassName?: string
+  alert?: boolean
 }
 
-function StatCard({
-  title,
-  icon,
-  value,
-  description,
-  to,
-  className,
-  valueClassName,
-}: StatCardProps) {
+function StatCard({ title, icon, value, description, to, alert = false }: StatCardProps) {
   const card = (
-    <Card className={cn("interactive-card h-full", className)}>
+    <Card
+      className={cn(
+        "interactive-card h-full",
+        alert && "border-destructive/40 bg-destructive/5",
+      )}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         {icon}
       </CardHeader>
       <CardContent>
-        <div className={cn("text-2xl font-bold tabular-nums", valueClassName)}>
-          {value}
-        </div>
+        <div className="text-2xl font-bold">{value}</div>
         <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
@@ -269,9 +267,16 @@ export function DashboardPage() {
       }),
     [activeProjects],
   )
-
-  const financialSummary = useMemo(
-    () => summarizeFinancials(activeProjects),
+  const activeEstimateTotal = useMemo(
+    () => totalActiveEstimate(activeProjects),
+    [activeProjects],
+  )
+  const budgetCommittedTotal = useMemo(
+    () => totalBudgetCommitted(activeProjects),
+    [activeProjects],
+  )
+  const overBudgetCount = useMemo(
+    () => countProjectsOverBudget(activeProjects),
     [activeProjects],
   )
 
@@ -380,44 +385,22 @@ export function DashboardPage() {
           <StatCard
             title="Active Estimate"
             icon={<Wallet className="size-4 text-muted-foreground" />}
-            value={formatCurrency(
-              financialSummary.activeEstimate,
-              financialSummary.currency,
-            )}
-            description="Service estimates across active work"
+            value={formatCurrency(activeEstimateTotal)}
+            description="Services estimate across active work"
           />
           <StatCard
             title="Budgeted"
             icon={<Wallet className="size-4 text-muted-foreground" />}
-            value={formatCurrency(
-              financialSummary.budgetCommitted,
-              financialSummary.currency,
-            )}
-            description="Committed budgets on active projects"
+            value={formatCurrency(budgetCommittedTotal)}
+            description="Committed budget on active projects"
           />
           <StatCard
             title="Over Budget"
-            icon={
-              <AlertTriangle
-                className={cn(
-                  "size-4",
-                  financialSummary.overBudgetCount > 0
-                    ? "text-destructive"
-                    : "text-muted-foreground",
-                )}
-              />
-            }
-            value={financialSummary.overBudgetCount}
-            description="Active projects where estimate exceeds budget"
+            icon={<AlertTriangle className="size-4 text-destructive" />}
+            value={overBudgetCount}
+            description="Active projects over estimate"
             to="/projects?filter=over_budget"
-            className={
-              financialSummary.overBudgetCount > 0
-                ? "border-destructive/40 bg-destructive/10"
-                : undefined
-            }
-            valueClassName={
-              financialSummary.overBudgetCount > 0 ? "text-destructive" : undefined
-            }
+            alert={overBudgetCount > 0}
           />
         </div>
       ) : null}
