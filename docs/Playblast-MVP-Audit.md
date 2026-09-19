@@ -634,6 +634,7 @@ The following execution view is the implementation order for the detailed backlo
 - [ ] Complete a clean-machine operator walkthrough using only public documentation and no maintainer/developer intervention.
 - [ ] Run Docker Compose and documented Synology/Linux installation checks.
 - [x] Record T7 clean-install automated evidence (`npm run verify:clean-install`; see [docs/soft-rc/t7-clean-install-evidence.md](./soft-rc/t7-clean-install-evidence.md)). Box-local Docker skip ≠ Gate closure.
+- [x] Record T10 Docker deployment smoke evidence (`npm run verify:docker-deployment` on daemon-capable host; see [docs/soft-rc/t10-docker-deployment-evidence.md](./soft-rc/t10-docker-deployment-evidence.md)). Box-local Docker skip ≠ Gate closure.
 - [ ] Run upgrade, backup, restore, recovery, SMTP capture/delivery, and media tests (clean install subset covered by T7 gate above).
 - [ ] Verify no centralized brzrk network dependency or credential is required in an offline/self-hosted run.
 

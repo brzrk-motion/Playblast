@@ -49,7 +49,7 @@ Docker-specific gates are skipped when the Docker daemon is unavailable; CI runs
 
 On box-local / agent-computer environments where `docker.sock` is unavailable (or not usable by the agent), `npm run verify:docker-deployment` is **SKIPPED**. That local skip is **not** Gate 1 closure.
 
-Until a daemon-capable host re-runs the smoke locally, the dated host-health signal is GitHub Actions CI run **34183858263** — Docker deployment smoke **success** on 2026-09-08 ~03:34Z UTC (PR #113, merge `0234811`). Do not treat CI alone as closing Gate 1 for release sign-off without that re-run (or an equivalent operator host check).
+**Current dated host signal:** daemon-capable re-run **passed** on 2026-09-19T05:12:19Z UTC (Ubuntu 24.04 cloud agent VM, Docker 29.1.3; see [docs/soft-rc/t10-docker-deployment-evidence.md](../soft-rc/t10-docker-deployment-evidence.md)). Prior CI signal: GitHub Actions run **34183858263** (2026-09-08 ~03:34Z UTC, PR #113).
 
 ## Automated verification matrix
 

@@ -42,7 +42,7 @@ Run from the repository root after `npm install`. The full release-candidate com
 
 If Docker or browser dependencies are unavailable, record those gates as environment-blocked rather than treating the remaining checks as release sign-off. See the [release candidate guide](https://github.com/brzrk-motion/Playblast/blob/development-mvp/docs/release/README.md) for the manual cross-browser, clean-machine, SMTP, NAS, and adoption gates.
 
-**Known limitation:** on box-local / agent-computer hosts without a usable `docker.sock`, `npm run verify:docker-deployment` is **SKIPPED**. CI run **34183858263** (Docker deployment smoke success, 2026-09-08 ~03:34Z UTC on PR #113) is the dated host-health signal until a daemon-capable host re-runs. Do **not** claim Gate 1 closed from a local skip.
+**Known limitation:** on box-local / agent-computer hosts without a usable `docker.sock`, `npm run verify:docker-deployment` is **SKIPPED**. Do **not** claim Gate 1 closed from a local skip. Current daemon-capable evidence: [T10 Docker deployment smoke](../soft-rc/t10-docker-deployment-evidence.md) (**passed** 2026-09-19T05:12:19Z UTC). Prior CI signal: run **34183858263** (2026-09-08 ~03:34Z UTC, PR #113).
 
 ## Support boundary
 
