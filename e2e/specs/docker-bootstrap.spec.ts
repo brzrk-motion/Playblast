@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Page } from "@playwright/test"
 import fs from "node:fs"
 import net, { type Server } from "node:net"
 import os from "node:os"
@@ -70,6 +70,68 @@ function containerIpOnNetwork(containerId: string, network: string): string {
     throw new Error(`container ${containerId} has no IP on ${network}`)
   }
   return ip
+}
+
+async function waitForApplicationApi(
+  baseUrl: string,
+  options: {
+    setupStatus?: "pending" | "complete"
+    timeoutMs?: number
+  } = {},
+): Promise<void> {
+  const { setupStatus = "complete", timeoutMs = 120_000 } = options
+  const started = Date.now()
+
+  while (Date.now() - started < timeoutMs) {
+    try {
+      const [health, setup] = await Promise.all([
+        fetch(`${baseUrl}/health`),
+        fetch(`${baseUrl}/api/setup/status`),
+      ])
+      if (!health.ok || !setup.ok) {
+        throw new Error("health or setup request failed")
+      }
+
+      const healthBody = (await health.json()) as { status?: string }
+      const setupBody = (await setup.json()) as { status?: string }
+      if (healthBody.status === "ok" && setupBody.status === setupStatus) {
+        return
+      }
+    } catch {
+      // retry until timeout
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+  }
+
+  throw new Error(
+    `application API did not reach setup=${setupStatus} within ${timeoutMs}ms`,
+  )
+}
+
+async function expectAuthenticatedProjectsPage(
+  page: Page,
+  baseUrl: string,
+): Promise<void> {
+  await page.goto(`${baseUrl}/projects`, { waitUntil: "domcontentloaded" })
+  await expect(page).not.toHaveURL(/\/login/)
+  await expect(page.getByText("Docker E2E Studio").first()).toBeVisible({
+    timeout: 60_000,
+  })
+
+  // Projects is a lazy route; retry once the shell is hydrated after container restart.
+  await expect(async () => {
+    if (
+      !(await page
+        .getByRole("heading", { name: "Projects", level: 1 })
+        .isVisible()
+        .catch(() => false))
+    ) {
+      await page.reload({ waitUntil: "domcontentloaded" })
+    }
+    await expect(page.getByRole("heading", { name: "Projects", level: 1 })).toBeVisible({
+      timeout: 15_000,
+    })
+  }).toPass({ timeout: 60_000 })
 }
 
 function startLoopbackProxy(upstreamHost: string): Promise<{ server: Server; port: number }> {
@@ -267,33 +329,12 @@ services:
         throw new Error(`docker compose restart failed:\n${restart.stdout}\n${restart.stderr}`)
       }
 
-      const restartedAt = Date.now()
-      let restarted = false
-      while (Date.now() - restartedAt < 120_000) {
-        try {
-          const health = await fetch(`${baseUrl}/health`)
-          if (health.ok) {
-            restarted = true
-            break
-          }
-        } catch {
-          // retry
-        }
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-      }
-      expect(restarted).toBe(true)
-      const persistedSetup = await fetch(`${baseUrl}/api/setup/status`)
-      expect(persistedSetup.status).toBe(200)
-      expect(((await persistedSetup.json()) as { status: string }).status).toBe("complete")
+      await waitForApplicationApi(baseUrl, { setupStatus: "complete", timeoutMs: 120_000 })
 
       // Reuse the pre-restart browser session before testing a fresh login.
       // This verifies Docker restart preserves the session contract, not only
       // the database and setup state.
-      await page.goto(`${baseUrl}/projects`)
-      await expect(page).not.toHaveURL(/\/login/)
-      await expect(page.getByRole("heading", { name: "Projects", level: 1 })).toBeVisible({
-        timeout: 60_000,
-      })
+      await expectAuthenticatedProjectsPage(page, baseUrl)
 
       await openAccountMenu(page)
       await expect(page.getByText("Docker E2E Studio").first()).toBeVisible()
