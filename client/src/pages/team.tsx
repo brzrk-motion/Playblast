@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import {
+  getSmtpStatusPresentation,
   INVITABLE_ROLES,
+  INVITE_DISABLED_REASON,
   ROLE_BADGE_TOKENS,
   ROLE_DESCRIPTIONS,
   ROLE_LABELS,
@@ -72,6 +74,13 @@ const INVITE_STATUS_LABELS: Record<InvitationSummary["status"], string> = {
   revoked: "Revoked",
   delivery_failed: "Delivery failed",
 }
+
+const SMTP_STATUS_STYLES = {
+  not_configured: "status-warning",
+  saved_not_tested: "status-pending",
+  verified: "status-success",
+  failed: "border-destructive text-destructive",
+} as const
 
 export function TeamPage() {
   const { role } = useSession()
@@ -235,9 +244,11 @@ export function TeamPage() {
       setSmtpPassword("")
       toast.success("SMTP settings saved.")
     } catch (saveError) {
-      setSmtpFormError(
-        isApiError(saveError) ? saveError.message : "Could not save SMTP settings.",
-      )
+      const message = isApiError(saveError)
+        ? saveError.message
+        : "Could not save SMTP settings."
+      setSmtpFormError(message)
+      toast.error(message)
     } finally {
       setSmtpSaving(false)
     }
@@ -266,6 +277,7 @@ export function TeamPage() {
         ? testError.message
         : "SMTP test failed."
       setSmtpFormError(message)
+      toast.error(message)
       await reloadTeam()
     } finally {
       setSmtpTesting(false)
@@ -336,6 +348,7 @@ export function TeamPage() {
   }
 
   const canInvite = Boolean(smtp?.testVerified)
+  const smtpStatus = getSmtpStatusPresentation(smtp)
   const smtpConfiguredFromEnv = Boolean(smtp?.smtpConfiguredFromEnv)
   const smtpConfiguredFromMailpitDev = Boolean(smtp?.smtpConfiguredFromMailpitDev)
   const smtpReadOnly = smtpConfiguredFromEnv || smtpConfiguredFromMailpitDev
@@ -351,16 +364,34 @@ export function TeamPage() {
 
       {isAdmin ? <Card>
         <CardHeader>
-          <CardTitle>
-            {smtpReadOnly ? "SMTP delivery" : "SMTP configuration"}
-          </CardTitle>
-          <CardDescription>
-            {smtpConfiguredFromEnv
-              ? "SMTP is preconfigured from your deployment environment. Send a test email to confirm the relay is working."
-              : smtpConfiguredFromMailpitDev
-                ? "Development mode routes outbound mail through the local Mailpit catcher. Send a test email, then open Mailpit to inspect captured messages."
-                : "Configure your studio's email relay. Credentials are stored locally and never returned by the API."}
-          </CardDescription>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1.5">
+              <CardTitle>
+                {smtpReadOnly ? "SMTP delivery" : "SMTP configuration"}
+              </CardTitle>
+              <CardDescription>
+                {smtpConfiguredFromEnv
+                  ? "SMTP is preconfigured from your deployment environment. Send a test email to confirm the relay is working."
+                  : smtpConfiguredFromMailpitDev
+                    ? "Development mode routes outbound mail through the local Mailpit catcher. Send a test email, then open Mailpit to inspect captured messages."
+                    : "Configure your studio's email relay. Credentials are stored locally and never returned by the API."}
+              </CardDescription>
+            </div>
+            <div className="space-y-1 sm:text-right">
+              <Badge
+                variant="outline"
+                className={cn(SMTP_STATUS_STYLES[smtpStatus.status])}
+              >
+                {smtpStatus.label}
+              </Badge>
+              <p className="text-muted-foreground text-xs">
+                Next: {smtpStatus.nextAction}
+              </p>
+              {smtpStatus.lastError ? (
+                <p className="text-destructive text-xs">{smtpStatus.lastError}</p>
+              ) : null}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {smtpReadOnly ? (
@@ -524,12 +555,13 @@ export function TeamPage() {
       </Card> : null}
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
             <CardTitle>Members</CardTitle>
             <CardDescription>Active studio accounts and roles.</CardDescription>
           </div>
-          {isAdmin ? <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+          {isAdmin ? <div className="flex flex-col items-end gap-1">
+            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
             <DialogTrigger asChild>
               <Button disabled={!canInvite}>Invite member</Button>
             </DialogTrigger>
@@ -589,7 +621,11 @@ export function TeamPage() {
                 </DialogFooter>
               </form>
             </DialogContent>
-          </Dialog> : null}
+          </Dialog>
+            {!canInvite ? (
+              <p className="text-muted-foreground text-xs">{INVITE_DISABLED_REASON}</p>
+            ) : null}
+          </div> : null}
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
@@ -681,7 +717,22 @@ export function TeamPage() {
                     <TableCell>{invitation.name}</TableCell>
                     <TableCell>{invitation.email}</TableCell>
                     <TableCell>{ROLE_LABELS[invitation.role]}</TableCell>
-                    <TableCell>{INVITE_STATUS_LABELS[invitation.status]}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          invitation.status === "delivery_failed"
+                            ? "border-destructive text-destructive"
+                            : invitation.status === "accepted"
+                              ? "status-success"
+                              : invitation.status === "pending"
+                                ? "status-pending"
+                                : undefined,
+                        )}
+                      >
+                        {INVITE_STATUS_LABELS[invitation.status]}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="space-x-2 text-right">
                       {["pending", "delivery_failed", "expired"].includes(invitation.status) ? (
                         <Button

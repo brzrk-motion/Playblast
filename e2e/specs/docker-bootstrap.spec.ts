@@ -311,6 +311,7 @@ services:
 
       await page.context().clearCookies()
       await page.goto(`${baseUrl}/login`)
+      await expect(page.getByLabel("Email")).toBeVisible({ timeout: 60_000 })
       await page.getByLabel("Email").fill(`docker-${E2E_ADMIN.email}`)
       await page.getByLabel("Password", { exact: true }).fill(E2E_ADMIN.password)
       await page.getByRole("button", { name: "Sign in" }).click()
