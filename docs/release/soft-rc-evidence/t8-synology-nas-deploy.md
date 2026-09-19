@@ -4,7 +4,7 @@
 **Pack:** T8 (mvp, soft-rc, ops)  
 **Evidence date (UTC):** 2026-09-19  
 **Branch:** `development-mvp`  
-**Commit:** `fb6b5362eab1677fe58a1bb53cd02dca60ccd17b` (pre-merge; includes this evidence PR)  
+**Commit:** `3e3f9f6` on branch `linear/t8-synology-nas-evidence-3f90` (PR into `development-mvp`)  
 **Agent host:** Cursor Cloud Agent (linux/amd64, Docker 29.1.3)
 
 ## Summary
