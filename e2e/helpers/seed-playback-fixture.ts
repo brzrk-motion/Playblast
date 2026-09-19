@@ -2,7 +2,8 @@ import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { E2E_ADMIN, E2E_CREATIVE } from "../credentials.js"
-import { apiFetch, apiLogin, authHeaders } from "./api.js"
+import { apiFetch, apiLogin } from "./api.js"
+import { tusUploadVersion } from "./tus-upload.js"
 
 const e2eRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 export const sampleVideoPath = path.join(e2eRoot, "fixtures/assets/sample.mp4")
@@ -16,41 +17,11 @@ export interface PlaybackFixture {
   versionBLabel: string
 }
 
-async function uploadVersion(
-  baseUrl: string,
-  cookies: string[],
-  csrfToken: string,
-  deliverableId: string,
-  versionLabel: string,
-): Promise<{ versionId: string; label: string }> {
-  const bytes = fs.readFileSync(sampleVideoPath)
-  const formData = new FormData()
-  formData.append(
-    "video",
-    new Blob([bytes], { type: "video/mp4" }),
-    path.basename(sampleVideoPath),
-  )
-
-  const response = await fetch(
-    `${baseUrl}/api/deliverables/${deliverableId}/versions/${versionLabel}/upload`,
-    {
-      method: "POST",
-      headers: authHeaders(cookies, csrfToken, false),
-      body: formData,
-    },
-  )
-
-  if (response.status !== 201) {
-    throw new Error(`upload ${versionLabel} failed: ${response.status}`)
-  }
-
-  const body = (await response.json()) as { versionId: string }
-  return { versionId: body.versionId, label: versionLabel }
-}
-
 export async function seedPlaybackFixture(baseUrl: string): Promise<PlaybackFixture> {
   const admin = await apiLogin(baseUrl, E2E_ADMIN.email, E2E_ADMIN.password)
   const creative = await apiLogin(baseUrl, E2E_CREATIVE.email, E2E_CREATIVE.password)
+  const bytes = fs.readFileSync(sampleVideoPath)
+  const filename = path.basename(sampleVideoPath)
 
   const projectRes = await apiFetch(baseUrl, "/api/projects", {
     method: "POST",
@@ -78,19 +49,23 @@ export async function seedPlaybackFixture(baseUrl: string): Promise<PlaybackFixt
   }
   const deliverable = (await deliverableRes.json()) as { id: string }
 
-  const versionA = await uploadVersion(
+  const versionA = await tusUploadVersion(
     baseUrl,
     creative.cookies,
     creative.csrfToken,
     deliverable.id,
     "v1",
+    filename,
+    bytes,
   )
-  const versionB = await uploadVersion(
+  const versionB = await tusUploadVersion(
     baseUrl,
     creative.cookies,
     creative.csrfToken,
     deliverable.id,
     "v2",
+    filename,
+    bytes,
   )
 
   return {
@@ -98,7 +73,7 @@ export async function seedPlaybackFixture(baseUrl: string): Promise<PlaybackFixt
     deliverableId: deliverable.id,
     versionAId: versionA.versionId,
     versionBId: versionB.versionId,
-    versionALabel: versionA.label,
-    versionBLabel: versionB.label,
+    versionALabel: versionA.version,
+    versionBLabel: versionB.version,
   }
 }
