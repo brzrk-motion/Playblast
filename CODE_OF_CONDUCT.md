@@ -1,6 +1,6 @@
 # Contributor Covenant Code of Conduct
 
-## Our Pledge
+Playblast welcomes motion studios, freelancers, proofing teams, self-hosted operators, and outside contributors who help improve open-source video proofing. Whether you are filing a bug from a Synology NAS deployment, opening your first pull request, or sponsoring maintenance, participation should feel professional, inclusive, and respectful.
 
 We as members, contributors, and leaders pledge to make participation in the Playblast community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, caste, color, religion, or sexual identity and orientation.
 
@@ -32,13 +32,24 @@ Community leaders have the right and responsibility to remove, edit, or reject c
 
 ## Scope
 
-This Code of Conduct applies within all community spaces — including the GitHub repository, discussions, and related channels — and also applies when an individual is officially representing the community in public spaces.
+This Code of Conduct applies within all community spaces — including the GitHub repository, discussions, issue comments, and related channels — and also applies when an individual is officially representing the community in public spaces. Examples include using an official project email address, posting via an official social media account, or acting as an appointed representative at an online or offline event.
 
-## Enforcement
+## Reporting
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement via the repository maintainers private contact channels or GitHub private security advisory workflow when privacy is required.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the Playblast maintainers at Brzrk Interactive:
 
-All complaints will be reviewed and investigated promptly and fairly. All community leaders are obligated to respect the privacy and security of the reporter of any incident.
+1. **Preferred:** Contact the [`brzrk-motion`](https://github.com/brzrk-motion) organization maintainers privately through GitHub (repository **Contact maintainers**, or a direct message to a listed maintainer).
+2. **If you already have a private studio or operator channel** with maintainers, you may use that channel instead.
+
+Please include:
+
+- A description of the incident and links or screenshots when available
+- Whether the behavior is ongoing
+- Any context that helps maintainers understand the impact
+
+**Security vulnerabilities** are handled separately — see [SECURITY.md](SECURITY.md). Do not use security advisories for general Code of Conduct reports.
+
+All complaints will be reviewed and investigated promptly and fairly. Maintainers aim to acknowledge reports within **5 business days**. All community leaders are obligated to respect the privacy and security of the reporter of any incident.
 
 ## Enforcement Guidelines
 
@@ -70,8 +81,8 @@ Community leaders will follow these Community Impact Guidelines in determining t
 
 ## Attribution
 
-This Code of Conduct is adapted from the Contributor Covenant, version 2.1, available at https://www.contributor-covenant.org/version/2/1/code_of_conduct.html.
+This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org), version 2.1, available at https://www.contributor-covenant.org/version/2/1/code_of_conduct.html.
 
-Community Impact Guidelines were inspired by Mozilla code of conduct enforcement ladder.
+Community Impact Guidelines were inspired by [Mozilla's code of conduct enforcement ladder](https://github.com/mozilla/diversity).
 
 For answers to common questions about this code of conduct, see the FAQ at https://www.contributor-covenant.org/faq.
