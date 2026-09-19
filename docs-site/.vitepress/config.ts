@@ -27,7 +27,8 @@ export default defineConfig({
   themeConfig: {
     siteTitle: 'Playblast',
     nav: [
-      { text: 'Get started', link: '/deployment/' },
+      { text: 'Install', link: '/deployment/install-linux-nas' },
+      { text: 'Deployment guide', link: '/deployment/' },
       { text: 'GitHub', link: 'https://github.com/brzrk-motion/Playblast' }
     ],
     sidebar: [
@@ -38,7 +39,8 @@ export default defineConfig({
           { text: 'Install on Linux or Synology', link: '/deployment/install-linux-nas' },
           { text: 'First-run onboarding', link: '/deployment/onboarding-walkthrough' },
           { text: 'Operator vs Admin', link: '/deployment/operator-responsibilities' },
-          { text: 'TLS / reverse proxy', link: '/deployment/tls-proxy' }
+          { text: 'TLS / reverse proxy', link: '/deployment/tls-proxy' },
+          { text: 'Mailpit (dev / CI only)', link: '/deployment/mailpit-dev' }
         ]
       },
       {

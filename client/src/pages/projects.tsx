@@ -229,17 +229,17 @@ export function ProjectsPage() {
     if (showingArchived) {
       options.archived = true
     }
-    if (selectedClientId) {
+    if (canViewBusiness && selectedClientId) {
       options.clientId = selectedClientId
     }
     return Object.keys(options).length > 0 ? options : undefined
-  }, [showingArchived, selectedClientId])
+  }, [showingArchived, selectedClientId, canViewBusiness])
 
   const loadProjects = useCallback(async () => {
     try {
       const [projectData, clientData] = await Promise.all([
         listProjects(listProjectsOptions),
-        listClients(),
+        canViewBusiness ? listClients() : Promise.resolve([] as Client[]),
       ])
       setProjects(projectData)
       setClients(clientData)
@@ -251,7 +251,7 @@ export function ProjectsPage() {
     } finally {
       setLoading(false)
     }
-  }, [listProjectsOptions])
+  }, [canViewBusiness, listProjectsOptions])
 
   useEffect(() => {
     let cancelled = false
@@ -260,7 +260,7 @@ export function ProjectsPage() {
       try {
         const [projectData, clientData] = await Promise.all([
           listProjects(listProjectsOptions),
-          listClients(),
+          canViewBusiness ? listClients() : Promise.resolve([] as Client[]),
         ])
         if (!cancelled) {
           setProjects(projectData)
@@ -285,7 +285,7 @@ export function ProjectsPage() {
     return () => {
       cancelled = true
     }
-  }, [listProjectsOptions])
+  }, [canViewBusiness, listProjectsOptions])
 
   async function handleCreateProject(values: ProjectFormValues) {
     const payload = projectFormToPayload(values)
@@ -353,9 +353,10 @@ export function ProjectsPage() {
     }
   }
 
-  const selectedClient = selectedClientId
-    ? clientLookup.get(selectedClientId)
-    : undefined
+  const selectedClient =
+    canViewBusiness && selectedClientId
+      ? clientLookup.get(selectedClientId)
+      : undefined
 
   const filteredProjects = useMemo(
     () =>
@@ -416,25 +417,27 @@ export function ProjectsPage() {
                   aria-label="Search projects by name or client"
                 />
               </div>
-              <Select
-                value={selectedClientId ?? "all"}
-                onValueChange={handleClientFilterChange}
-              >
-                <SelectTrigger
-                  className="w-full shrink-0 sm:w-[14rem]"
-                  aria-label="Filter projects by client"
+              {canViewBusiness ? (
+                <Select
+                  value={selectedClientId ?? "all"}
+                  onValueChange={handleClientFilterChange}
                 >
-                  <SelectValue placeholder="All clients" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All clients</SelectItem>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {clientOptionLabel(client)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <SelectTrigger
+                    className="w-full shrink-0 sm:w-[14rem]"
+                    aria-label="Filter projects by client"
+                  >
+                    <SelectValue placeholder="All Clients" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Clients</SelectItem>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {clientOptionLabel(client)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="shrink-0">
@@ -522,7 +525,7 @@ export function ProjectsPage() {
                     Clear filter
                   </Button>
                 ) : null}
-                {selectedClientId ? (
+                {canViewBusiness && selectedClientId ? (
                   <Button variant="outline" onClick={clearClientFilter}>
                     Clear client filter
                   </Button>

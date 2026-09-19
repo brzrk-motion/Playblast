@@ -1,3 +1,4 @@
+import type { UserSummary } from "@playblast/shared"
 import type { LeadStatus } from "@/types/lead"
 
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
@@ -18,6 +19,27 @@ export const LEAD_STATUS_STYLES: Record<LeadStatus, string> = {
   converted:
     "border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-400",
   lost: "border-destructive/30 bg-destructive/10 text-destructive",
+}
+
+export function isLeadOwnerRole(role: UserSummary["role"]): boolean {
+  return role === "admin" || role === "account_executive"
+}
+
+export function leadOwnerOptions(users: UserSummary[]): UserSummary[] {
+  return users
+    .filter((user) => !user.disabled && isLeadOwnerRole(user.role))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+}
+
+export function leadOwnerLabel(
+  assignedToUserId: string | undefined,
+  usersById: Map<string, UserSummary>,
+): string {
+  if (!assignedToUserId) {
+    return "Unassigned"
+  }
+
+  return usersById.get(assignedToUserId)?.name ?? "Unknown"
 }
 
 export function filterLeadsBySearch<

@@ -124,6 +124,8 @@ export function updateStudioById(
     name?: string
     avatarPath?: string | null
     setupStatus?: SetupStatus
+    internalHourlyCostRate?: number | null
+    weeklyCapacityHours?: number | null
   },
 ) {
   const db = getDrizzle()
@@ -142,6 +144,14 @@ export function updateStudioById(
 
   if (patch.setupStatus !== undefined) {
     values.setupStatus = patch.setupStatus
+  }
+
+  if (patch.internalHourlyCostRate !== undefined) {
+    values.internalHourlyCostRate = patch.internalHourlyCostRate
+  }
+
+  if (patch.weeklyCapacityHours !== undefined) {
+    values.weeklyCapacityHours = patch.weeklyCapacityHours
   }
 
   db.update(studios).set(values).where(eq(studios.id, id)).run()

@@ -23,11 +23,14 @@ import {
   uploadStudioAvatar,
 } from "@/lib/api-http"
 import {
-  getInternalHourlyCostRate,
   setInternalHourlyCostRate,
 } from "@/lib/internal-hourly-cost-rate"
+import { migrateLocalStudioPreferencesIfNeeded } from "@/lib/migrate-local-studio-preferences"
 import {
-  getWeeklyCapacityHours,
+  ensureStudioPreferencesLoaded,
+  useStudioPreferencesState,
+} from "@/lib/studio-preferences-store"
+import {
   setWeeklyCapacityHours,
 } from "@/lib/weekly-capacity"
 import { useCapability } from "@/hooks/use-capability"
@@ -37,16 +40,13 @@ export function SettingsPage() {
   const isAdmin = role === "admin"
   const canViewBusiness = useCapability("business.manage")
   const sessionStudio = state.status === "ready" ? state.session?.studio : null
+  const preferencesState = useStudioPreferencesState()
 
-  const [internalRateInput, setInternalRateInput] = useState(() => {
-    const rate = getInternalHourlyCostRate()
-    return rate !== null ? String(rate) : ""
-  })
-  const [weeklyCapacityInput, setWeeklyCapacityInput] = useState(() => {
-    const hours = getWeeklyCapacityHours()
-    return hours !== null ? String(hours) : ""
-  })
+  const [internalRateInput, setInternalRateInput] = useState("")
+  const [weeklyCapacityInput, setWeeklyCapacityInput] = useState("")
   const [saved, setSaved] = useState(false)
+  const [preferencesError, setPreferencesError] = useState<string | null>(null)
+  const [preferencesSaving, setPreferencesSaving] = useState(false)
 
   const [draftStudioName, setDraftStudioName] = useState<string | null>(null)
   const [draftAvatarUrl, setDraftAvatarUrl] = useState<string | null | undefined>(undefined)
@@ -63,50 +63,86 @@ export function SettingsPage() {
   const avatarUrl =
     draftAvatarUrl === undefined ? sessionStudio?.avatarUrl ?? null : draftAvatarUrl
 
-  function handleSaveInternalRate() {
+  async function handleSaveInternalRate() {
     const trimmed = internalRateInput.trim()
-    if (!trimmed) {
-      setInternalHourlyCostRate(null)
+    setPreferencesError(null)
+    setPreferencesSaving(true)
+
+    try {
+      if (!trimmed) {
+        await setInternalHourlyCostRate(null)
+        setSaved(true)
+        return
+      }
+
+      const parsed = Number.parseFloat(trimmed)
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        return
+      }
+
+      await setInternalHourlyCostRate(parsed)
       setSaved(true)
-      return
+    } catch {
+      setPreferencesError("Could not save internal hourly cost rate.")
+    } finally {
+      setPreferencesSaving(false)
     }
-
-    const parsed = Number.parseFloat(trimmed)
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      return
-    }
-
-    setInternalHourlyCostRate(parsed)
-    setSaved(true)
   }
 
-  function handleClearInternalRate() {
-    setInternalRateInput("")
-    setInternalHourlyCostRate(null)
-    setSaved(true)
+  async function handleClearInternalRate() {
+    setPreferencesError(null)
+    setPreferencesSaving(true)
+
+    try {
+      setInternalRateInput("")
+      await setInternalHourlyCostRate(null)
+      setSaved(true)
+    } catch {
+      setPreferencesError("Could not clear internal hourly cost rate.")
+    } finally {
+      setPreferencesSaving(false)
+    }
   }
 
-  function handleSaveWeeklyCapacity() {
+  async function handleSaveWeeklyCapacity() {
     const trimmed = weeklyCapacityInput.trim()
-    if (!trimmed) {
-      setWeeklyCapacityHours(null)
+    setPreferencesError(null)
+    setPreferencesSaving(true)
+
+    try {
+      if (!trimmed) {
+        await setWeeklyCapacityHours(null)
+        setSaved(true)
+        return
+      }
+
+      const parsed = Number.parseFloat(trimmed)
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        return
+      }
+
+      await setWeeklyCapacityHours(parsed)
       setSaved(true)
-      return
+    } catch {
+      setPreferencesError("Could not save weekly capacity.")
+    } finally {
+      setPreferencesSaving(false)
     }
-
-    const parsed = Number.parseFloat(trimmed)
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      return
-    }
-
-    setWeeklyCapacityHours(parsed)
-    setSaved(true)
   }
 
-  function handleClearWeeklyCapacity() {
-    setWeeklyCapacityInput("")
-    setWeeklyCapacityHours(null)
-    setSaved(true)
+  async function handleClearWeeklyCapacity() {
+    setPreferencesError(null)
+    setPreferencesSaving(true)
+
+    try {
+      setWeeklyCapacityInput("")
+      await setWeeklyCapacityHours(null)
+      setSaved(true)
+    } catch {
+      setPreferencesError("Could not clear weekly capacity.")
+    } finally {
+      setPreferencesSaving(false)
+    }
   }
 
   async function handleSaveStudioProfile() {
@@ -184,6 +220,42 @@ export function SettingsPage() {
       setAvatarDeleting(false)
     }
   }
+
+  useEffect(() => {
+    if (!canViewBusiness) {
+      return
+    }
+
+    let cancelled = false
+
+    void ensureStudioPreferencesLoaded()
+      .then((preferences) => migrateLocalStudioPreferencesIfNeeded(preferences))
+      .then((preferences) => {
+        if (cancelled) {
+          return
+        }
+
+        setInternalRateInput(
+          preferences.internalHourlyCostRate !== null
+            ? String(preferences.internalHourlyCostRate)
+            : "",
+        )
+        setWeeklyCapacityInput(
+          preferences.weeklyCapacityHours !== null
+            ? String(preferences.weeklyCapacityHours)
+            : "",
+        )
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPreferencesError("Could not load studio preferences.")
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [canViewBusiness])
 
   useEffect(() => {
     if (!saved) {
@@ -264,9 +336,9 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle>Profitability</CardTitle>
           <CardDescription>
-            Set the internal hourly cost rate used to calculate project margins.
-            Without a rate, profitability views compare estimated value to billed
-            rates only.
+            Set the studio-wide internal hourly cost rate used to calculate project
+            margins. Without a rate, profitability views compare estimated value
+            to billed rates only.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -288,25 +360,31 @@ export function SettingsPage() {
                   placeholder="e.g. 120"
                   className="pl-7"
                   value={internalRateInput}
+                  disabled={preferencesSaving || preferencesState.status === "loading"}
                   onChange={(event) => {
                     setInternalRateInput(event.target.value)
                     setSaved(false)
                   }}
                 />
               </div>
-              <Button type="button" onClick={handleSaveInternalRate}>
+              <Button
+                type="button"
+                onClick={() => void handleSaveInternalRate()}
+                disabled={preferencesSaving || preferencesState.status === "loading"}
+              >
                 Save
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleClearInternalRate}
+                onClick={() => void handleClearInternalRate()}
+                disabled={preferencesSaving || preferencesState.status === "loading"}
               >
                 Clear
               </Button>
             </div>
             {saved ? (
-              <p className="text-sm text-muted-foreground">Saved.</p>
+              <p className="text-sm text-muted-foreground">Saved for all users.</p>
             ) : null}
           </div>
         </CardContent>
@@ -334,26 +412,37 @@ export function SettingsPage() {
                 placeholder="e.g. 160"
                 className="min-w-[12rem] flex-1"
                 value={weeklyCapacityInput}
+                disabled={preferencesSaving || preferencesState.status === "loading"}
                 onChange={(event) => {
                   setWeeklyCapacityInput(event.target.value)
                   setSaved(false)
                 }}
               />
-              <Button type="button" onClick={handleSaveWeeklyCapacity}>
+              <Button
+                type="button"
+                onClick={() => void handleSaveWeeklyCapacity()}
+                disabled={preferencesSaving || preferencesState.status === "loading"}
+              >
                 Save
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleClearWeeklyCapacity}
+                onClick={() => void handleClearWeeklyCapacity()}
+                disabled={preferencesSaving || preferencesState.status === "loading"}
               >
                 Clear
               </Button>
             </div>
             {saved ? (
-              <p className="text-sm text-muted-foreground">Saved.</p>
+              <p className="text-sm text-muted-foreground">Saved for all users.</p>
             ) : null}
           </div>
+          {preferencesError ? (
+            <p className="text-destructive text-sm" role="alert">
+              {preferencesError}
+            </p>
+          ) : null}
         </CardContent>
       </Card> : null}
 

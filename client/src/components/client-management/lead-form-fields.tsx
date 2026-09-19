@@ -1,3 +1,4 @@
+import type { UserSummary } from "@playblast/shared"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -21,6 +22,8 @@ interface LeadFormFieldsProps {
   ) => void
   submitting?: boolean
   validationError?: string | null
+  showAssignee?: boolean
+  assigneeOptions?: UserSummary[]
 }
 
 export function LeadFormFields({
@@ -28,6 +31,8 @@ export function LeadFormFields({
   onChange,
   submitting = false,
   validationError,
+  showAssignee = false,
+  assigneeOptions = [],
 }: LeadFormFieldsProps) {
   return (
     <div className="space-y-4 py-4">
@@ -102,6 +107,34 @@ export function LeadFormFields({
             </SelectContent>
           </Select>
         </div>
+
+        {showAssignee ? (
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="lead-owner">Owner</Label>
+            <Select
+              value={values.assignedToUserId || "unassigned"}
+              onValueChange={(value) =>
+                onChange(
+                  "assignedToUserId",
+                  value === "unassigned" ? "" : value,
+                )
+              }
+              disabled={submitting}
+            >
+              <SelectTrigger id="lead-owner">
+                <SelectValue placeholder="Select owner" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {assigneeOptions.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
 
         <div className="space-y-2">
           <Label htmlFor="lead-status">Status</Label>

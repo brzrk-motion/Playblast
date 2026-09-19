@@ -12,6 +12,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { LeadFormFields } from "@/components/client-management/lead-form-fields"
 import { useLeadForm } from "@/components/client-management/use-lead-form"
 import { validateLeadForm, type LeadFormValues } from "@/lib/lead-form"
+import type { UserSummary } from "@playblast/shared"
 import type { Lead } from "@/types/lead"
 
 interface EditLeadModalProps {
@@ -20,6 +21,8 @@ interface EditLeadModalProps {
   lead: Lead | null
   submitting?: boolean
   error?: string | null
+  showAssignee?: boolean
+  assigneeOptions?: UserSummary[]
   onSubmit: (values: LeadFormValues) => void
 }
 
@@ -29,6 +32,8 @@ export function EditLeadModal({
   lead,
   submitting = false,
   error,
+  showAssignee = false,
+  assigneeOptions = [],
   onSubmit,
 }: EditLeadModalProps) {
   const { values, update, syncOpenState, handleOpenChange } = useLeadForm(lead)
@@ -66,6 +71,8 @@ export function EditLeadModal({
             onChange={update}
             submitting={submitting}
             validationError={validationError ?? error}
+            showAssignee={showAssignee}
+            assigneeOptions={assigneeOptions}
           />
 
           <DialogFooter>
