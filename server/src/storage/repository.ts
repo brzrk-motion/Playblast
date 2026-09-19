@@ -30,6 +30,7 @@ import type {
   CreateDeliverableInput,
   Client,
   ClientListItem,
+  ClientLinkedProject,
   ClientWithProjects,
   CreateClientInput,
   CreateInvoicePaymentInput,
@@ -231,6 +232,19 @@ function emptyStatusCounts(): Record<DeliverableStatus, number> {
     },
     {} as Record<DeliverableStatus, number>,
   )
+}
+
+function enrichClientLinkedProject(project: Project): ClientLinkedProject {
+  const projectServices = listProjectServices(project.id)
+  const servicesEstimate =
+    projectServices.length > 0
+      ? calculateProjectServicesEstimate(projectServices)
+      : undefined
+
+  return {
+    ...project,
+    ...(servicesEstimate !== undefined ? { servicesEstimate } : {}),
+  }
 }
 
 function rowToProject(row: ProjectRow): Project {
@@ -2143,7 +2157,7 @@ export function getClientWithProjects(
 
   return {
     ...client,
-    projects: listProjectsByClientId(studioId, id),
+    projects: listProjectsByClientId(studioId, id).map(enrichClientLinkedProject),
     lifetimeValue,
     ...(outstandingBalance > 0 ? { outstandingBalance } : {}),
     ...(retainerSummary ? { retainerSummary } : {}),

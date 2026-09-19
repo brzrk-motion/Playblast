@@ -28,15 +28,23 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { deleteClient, getClient, updateProject } from "@/lib/api"
-import { formatEstimateCurrency } from "@/lib/budget"
+import {
+  ESTIMATE_BUDGET_STATUS_DOT_STYLES,
+  ESTIMATE_BUDGET_STATUS_LABELS,
+  estimateBudgetStatus,
+  formatCurrency,
+  formatEstimateCurrency,
+} from "@/lib/budget"
+import { summarizeClientFinancials } from "@/lib/client-financials"
+import { ClientFinancialSummaryPanel } from "@/components/client-management/client-financial-summary-panel"
+import { cn } from "@/lib/utils"
 import { formatShortDate } from "@playblast/shared"
 import { isProjectArchived } from "@/lib/projects"
 import { toast } from "sonner"
 import { humanizeApiError } from "@/lib/toast"
 import { RetainerPanel } from "@/components/client-management/retainer-panel"
 import { ClientLifetimeValuePanel } from "@/components/client-management/client-lifetime-value-panel"
-import type { Client, ClientWithProjects } from "@/types/client"
-import type { Project } from "@/types/project"
+import type { Client, ClientLinkedProject, ClientWithProjects } from "@/types/client"
 
 interface ClientDetailSheetProps {
   clientId: string | null
@@ -85,15 +93,42 @@ function formatWebsiteHref(website: string): string {
   return /^https?:\/\//i.test(website) ? website : `https://${website}`
 }
 
+function BudgetHealthDot({
+  status,
+}: {
+  status: ReturnType<typeof estimateBudgetStatus>
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-block size-2 shrink-0 rounded-full",
+        ESTIMATE_BUDGET_STATUS_DOT_STYLES[status],
+      )}
+      title={ESTIMATE_BUDGET_STATUS_LABELS[status]}
+      aria-label={ESTIMATE_BUDGET_STATUS_LABELS[status]}
+    />
+  )
+}
+
 function LinkedProjectCard({
   project,
   onUnlink,
   unlinking,
 }: {
-  project: Project
-  onUnlink: (project: Project) => void
+  project: ClientLinkedProject
+  onUnlink: (project: ClientLinkedProject) => void
   unlinking: boolean
 }) {
+  const currency = project.budget?.currency ?? "USD"
+  const hasEstimate =
+    project.servicesEstimate !== undefined && project.servicesEstimate > 0
+  const budgetTotal = project.budget?.total
+  const hasBudget = budgetTotal !== undefined && budgetTotal > 0
+  const budgetStatus =
+    hasEstimate && hasBudget
+      ? estimateBudgetStatus(budgetTotal, project.servicesEstimate!)
+      : null
+
   return (
     <Card className="h-full border-muted">
       <CardHeader className="gap-2 pb-2">
@@ -126,10 +161,22 @@ function LinkedProjectCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="text-sm text-muted-foreground">
+      <CardContent className="space-y-1 text-sm text-muted-foreground">
         <p>
           {formatProjectDate(project.startDate)} – {formatProjectDate(project.endDate)}
         </p>
+        {hasEstimate ? (
+          <p className="flex items-center gap-1.5 tabular-nums">
+            <span>
+              Est. {formatEstimateCurrency(project.servicesEstimate!, currency)}
+            </span>
+            {budgetStatus ? <BudgetHealthDot status={budgetStatus} /> : null}
+          </p>
+        ) : hasBudget ? (
+          <p className="tabular-nums">
+            Budget {formatCurrency(budgetTotal, currency)}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   )
@@ -156,6 +203,11 @@ export function ClientDetailSheet({
 
   const hasActiveProjects = useMemo(
     () => client?.projects.some((project) => !isProjectArchived(project)) ?? false,
+    [client?.projects],
+  )
+
+  const financialSummary = useMemo(
+    () => summarizeClientFinancials(client?.projects ?? []),
     [client?.projects],
   )
 
@@ -266,7 +318,7 @@ export function ClientDetailSheet({
     }
   }
 
-  async function handleUnlink(project: Project) {
+  async function handleUnlink(project: ClientLinkedProject) {
     if (!client) {
       return
     }
@@ -476,6 +528,8 @@ export function ClientDetailSheet({
               />
 
               <ClientLifetimeValuePanel lifetimeValue={client.lifetimeValue} />
+
+              <ClientFinancialSummaryPanel summary={financialSummary} />
 
               <section className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">

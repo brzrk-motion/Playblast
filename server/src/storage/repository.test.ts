@@ -439,6 +439,55 @@ describe("SQLite data store", () => {
     deleteClient(client.id)
   })
 
+  it("includes services estimate on client-linked projects", () => {
+    const client = createClient({
+      studioId: STUDIO_ID,
+      name: "Financial Client",
+      email: "financial@example.com",
+    })
+    const withServices = createProject({
+      studioId: STUDIO_ID,
+      id: "client-financial-with-services",
+      name: "With Services",
+      clientId: client.id,
+      budget: { total: 8000, currency: "USD" },
+    })
+    const withoutServices = createProject({
+      studioId: STUDIO_ID,
+      id: "client-financial-without-services",
+      name: "Without Services",
+      clientId: client.id,
+    })
+    const service = createService({
+      studioId: STUDIO_ID,
+      name: "Edit Package",
+      hourEstimate: 8,
+      hourlyRate: 250,
+      type: "animated",
+    })
+
+    addProjectService(withServices.id, service.id)
+
+    const detail = getClientWithProjects(client.id, STUDIO_ID)
+    assert.ok(detail)
+    const withServicesProject = detail.projects.find(
+      (project) => project.id === withServices.id,
+    )
+    const withoutServicesProject = detail.projects.find(
+      (project) => project.id === withoutServices.id,
+    )
+
+    assert.equal(withServicesProject?.servicesEstimate, 2000)
+    assert.equal(withServicesProject?.budget?.total, 8000)
+    assert.equal(withoutServicesProject?.servicesEstimate, undefined)
+
+    removeProjectService(withServices.id, service.id)
+    deleteProject(withServices.id)
+    deleteProject(withoutServices.id)
+    deleteService(service.id)
+    deleteClient(client.id)
+  })
+
   it("includes logged hours from time logs in project summaries and detail", () => {
     const project = createProject({ studioId: STUDIO_ID,
       id: "logged-hours-summary",
