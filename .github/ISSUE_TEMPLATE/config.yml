@@ -1,8 +1,17 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Install & operations questions
+    url: https://github.com/brzrk-motion/Playblast/discussions/new?category=q-a
+    about: Docker, NAS, SMTP, backup, and upgrade questions — use Discussions Q&A, not issues.
+  - name: Community & sponsorship
+    url: https://github.com/brzrk-motion/Playblast/discussions/new?category=general
+    about: General chat and sponsorship interest — soft RC, no paid support SLA.
   - name: Security vulnerability
     url: https://github.com/brzrk-motion/Playblast/security/advisories/new
     about: Report exploitable security issues privately — do not file a public issue.
   - name: Deployment / operator docs
     url: https://github.com/brzrk-motion/Playblast/blob/development-mvp/docs/deployment/index.md
     about: Self-hosted Docker and Synology install guides.
+  - name: Getting help (routing guide)
+    url: https://github.com/brzrk-motion/Playblast/blob/development-mvp/docs/community/getting-help.md
+    about: When to use Discussions vs Issues vs private security advisories.

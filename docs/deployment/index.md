@@ -47,4 +47,8 @@ If Docker or browser dependencies are unavailable, record those gates as environ
 
 ## Support boundary
 
-Playblast is free, open-source, and self-hosted. There is no hosted SaaS, no founder-installed deployment service, and no paid support commitment. Studios operate their own Docker host, networking, HTTPS/VPN, SMTP deliverability, backups, and restore drills. Report bugs through the project's public issue tracker.
+Playblast is free, open-source, and self-hosted. There is no hosted SaaS, no founder-installed deployment service, and no paid support commitment. Studios operate their own Docker host, networking, HTTPS/VPN, SMTP deliverability, backups, and restore drills.
+
+- **Install / operator questions** → [GitHub Discussions](https://github.com/brzrk-motion/Playblast/discussions) (Q&A)
+- **Actionable defects** → [GitHub Issues](https://github.com/brzrk-motion/Playblast/issues)
+- **Routing guide** → [Getting help](../community/getting-help.md)

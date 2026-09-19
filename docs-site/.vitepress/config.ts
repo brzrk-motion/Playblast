@@ -29,6 +29,7 @@ export default defineConfig({
     nav: [
       { text: 'Install', link: '/deployment/install-linux-nas' },
       { text: 'Deployment guide', link: '/deployment/' },
+      { text: 'Getting help', link: '/community/getting-help' },
       { text: 'GitHub', link: 'https://github.com/brzrk-motion/Playblast' }
     ],
     sidebar: [
@@ -41,6 +42,12 @@ export default defineConfig({
           { text: 'Operator vs Admin', link: '/deployment/operator-responsibilities' },
           { text: 'TLS / reverse proxy', link: '/deployment/tls-proxy' },
           { text: 'Mailpit (dev / CI only)', link: '/deployment/mailpit-dev' }
+        ]
+      },
+      {
+        text: 'Community',
+        items: [
+          { text: 'Getting help', link: '/community/getting-help' }
         ]
       },
       {

@@ -17,7 +17,7 @@ Detailed phase checklists live in docs/Playblast-MVP-Audit.md.
 - Operator docs polish (backup/restore, upgrade/rollback, Synology)
 - Accessibility and responsive review UI pass
 - Clearer first-run and invite/SMTP operator experience
-- Public community pack: CoC, contributing guide, issue templates, funding
+- Public community pack: CoC, contributing guide, issue templates, GitHub Discussions, funding
 
 ## Next (post-MVP)
 

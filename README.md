@@ -110,9 +110,22 @@ See [.env.example](.env.example) and [docs/deployment/secrets.md](docs/deploymen
 | `UPLOAD_DIR` | No | Media storage (default `/app/uploads`) |
 | `DB_PATH` | No | SQLite path (default `/app/data/playblast.db`) |
 
+## Community & help
+
+Playblast is in **soft release candidate** — we welcome questions but do not offer paid support or remote hands.
+
+| Need | Where |
+|------|-------|
+| Install, Docker/NAS, SMTP, backups, upgrades | [GitHub Discussions](https://github.com/brzrk-motion/Playblast/discussions) (Q&A) |
+| Sponsorship interest, general chat | [GitHub Discussions](https://github.com/brzrk-motion/Playblast/discussions) (General) |
+| Reproducible software defects | [GitHub Issues](https://github.com/brzrk-motion/Playblast/issues) |
+| Security vulnerabilities | [SECURITY.md](SECURITY.md) (private advisory) |
+
+Full routing guide: [docs/community/getting-help.md](docs/community/getting-help.md). Maintainer enablement: [.github/DISCUSSIONS.md](.github/DISCUSSIONS.md).
+
 ## Support boundary
 
-Self-hosted operators own Docker, networking, HTTPS/VPN, backups, and SMTP deliverability. Playblast provides application setup, roles, proofing, and Admin CRM/finance — not remote hands or paid support. Report defects via the project's public issue tracker. Security issues: see [SECURITY.md](SECURITY.md).
+Self-hosted operators own Docker, networking, HTTPS/VPN, backups, and SMTP deliverability. Playblast provides application setup, roles, proofing, and Admin CRM/finance — not remote hands or paid support.
 
 ## MVP reference
 

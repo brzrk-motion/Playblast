@@ -94,6 +94,7 @@ Do **not** mark adoption/funding audit tasks complete without real evidence from
 
 ## Issue and support boundary
 
+- Install / operator questions: [GitHub Discussions](https://github.com/brzrk-motion/Playblast/discussions) (Q&A) — see [../community/getting-help.md](../community/getting-help.md).
 - Defects: public GitHub issues for non-security bugs.
 - Security: private advisories per [SECURITY.md](https://github.com/brzrk-motion/Playblast/blob/development-mvp/SECURITY.md).
 - Operations: [../deployment/operator-responsibilities.md](../deployment/operator-responsibilities.md) — no remote hands or paid support commitments.
