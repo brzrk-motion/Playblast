@@ -40,6 +40,7 @@ import type {
   UpdateServiceInput,
 } from "@/types/service"
 import type { UploadProgress, UploadResponse } from "@/types/upload"
+import * as tus from "tus-js-client"
 import type { Version, VersionStatus } from "@/types/version"
 import { isApiErrorEnvelope } from "@playblast/shared"
 import {
@@ -542,6 +543,29 @@ export async function updateVersionStatus(
   return parseApiResponse<Version>(response)
 }
 
+function parseTusUploadError(error: Error | tus.DetailedError): Error {
+  if (!("originalResponse" in error)) {
+    return new Error(error.message || "Upload failed.")
+  }
+
+  const responseBody = error.originalResponse?.getBody()
+  if (!responseBody) {
+    return new Error(error.message || "Upload failed.")
+  }
+
+  try {
+    const body = JSON.parse(responseBody) as unknown
+    if (isApiErrorEnvelope(body)) {
+      return new ApiError(error.originalResponse?.getStatus() ?? 500, body)
+    }
+
+    const fallback = (body as { error?: string } | null)?.error
+    return new Error(fallback ?? "Upload failed.")
+  } catch {
+    return new Error(error.message || "Upload failed.")
+  }
+}
+
 export function uploadVersion(
   deliverableId: string,
   label: string,
@@ -549,58 +573,45 @@ export function uploadVersion(
   onProgress?: (progress: UploadProgress) => void,
 ): Promise<UploadResponse> {
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
-    const formData = new FormData()
-    formData.append("video", file)
+    const headers = buildApiHeaders(false) as Record<string, string>
 
-    xhr.upload.addEventListener("progress", (event) => {
-      if (event.lengthComputable && onProgress) {
-        onProgress({
-          loaded: event.loaded,
-          total: event.total,
-          percent: Math.round((event.loaded / event.total) * 100),
-        })
-      }
-    })
-
-    xhr.addEventListener("load", () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(JSON.parse(xhr.responseText) as UploadResponse)
-        return
-      }
-
-      try {
-        const body = JSON.parse(xhr.responseText) as unknown
-        if (isApiErrorEnvelope(body)) {
-          reject(new ApiError(xhr.status, body))
+    const upload = new tus.Upload(file, {
+      endpoint: "/api/uploads/tus",
+      metadata: {
+        deliverableId,
+        version: label,
+        filename: file.name,
+        filetype: file.type || "video/mp4",
+      },
+      headers,
+      chunkSize: 6 * 1024 * 1024,
+      retryDelays: [0, 1000, 3000, 5000, 10000],
+      removeFingerprintOnSuccess: true,
+      onProgress(bytesUploaded, bytesTotal) {
+        if (!onProgress) {
           return
         }
 
-        const fallback = (body as { error?: string } | null)?.error
-        reject(new Error(fallback ?? "Upload failed."))
-      } catch {
-        reject(new Error("Upload failed."))
-      }
+        onProgress({
+          loaded: bytesUploaded,
+          total: bytesTotal,
+          percent:
+            bytesTotal > 0 ? Math.round((bytesUploaded / bytesTotal) * 100) : 0,
+        })
+      },
+      onSuccess(payload) {
+        try {
+          resolve(JSON.parse(payload.lastResponse.getBody()) as UploadResponse)
+        } catch {
+          reject(new Error("Upload failed."))
+        }
+      },
+      onError(error) {
+        reject(parseTusUploadError(error))
+      },
     })
 
-    xhr.addEventListener("error", () => {
-      reject(new Error("Upload failed"))
-    })
-
-    xhr.addEventListener("abort", () => {
-      reject(new Error("Upload cancelled"))
-    })
-
-    xhr.open(
-      "POST",
-      `/api/deliverables/${encodeURIComponent(deliverableId)}/versions/${encodeURIComponent(label)}/upload`,
-    )
-    xhr.withCredentials = true
-    const headers = buildApiHeaders(false) as Record<string, string>
-    for (const [key, value] of Object.entries(headers)) {
-      xhr.setRequestHeader(key, value)
-    }
-    xhr.send(formData)
+    upload.start()
   })
 }
 
