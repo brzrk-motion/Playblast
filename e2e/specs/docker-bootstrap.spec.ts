@@ -222,6 +222,10 @@ services:
       expect(setupBody.status).toBe("pending")
 
       await page.goto(`${baseUrl}/setup`)
+      await expect(page.getByRole("button", { name: "Create admin account" })).toBeVisible({
+        timeout: 60_000,
+      })
+      await expect(page.getByText("Claim this self-hosted Playblast instance")).toBeVisible()
       await page.getByLabel("Your name").fill("Invalid Setup")
       await page.getByLabel("Email").fill("not-an-email")
       await page.getByLabel("Password", { exact: true }).fill("short")
