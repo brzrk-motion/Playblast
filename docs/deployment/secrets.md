@@ -41,7 +41,18 @@ If enabled without `PLAYBLAST_AUTH_USER` and `PLAYBLAST_AUTH_PASSWORD`, producti
 
 ## SMTP credentials
 
-Admins configure SMTP in the Team UI. Values are stored in the local SQLite database. Include the database backup when protecting SMTP configuration. Do not commit SMTP passwords to compose files or git.
+Two supported paths (choose one per instance):
+
+| Path | Where secrets live | When to use |
+|------|-------------------|-------------|
+| **Team UI** (default) | Encrypted in SQLite (`data/`) | Most self-hosted studios; configure after first-run setup on **Team** |
+| **Environment** (optional) | Host `.env` / Container Manager env | CI, GitOps, or operators who prefer 12-factor config |
+
+Required env keys for the environment path: `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`. Optional: `SMTP_REPLY_TO`, `PLAYBLAST_INSTANCE_URL`.
+
+When the full env set is present, Admin UI SMTP fields are read-only and env values take precedence. Partial env sets are ignored — configure via Team instead.
+
+Do not commit SMTP passwords to compose files or git. Include `data/` in backups when using the Team UI path.
 
 ## File permissions
 

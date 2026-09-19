@@ -15,6 +15,10 @@ Admins invite Account Executive, Creative, and Proofing users from **Team**. Inv
 
 ## SMTP setup (Admin)
 
+SMTP is **not** part of the first-run setup wizard. After setup completes, configure email from **Team** (`/team`) or via deployment environment variables (see below).
+
+### Team UI path (default)
+
 1. Sign in as Admin → **Team**.
 2. Open SMTP settings.
 3. Enter host, port, TLS mode, username, and password for your studio's mail relay.
@@ -23,7 +27,26 @@ Admins invite Account Executive, Creative, and Proofing users from **Team**. Inv
 
 If SMTP is unavailable, the instance remains usable for signed-in users, but new email invitations will not deliver until test delivery succeeds.
 
-SMTP credentials live in the local database. Back up `data/` to protect them.
+SMTP credentials configured in the UI live in the local database. Back up `data/` to protect them.
+
+### Environment path (optional 12-factor override)
+
+When **all** required SMTP variables are set in the deployment environment, Playblast treats SMTP as preconfigured (`smtpConfiguredFromEnv: true`). The Team UI shows read-only settings and blocks UI updates; invitations still require a successful test delivery.
+
+| Variable | Required for env SMTP | Purpose |
+|----------|----------------------|---------|
+| `SMTP_HOST` | Yes | Relay hostname |
+| `SMTP_PORT` | Yes | Relay port (1–65535) |
+| `SMTP_SECURE` | Yes | `true`/`false` for implicit TLS |
+| `SMTP_USER` | Yes | SMTP username |
+| `SMTP_PASS` | Yes | SMTP password |
+| `SMTP_FROM` | Yes | Sender address |
+| `SMTP_REPLY_TO` | No | Optional reply-to header |
+| `PLAYBLAST_INSTANCE_URL` | Recommended | Public URL embedded in invitation links |
+
+Set these in `.env` beside `docker-compose.yml` or in Container Manager env files — never commit values to git. See [secrets and permissions](./secrets.md) and root `.env.example`.
+
+If only some SMTP variables are set, Playblast ignores the partial env block and falls back to Team UI configuration.
 
 ## Admin recovery
 
