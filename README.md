@@ -1,6 +1,12 @@
 # Playblast
 
-Self-hosted video proofing — versions, timestamped comments, frame annotations, side-by-side compare, and approvals for reviewing CGI renders and motion work.
+Self-hosted video proofing for motion studios — versions, timestamped comments, frame annotations, side-by-side compare, and approvals for reviewing CGI renders and motion work.
+
+MIT-licensed. One free, self-hosted instance per studio. No hosted SaaS.
+
+**Links:** [Install docs](https://brzrk-motion.github.io/Playblast/deployment/install-linux-nas) · [Discussions](https://github.com/brzrk-motion/Playblast/discussions) · [Issues](https://github.com/brzrk-motion/Playblast/issues)
+
+> Product overview and funding context live on [brzrkmotion.com/playblast](https://brzrkmotion.com/playblast). This repo is for code, install docs, and community support.
 
 ## Stack
 
