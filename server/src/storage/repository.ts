@@ -171,6 +171,7 @@ interface LeadRow {
   notes: string | null
   lastContactedAt: string | null
   replied: number
+  assignedToUserId: string | null
   createdAt: string
   updatedAt: string
   studioId: string | null
@@ -430,7 +431,7 @@ export function listProjectSummaries(
 ): ProjectSummary[] {
   const db = getDb()
   const projects = clientId
-    ? listProjectsByClientId(studioId, clientId)
+    ? listProjectsByClientId(studioId, clientId, options)
     : listProjects(studioId, options)
 
   return projects.map((project) => {
@@ -1691,6 +1692,7 @@ export function deleteComment(id: string): boolean {
 export interface ListLeadsFilters {
   status?: LeadStatus
   replied?: boolean
+  assignedToUserId?: string
 }
 
 function rowToLead(row: LeadRow): Lead {
@@ -1709,6 +1711,7 @@ function rowToLead(row: LeadRow): Lead {
   if (row.source) lead.source = row.source
   if (row.notes) lead.notes = row.notes
   if (row.lastContactedAt) lead.lastContactedAt = row.lastContactedAt
+  if (row.assignedToUserId) lead.assignedToUserId = row.assignedToUserId
 
   return lead
 }
@@ -1747,6 +1750,11 @@ export function listLeads(
   if (filters.replied !== undefined) {
     conditions.push("replied = ?")
     params.push(filters.replied ? 1 : 0)
+  }
+
+  if (filters.assignedToUserId !== undefined) {
+    conditions.push("assignedToUserId = ?")
+    params.push(filters.assignedToUserId)
   }
 
   const where =
@@ -1803,14 +1811,17 @@ export function createLead(input: CreateLeadInput): Lead {
       ...(input.lastContactedAt
         ? { lastContactedAt: input.lastContactedAt }
         : {}),
+      ...(input.assignedToUserId
+        ? { assignedToUserId: input.assignedToUserId }
+        : {}),
     }
 
     getDb()
       .prepare(
         `INSERT INTO leads (
           id, name, company, email, phone, source, status, notes,
-          lastContactedAt, replied, createdAt, updatedAt, studioId
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          lastContactedAt, replied, assignedToUserId, createdAt, updatedAt, studioId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         lead.id,
@@ -1823,6 +1834,7 @@ export function createLead(input: CreateLeadInput): Lead {
         lead.notes ?? null,
         lead.lastContactedAt ?? null,
         lead.replied ? 1 : 0,
+        lead.assignedToUserId ?? null,
         lead.createdAt,
         lead.updatedAt,
         input.studioId,
@@ -1852,6 +1864,7 @@ export function updateLead(
     applyNullableString(lead, "source", input.source)
     applyNullableString(lead, "notes", input.notes)
     applyNullableString(lead, "lastContactedAt", input.lastContactedAt)
+    applyNullableString(lead, "assignedToUserId", input.assignedToUserId)
 
     lead.updatedAt = new Date().toISOString()
 
@@ -1860,7 +1873,7 @@ export function updateLead(
         `UPDATE leads
          SET name = ?, company = ?, email = ?, phone = ?, source = ?,
              status = ?, notes = ?, lastContactedAt = ?, replied = ?,
-             updatedAt = ?
+             assignedToUserId = ?, updatedAt = ?
          WHERE id = ?`,
       )
       .run(
@@ -1873,6 +1886,7 @@ export function updateLead(
         lead.notes ?? null,
         lead.lastContactedAt ?? null,
         lead.replied ? 1 : 0,
+        lead.assignedToUserId ?? null,
         lead.updatedAt,
         id,
       )
@@ -2104,19 +2118,34 @@ export function getClient(id: string): Client | undefined {
   return row ? rowToClient(row) : undefined
 }
 
+function enrichClientLinkedProject(project: Project): ClientWithProjects["projects"][number] {
+  const projectServices = listProjectServices(project.id)
+  const servicesEstimate =
+    projectServices.length > 0
+      ? calculateProjectServicesEstimate(projectServices)
+      : undefined
+
+  return {
+    ...project,
+    ...(servicesEstimate !== undefined ? { servicesEstimate } : {}),
+  }
+}
+
 export function listProjectsByClientId(
   studioId: string,
   clientId: string,
-): Project[] {
+  options?: ListProjectsOptions,
+): ClientWithProjects["projects"] {
+  const { clause, params } = buildProjectArchiveClause(studioId, options)
   const rows = getDb()
     .prepare(
       `SELECT * FROM projects
-       WHERE clientId = ? AND studioId = ?
+       ${clause} AND clientId = ?
        ORDER BY createdAt DESC`,
     )
-    .all(clientId, studioId) as ProjectRow[]
+    .all(...params, clientId) as ProjectRow[]
 
-  return rows.map(rowToProject)
+  return rows.map((row) => enrichClientLinkedProject(rowToProject(row)))
 }
 
 export function getClientWithProjects(

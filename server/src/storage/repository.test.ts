@@ -731,6 +731,23 @@ describe("SQLite data store", () => {
     assert.equal(listLeads(STUDIO_ID,{ replied: false }).length, 1)
     assert.equal(listLeads(STUDIO_ID,{ replied: true }).length, 1)
 
+    const ownedLead = createLead({
+      studioId: STUDIO_ID,
+      name: "Owned Lead",
+      email: "owned@example.com",
+      assignedToUserId: "ae-user-1",
+    })
+    assert.equal(ownedLead.assignedToUserId, "ae-user-1")
+    assert.equal(
+      listLeads(STUDIO_ID, { assignedToUserId: "ae-user-1" }).length,
+      1,
+    )
+
+    const reassigned = updateLead(ownedLead.id, {
+      assignedToUserId: "ae-user-2",
+    })
+    assert.equal(reassigned?.assignedToUserId, "ae-user-2")
+
     const entry = createContactLog({
       leadId: lead.id,
       type: "email",
@@ -834,6 +851,18 @@ describe("SQLite data store", () => {
     })
 
     assert.equal(getClientWithProjects(manual.id, STUDIO_ID)?.projects.length, 1)
+
+    const service = createService({
+      studioId: STUDIO_ID,
+      name: "Client Detail Service",
+      hourEstimate: 8,
+      hourlyRate: 150,
+      type: "animated",
+    })
+    addProjectService("proj-client", service.id)
+    const linked = getClientWithProjects(manual.id, STUDIO_ID)?.projects[0]
+    assert.equal(linked?.servicesEstimate, 1200)
+
     assert.equal(deleteClient(manual.id), "has_active_projects")
 
     updateProject("proj-client", { status: "completed" })

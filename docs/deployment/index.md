@@ -2,6 +2,8 @@
 
 Self-hosted release and operations guides for one Playblast instance per studio.
 
+**[Install Playblast on Linux or Synology NAS →](./install-linux-nas.md)** — primary install guide for host operators.
+
 ## Start here
 
 | Guide | Audience | Purpose |
@@ -13,6 +15,7 @@ Self-hosted release and operations guides for one Playblast instance per studio.
 | [Operator checklist (backup / upgrade)](./operator-checklist.md) | Host operator | One-page maintenance-day runbook |
 | [TLS / reverse proxy](./tls-proxy.md) | Host operator | LAN/VPN-only stance, Caddy overlay, `PROXY_HOPS` |
 | [Roles, SMTP, and recovery](./roles-smtp-recovery.md) | Admin | Capabilities, email, and credential recovery |
+| [Mailpit (dev / CI only)](./mailpit-dev.md) | Developer / CI | Local email catcher; not production deliverability |
 | [Backup and restore](./backup-restore.md) | Host operator | What to back up, restore drills, post-restore SMTP, session effects |
 | [Migrations](./migrations.md) | Host operator | Legacy SQL + Drizzle ordering, upgrade safety |
 | [Secrets and permissions](./secrets.md) | Host operator | SESSION_SECRET, recovery token, file permissions |
@@ -29,6 +32,8 @@ Run from the repository root after `npm install`. The full release-candidate com
 | `npm run verify:deployment-config` | No | Dockerfile, Compose, env examples, and docs presence |
 | `npm run verify:docker-compose` | Yes (skipped if absent) | `docker compose config` renders cleanly |
 | `npm run verify:docker-deployment` | Yes (skipped if absent) | Build, start, `/health`, and clean setup status |
+| `npm run verify:clean-install` | Optional | Fresh volumes → setup → login → project → tus upload stub → comment; runs Docker smoke when daemon available |
+| `npm run verify:smtp-mailpit` | Optional | SMTP test-send delivery via Mailpit in CI/dev |
 | `npm run verify:backup-restore` | No | Filesystem backup → wipe → restore of DB + uploads |
 | `npm run verify:pilot-browser` | No | Session auth-boundary curl smoke (local stub by default) |
 | `npm run verify:browser-qa` | No | Playwright Chromium workflow smoke; requires installed browser dependencies |

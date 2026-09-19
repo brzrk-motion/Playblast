@@ -1,3 +1,4 @@
+import { isProjectOverBudget } from "./financial-summary"
 import { PROJECT_STATUSES, isProjectArchived } from "../types/project"
 import type { ProjectStatus, ProjectSummary } from "../types/project"
 
@@ -107,10 +108,19 @@ export function recentlyUpdatedProjects(
 
 export type DashboardProjectFilter =
   | { type: "open_comments" }
+  | { type: "over_budget" }
   | { type: "status"; status: ProjectStatus }
   | { type: "archived" }
 
 const DASHBOARD_FILTER_PARAM = "filter"
+const CLIENT_FILTER_PARAM = "client"
+
+export function parseClientFilterFromSearchParams(
+  searchParams: URLSearchParams,
+): string | null {
+  const value = searchParams.get(CLIENT_FILTER_PARAM)?.trim()
+  return value || null
+}
 
 function isProjectStatusValue(value: string): value is ProjectStatus {
   return (PROJECT_STATUS_ORDER as string[]).includes(value)
@@ -125,6 +135,10 @@ export function parseDashboardFilter(
 
   if (value === "open_comments") {
     return { type: "open_comments" }
+  }
+
+  if (value === "over_budget") {
+    return { type: "over_budget" }
   }
 
   if (value === "archived") {
@@ -149,6 +163,10 @@ export function dashboardFilterToParam(
     return "open_comments"
   }
 
+  if (filter.type === "over_budget") {
+    return "over_budget"
+  }
+
   if (filter.type === "archived") {
     return "archived"
   }
@@ -167,6 +185,10 @@ export function getDashboardFilterLabel(
 ): string {
   if (filter.type === "open_comments") {
     return "projects with open comments"
+  }
+
+  if (filter.type === "over_budget") {
+    return "over-budget projects"
   }
 
   if (filter.type === "archived") {
@@ -188,6 +210,10 @@ export function filterProjectsByDashboardFilter(
     return projects.filter((project) => project.openCommentCount > 0)
   }
 
+  if (filter.type === "over_budget") {
+    return projects.filter((project) => isProjectOverBudget(project))
+  }
+
   if (filter.type === "archived") {
     return projects.filter((project) => isProjectArchived(project))
   }
@@ -195,4 +221,4 @@ export function filterProjectsByDashboardFilter(
   return projects.filter((project) => project.status === filter.status)
 }
 
-export { DASHBOARD_FILTER_PARAM, isProjectArchived }
+export { CLIENT_FILTER_PARAM, DASHBOARD_FILTER_PARAM, isProjectArchived }

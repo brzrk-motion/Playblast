@@ -41,14 +41,19 @@ If enabled without `PLAYBLAST_AUTH_USER` and `PLAYBLAST_AUTH_PASSWORD`, producti
 
 ## SMTP credentials
 
-Two configuration paths exist (see [roles, SMTP, and recovery](./roles-smtp-recovery.md)):
+SMTP is configured **after first-run setup** (not in the setup wizard). Three supported paths (see [roles, SMTP, and recovery](./roles-smtp-recovery.md)):
 
-| Path | Secret storage | Backup |
-|------|----------------|--------|
-| **Team UI** | Encrypted in SQLite (`studio_smtp_settings`) | Include `data/` in filesystem backup |
-| **Environment** | `SMTP_PASS` and related vars in host `.env` | Include `.env` in secure operator backup; not in DB |
+| Method | Storage | Team UI | Backup |
+|--------|---------|---------|--------|
+| Environment (`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`) | Host environment | Read-only delivery card | Include `.env` in secure operator backup |
+| Team settings (Admin) | Local SQLite database | Editable form | Include `data/` in filesystem backup |
+| Mailpit dev (`MAILPIT_URL` in development only) | Not stored; routes to local catcher | Read-only delivery card | N/A (dev/CI only) |
+
+Optional env keys: `SMTP_REPLY_TO`, `PLAYBLAST_INSTANCE_URL`. When the full env set is present, Admin UI SMTP fields are read-only and env values take precedence. Partial env sets are ignored — configure via Team instead.
 
 Do not commit SMTP passwords to compose files or git. After restore, re-run SMTP test delivery from **Team** regardless of path.
+
+Local Mailpit workflow: [mailpit-dev.md](mailpit-dev.md).
 
 ## File permissions
 

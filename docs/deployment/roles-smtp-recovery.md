@@ -52,23 +52,42 @@ After a backup restore, `testVerified` may still read true from the restored dat
 
 ## SMTP setup (Admin) — Team UI path
 
+SMTP is **not** part of the first-run setup wizard. After setup completes, configure email from **Team** (`/team`) or via deployment environment variables (see below).
+
+### UI-configured SMTP
+
 1. Sign in as Admin → **Team**.
 2. Open SMTP settings.
 3. Enter host, port, TLS mode, username, and password for your studio's mail relay.
-4. Run **Test delivery** to a reachable inbox.
-5. Save settings before sending invitations.
+4. Save settings, then run **Send test email** to a reachable inbox.
+5. Send invitations after test delivery succeeds.
+
+### Environment-preconfigured SMTP
+
+When the operator sets all required `SMTP_*` environment variables, the Team SMTP card is read-only (`smtpConfiguredFromEnv: true`). Admins still run **Send test email** to verify delivery before inviting users.
+
+| Variable | Required for env SMTP | Purpose |
+|----------|----------------------|---------|
+| `SMTP_HOST` | Yes | Relay hostname |
+| `SMTP_PORT` | Yes | Relay port (1–65535) |
+| `SMTP_SECURE` | Yes | `true`/`false` for implicit TLS |
+| `SMTP_USER` | Yes | SMTP username |
+| `SMTP_PASS` | Yes | SMTP password |
+| `SMTP_FROM` | Yes | Sender address |
+| `SMTP_REPLY_TO` | No | Optional reply-to header |
+| `PLAYBLAST_INSTANCE_URL` | Recommended | Public URL embedded in invitation links |
+
+Set these in `.env` beside `docker-compose.yml` or in Container Manager env files — never commit values to git. See [secrets and permissions](./secrets.md) and root `.env.example`.
+
+If only some SMTP variables are set, Playblast ignores the partial env block and falls back to Team UI configuration.
+
+### Local development with Mailpit
+
+When `MAILPIT_URL` is set in development and env SMTP is absent, Playblast routes mail to a local Mailpit catcher. See [mailpit-dev.md](mailpit-dev.md).
 
 If SMTP is unavailable, the instance remains usable for signed-in users, but new email invitations will not deliver until test delivery succeeds.
 
-## SMTP setup (Admin) — environment path
-
-1. Operator sets all required `SMTP_*` variables (and `PLAYBLAST_INSTANCE_URL`) in host `.env`.
-2. Restart the container so the process picks up env values.
-3. Admin signs in → **Team** → confirm read-only SMTP summary.
-4. Run **Send test email** and confirm delivery to a real inbox.
-5. Proceed with invitations once **SMTP delivery confirmed** appears.
-
-Credentials are **not** in the database backup when using env SMTP; protect `.env` separately. Test verification state **is** in the database.
+UI-configured SMTP credentials live in the local database. Back up `data/` to protect them. Env-based SMTP passwords live in host `.env` — not in the database backup. Test verification state (`test_verified_at`) is stored in the database for both paths.
 
 ## Post-restore SMTP recovery
 
@@ -76,14 +95,14 @@ Use this after restoring `data/` and `uploads/` from backup ([backup and restore
 
 | Configuration path | What restore brings back | What operator must verify |
 |--------------------|--------------------------|---------------------------|
-| **Team UI** | Encrypted SMTP row in SQLite; prior `testVerified` flag if backup included it | Sign in as Admin → **Team** → run **Test delivery**; fix settings if relay changed |
+| **Team UI** | Encrypted SMTP row in SQLite; prior `testVerified` flag if backup included it | Sign in as Admin → **Team** → run **Send test email**; fix settings if relay changed |
 | **Environment** | `test_verified_at` row if present; live relay still from `.env` | Confirm `.env` `SMTP_*` vars match production relay → **Team** → **Send test email** |
 
 **Decision tree:**
 
 1. Check host `.env`: are all required `SMTP_*` vars set?
    - **Yes (env-wins):** UI shows read-only SMTP summary. Re-run **Send test email**. Do not edit SMTP in the UI.
-   - **No (Team UI):** Open SMTP form. Confirm host/port/credentials still correct; re-run **Test delivery**.
+   - **No (Team UI):** Open SMTP form. Confirm host/port/credentials still correct; re-run **Send test email**.
 2. If test fails, fix relay credentials (in `.env` or Team UI), restart if env changed, and test again.
 3. Only invite users after **SMTP delivery confirmed** (or successful test status in Team).
 

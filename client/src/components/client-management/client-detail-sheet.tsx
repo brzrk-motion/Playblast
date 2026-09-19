@@ -34,9 +34,10 @@ import { isProjectArchived } from "@/lib/projects"
 import { toast } from "sonner"
 import { humanizeApiError } from "@/lib/toast"
 import { RetainerPanel } from "@/components/client-management/retainer-panel"
+import { ClientFinancialSummaryPanel } from "@/components/client-management/client-financial-summary-panel"
 import { ClientLifetimeValuePanel } from "@/components/client-management/client-lifetime-value-panel"
-import type { Client, ClientWithProjects } from "@/types/client"
-import type { Project } from "@/types/project"
+import { ProjectCardFinancials } from "@/components/dashboard/project-card"
+import type { Client, ClientLinkedProject, ClientWithProjects } from "@/types/client"
 
 interface ClientDetailSheetProps {
   clientId: string | null
@@ -90,47 +91,61 @@ function LinkedProjectCard({
   onUnlink,
   unlinking,
 }: {
-  project: Project
-  onUnlink: (project: Project) => void
+  project: ClientLinkedProject
+  onUnlink: (project: ClientLinkedProject) => void
   unlinking: boolean
 }) {
+  const hasFinancials =
+    (project.servicesEstimate !== undefined && project.servicesEstimate > 0) ||
+    (project.budget?.total !== undefined && project.budget.total > 0)
+
   return (
     <Card className="h-full border-muted">
-      <CardHeader className="gap-2 pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <Link
-            to={`/projects/${encodeURIComponent(project.id)}`}
-            className="rounded-sm focus-ring"
-          >
+      <Link
+        to={`/projects/${encodeURIComponent(project.id)}`}
+        className="block rounded-xl focus-ring"
+      >
+        <CardHeader className="gap-2 pb-2">
+          <div className="flex items-start justify-between gap-2">
             <CardTitle className="text-base leading-snug hover:underline">
               {project.name}
             </CardTitle>
-          </Link>
-          <div className="flex shrink-0 items-center gap-1">
-            <ProjectStatusBadge status={project.status} />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Unlink ${project.name}`}
-              title="Unlink project"
-              disabled={unlinking}
-              onClick={() => onUnlink(project)}
-            >
-              {unlinking ? (
-                <Spinner className="size-4" />
-              ) : (
-                <Link2Off className="size-4" />
-              )}
-            </Button>
+            <div className="flex shrink-0 items-center gap-1">
+              <ProjectStatusBadge status={project.status} />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Unlink ${project.name}`}
+                title="Unlink project"
+                disabled={unlinking}
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onUnlink(project)
+                }}
+              >
+                {unlinking ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <Link2Off className="size-4" />
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="text-sm text-muted-foreground">
-        <p>
-          {formatProjectDate(project.startDate)} – {formatProjectDate(project.endDate)}
-        </p>
-      </CardContent>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          {hasFinancials ? (
+            <ProjectCardFinancials
+              budget={project.budget}
+              servicesEstimate={project.servicesEstimate}
+            />
+          ) : null}
+          <p>
+            {formatProjectDate(project.startDate)} – {formatProjectDate(project.endDate)}
+          </p>
+        </CardContent>
+      </Link>
     </Card>
   )
 }
@@ -266,7 +281,7 @@ export function ClientDetailSheet({
     }
   }
 
-  async function handleUnlink(project: Project) {
+  async function handleUnlink(project: ClientLinkedProject) {
     if (!client) {
       return
     }
@@ -476,6 +491,8 @@ export function ClientDetailSheet({
               />
 
               <ClientLifetimeValuePanel lifetimeValue={client.lifetimeValue} />
+
+              <ClientFinancialSummaryPanel projects={client.projects} />
 
               <section className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
