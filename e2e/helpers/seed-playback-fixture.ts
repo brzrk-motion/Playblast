@@ -16,6 +16,20 @@ export interface PlaybackFixture {
   versionBLabel: string
 }
 
+function encodeTusMetadata(metadata: Record<string, string>): string {
+  return Object.entries(metadata)
+    .map(([key, value]) => `${key} ${Buffer.from(value, "utf8").toString("base64")}`)
+    .join(",")
+}
+
+function resolveTusUrl(baseUrl: string, location: string): string {
+  if (location.startsWith("http://") || location.startsWith("https://")) {
+    return location
+  }
+
+  return new URL(location, baseUrl).toString()
+}
+
 async function uploadVersion(
   baseUrl: string,
   cookies: string[],
@@ -24,27 +38,49 @@ async function uploadVersion(
   versionLabel: string,
 ): Promise<{ versionId: string; label: string }> {
   const bytes = fs.readFileSync(sampleVideoPath)
-  const formData = new FormData()
-  formData.append(
-    "video",
-    new Blob([bytes], { type: "video/mp4" }),
-    path.basename(sampleVideoPath),
-  )
-
-  const response = await fetch(
-    `${baseUrl}/api/deliverables/${deliverableId}/versions/${versionLabel}/upload`,
-    {
-      method: "POST",
-      headers: authHeaders(cookies, csrfToken, false),
-      body: formData,
-    },
-  )
-
-  if (response.status !== 201) {
-    throw new Error(`upload ${versionLabel} failed: ${response.status}`)
+  const filename = path.basename(sampleVideoPath)
+  const metadata = {
+    deliverableId,
+    version: versionLabel,
+    filename,
+    filetype: "video/mp4",
   }
 
-  const body = (await response.json()) as { versionId: string }
+  const createResponse = await fetch(`${baseUrl}/api/uploads/tus`, {
+    method: "POST",
+    headers: {
+      "Tus-Resumable": "1.0.0",
+      "Upload-Length": String(bytes.length),
+      "Upload-Metadata": encodeTusMetadata(metadata),
+      ...authHeaders(cookies, csrfToken, false),
+    },
+  })
+
+  if (createResponse.status !== 201) {
+    throw new Error(`upload ${versionLabel} create failed: ${createResponse.status}`)
+  }
+
+  const location = createResponse.headers.get("Location")
+  if (!location) {
+    throw new Error(`upload ${versionLabel} missing Location header`)
+  }
+
+  const patchResponse = await fetch(resolveTusUrl(baseUrl, location), {
+    method: "PATCH",
+    headers: {
+      "Tus-Resumable": "1.0.0",
+      "Upload-Offset": "0",
+      "Content-Type": "application/offset+octet-stream",
+      ...authHeaders(cookies, csrfToken, false),
+    },
+    body: new Uint8Array(bytes),
+  })
+
+  if (patchResponse.status !== 200) {
+    throw new Error(`upload ${versionLabel} patch failed: ${patchResponse.status}`)
+  }
+
+  const body = (await patchResponse.json()) as { versionId: string }
   return { versionId: body.versionId, label: versionLabel }
 }
 

@@ -289,7 +289,7 @@ services:
       await expect(page).not.toHaveURL(/\/login/)
 
       await expect.poll(async () => {
-        const response = await page.request.get(`${baseUrl}/api/auth/session`)
+        const response = await page.request.get(`${baseUrl}/api/session`)
         if (!response.ok()) {
           return ""
         }
