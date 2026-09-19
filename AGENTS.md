@@ -93,6 +93,7 @@ Run from the repository root:
 | `npm run lint` | Lint the client (`eslint`) |
 | `npm run test` | Run server and client tests |
 | `npm run test:e2e` | Full Playwright E2E (isolated temp DB/uploads; Docker bootstrap when available) |
+| `npm run test:e2e:mailpit` | Optional Mailpit follow-up E2E (BRZ-195): Team SMTP test-send asserted via Mailpit API; invite flows still use file capture |
 
 Workspace-specific scripts:
 

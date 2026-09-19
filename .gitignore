@@ -1,6 +1,9 @@
 # Dependencies
 node_modules
 
+# Local tool caches
+.cache/
+
 # Build output
 dist
 dist-ssr
