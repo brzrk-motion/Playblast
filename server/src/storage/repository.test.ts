@@ -900,6 +900,18 @@ describe("SQLite data store", () => {
     })
 
     assert.equal(getClientWithProjects(manual.id, STUDIO_ID)?.projects.length, 1)
+
+    const service = createService({
+      studioId: STUDIO_ID,
+      name: "Client Detail Service",
+      hourEstimate: 8,
+      hourlyRate: 150,
+      type: "animated",
+    })
+    addProjectService("proj-client", service.id)
+    const linked = getClientWithProjects(manual.id, STUDIO_ID)?.projects[0]
+    assert.equal(linked?.servicesEstimate, 1200)
+
     assert.equal(deleteClient(manual.id), "has_active_projects")
 
     updateProject("proj-client", { status: "completed" })

@@ -1,14 +1,25 @@
+import { Scale } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import {
   ESTIMATE_BUDGET_STATUS_DOT_STYLES,
   ESTIMATE_BUDGET_STATUS_LABELS,
+  ESTIMATE_BUDGET_STATUS_STYLES,
   formatCurrency,
   formatEstimateCurrency,
 } from "@/lib/budget"
-import type { ClientFinancialSummary } from "@/lib/client-financials"
+import { calculateClientFinancialSummary } from "@/lib/client-financial-summary"
+import type { ClientLinkedProject } from "@/types/client"
 import { cn } from "@/lib/utils"
 
 interface ClientFinancialSummaryPanelProps {
-  summary: ClientFinancialSummary
+  projects: ClientLinkedProject[]
+}
+
+function formatSignedVariance(amount: number, currency: string): string {
+  const formatted = formatEstimateCurrency(Math.abs(amount), currency)
+  if (amount > 0) return `+${formatted}`
+  if (amount < 0) return `-${formatted}`
+  return formatted
 }
 
 function SummaryRow({
@@ -22,102 +33,101 @@ function SummaryRow({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <dt className={emphasized ? "text-sm font-medium" : "text-sm text-muted-foreground"}>
+      <dt
+        className={
+          emphasized ? "text-sm font-medium" : "text-sm text-muted-foreground"
+        }
+      >
         {label}
       </dt>
-      <dd className={emphasized ? "text-sm font-semibold tabular-nums" : "text-sm tabular-nums"}>
+      <dd
+        className={
+          emphasized
+            ? "text-sm font-semibold tabular-nums"
+            : "text-sm tabular-nums"
+        }
+      >
         {amount}
       </dd>
     </div>
   )
 }
 
-function formatSignedVariance(amount: number, currency: string): string {
-  const formatted = formatEstimateCurrency(Math.abs(amount), currency)
-  if (amount > 0) {
-    return `+${formatted}`
-  }
-  if (amount < 0) {
-    return `-${formatted}`
-  }
-  return formatted
-}
-
-function BudgetHealthDot({
-  status,
-  className,
-}: {
-  status: NonNullable<ClientFinancialSummary["aggregateBudgetStatus"]>
-  className?: string
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-block size-2 shrink-0 rounded-full",
-        ESTIMATE_BUDGET_STATUS_DOT_STYLES[status],
-        className,
-      )}
-      title={ESTIMATE_BUDGET_STATUS_LABELS[status]}
-      aria-label={ESTIMATE_BUDGET_STATUS_LABELS[status]}
-    />
-  )
-}
-
 export function ClientFinancialSummaryPanel({
-  summary,
+  projects,
 }: ClientFinancialSummaryPanelProps) {
+  const summary = calculateClientFinancialSummary(projects)
+
   if (!summary.hasFinancialData) {
     return (
       <section className="space-y-3">
         <div className="space-y-1">
           <h3 className="text-sm font-medium">Financial Summary</h3>
           <p className="text-xs text-muted-foreground">
-            Totals across linked projects with service estimates or budgets.
+            Totals across linked projects with services or budgets.
           </p>
         </div>
-        <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-          No service estimates or budgets on linked projects yet.
+        <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+          No estimates or budgets across linked projects yet.
         </div>
       </section>
     )
   }
 
-  const showVariance = summary.hasEstimateData && summary.hasBudgetData
+  const varianceLabel =
+    summary.variance === null
+      ? null
+      : summary.variance >= 0
+        ? "Under budget"
+        : "Over budget"
 
   return (
     <section className="space-y-3">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="space-y-1">
-          <h3 className="text-sm font-medium">Financial Summary</h3>
+          <h3 className="flex items-center gap-2 text-sm font-medium">
+            <Scale className="size-4 text-muted-foreground" />
+            Financial Summary
+          </h3>
           <p className="text-xs text-muted-foreground">
-            Totals across linked projects with service estimates or budgets.
+            Totals across linked projects with services or budgets.
           </p>
         </div>
-        {summary.aggregateBudgetStatus ? (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <BudgetHealthDot status={summary.aggregateBudgetStatus} />
-            <span>{ESTIMATE_BUDGET_STATUS_LABELS[summary.aggregateBudgetStatus]}</span>
-          </div>
+        {summary.health ? (
+          <Badge
+            variant="outline"
+            className={cn("gap-1.5", ESTIMATE_BUDGET_STATUS_STYLES[summary.health])}
+          >
+            <span
+              className={cn(
+                "inline-block size-2 rounded-full",
+                ESTIMATE_BUDGET_STATUS_DOT_STYLES[summary.health],
+              )}
+              aria-hidden="true"
+            />
+            {ESTIMATE_BUDGET_STATUS_LABELS[summary.health]}
+          </Badge>
         ) : null}
       </div>
 
       <dl className="space-y-2 rounded-lg border bg-muted/20 p-4">
-        {summary.hasEstimateData ? (
+        {summary.hasEstimates ? (
           <SummaryRow
             label="Total estimate"
-            amount={formatEstimateCurrency(summary.totalEstimate, summary.currency)}
+            amount={formatCurrency(summary.totalEstimate, summary.currency)}
             emphasized
           />
         ) : null}
-        {summary.hasBudgetData ? (
+        {summary.hasBudgets ? (
           <SummaryRow
             label="Total budget"
             amount={formatCurrency(summary.totalBudget, summary.currency)}
+            emphasized={!summary.hasEstimates}
           />
         ) : null}
-        {showVariance ? (
+        {summary.variance !== null ? (
           <SummaryRow
-            label="Variance (budget − estimate)"
+            label={`Variance (${varianceLabel})`}
             amount={formatSignedVariance(summary.variance, summary.currency)}
           />
         ) : null}

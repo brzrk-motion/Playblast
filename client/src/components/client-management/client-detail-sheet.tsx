@@ -28,22 +28,15 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { deleteClient, getClient, updateProject } from "@/lib/api"
-import {
-  ESTIMATE_BUDGET_STATUS_DOT_STYLES,
-  ESTIMATE_BUDGET_STATUS_LABELS,
-  estimateBudgetStatus,
-  formatCurrency,
-  formatEstimateCurrency,
-} from "@/lib/budget"
-import { summarizeClientFinancials } from "@/lib/client-financials"
-import { ClientFinancialSummaryPanel } from "@/components/client-management/client-financial-summary-panel"
-import { cn } from "@/lib/utils"
+import { formatEstimateCurrency } from "@/lib/budget"
 import { formatShortDate } from "@playblast/shared"
 import { isProjectArchived } from "@/lib/projects"
 import { toast } from "sonner"
 import { humanizeApiError } from "@/lib/toast"
 import { RetainerPanel } from "@/components/client-management/retainer-panel"
+import { ClientFinancialSummaryPanel } from "@/components/client-management/client-financial-summary-panel"
 import { ClientLifetimeValuePanel } from "@/components/client-management/client-lifetime-value-panel"
+import { ProjectCardFinancials } from "@/components/dashboard/project-card"
 import type { Client, ClientLinkedProject, ClientWithProjects } from "@/types/client"
 
 interface ClientDetailSheetProps {
@@ -93,23 +86,6 @@ function formatWebsiteHref(website: string): string {
   return /^https?:\/\//i.test(website) ? website : `https://${website}`
 }
 
-function BudgetHealthDot({
-  status,
-}: {
-  status: ReturnType<typeof estimateBudgetStatus>
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-block size-2 shrink-0 rounded-full",
-        ESTIMATE_BUDGET_STATUS_DOT_STYLES[status],
-      )}
-      title={ESTIMATE_BUDGET_STATUS_LABELS[status]}
-      aria-label={ESTIMATE_BUDGET_STATUS_LABELS[status]}
-    />
-  )
-}
-
 function LinkedProjectCard({
   project,
   onUnlink,
@@ -119,65 +95,57 @@ function LinkedProjectCard({
   onUnlink: (project: ClientLinkedProject) => void
   unlinking: boolean
 }) {
-  const currency = project.budget?.currency ?? "USD"
-  const hasEstimate =
-    project.servicesEstimate !== undefined && project.servicesEstimate > 0
-  const budgetTotal = project.budget?.total
-  const hasBudget = budgetTotal !== undefined && budgetTotal > 0
-  const budgetStatus =
-    hasEstimate && hasBudget
-      ? estimateBudgetStatus(budgetTotal, project.servicesEstimate!)
-      : null
+  const hasFinancials =
+    (project.servicesEstimate !== undefined && project.servicesEstimate > 0) ||
+    (project.budget?.total !== undefined && project.budget.total > 0)
 
   return (
     <Card className="h-full border-muted">
-      <CardHeader className="gap-2 pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <Link
-            to={`/projects/${encodeURIComponent(project.id)}`}
-            className="rounded-sm focus-ring"
-          >
+      <Link
+        to={`/projects/${encodeURIComponent(project.id)}`}
+        className="block rounded-xl focus-ring"
+      >
+        <CardHeader className="gap-2 pb-2">
+          <div className="flex items-start justify-between gap-2">
             <CardTitle className="text-base leading-snug hover:underline">
               {project.name}
             </CardTitle>
-          </Link>
-          <div className="flex shrink-0 items-center gap-1">
-            <ProjectStatusBadge status={project.status} />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Unlink ${project.name}`}
-              title="Unlink project"
-              disabled={unlinking}
-              onClick={() => onUnlink(project)}
-            >
-              {unlinking ? (
-                <Spinner className="size-4" />
-              ) : (
-                <Link2Off className="size-4" />
-              )}
-            </Button>
+            <div className="flex shrink-0 items-center gap-1">
+              <ProjectStatusBadge status={project.status} />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Unlink ${project.name}`}
+                title="Unlink project"
+                disabled={unlinking}
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onUnlink(project)
+                }}
+              >
+                {unlinking ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <Link2Off className="size-4" />
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-1 text-sm text-muted-foreground">
-        <p>
-          {formatProjectDate(project.startDate)} – {formatProjectDate(project.endDate)}
-        </p>
-        {hasEstimate ? (
-          <p className="flex items-center gap-1.5 tabular-nums">
-            <span>
-              Est. {formatEstimateCurrency(project.servicesEstimate!, currency)}
-            </span>
-            {budgetStatus ? <BudgetHealthDot status={budgetStatus} /> : null}
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          {hasFinancials ? (
+            <ProjectCardFinancials
+              budget={project.budget}
+              servicesEstimate={project.servicesEstimate}
+            />
+          ) : null}
+          <p>
+            {formatProjectDate(project.startDate)} – {formatProjectDate(project.endDate)}
           </p>
-        ) : hasBudget ? (
-          <p className="tabular-nums">
-            Budget {formatCurrency(budgetTotal, currency)}
-          </p>
-        ) : null}
-      </CardContent>
+        </CardContent>
+      </Link>
     </Card>
   )
 }
@@ -203,11 +171,6 @@ export function ClientDetailSheet({
 
   const hasActiveProjects = useMemo(
     () => client?.projects.some((project) => !isProjectArchived(project)) ?? false,
-    [client?.projects],
-  )
-
-  const financialSummary = useMemo(
-    () => summarizeClientFinancials(client?.projects ?? []),
     [client?.projects],
   )
 
@@ -529,7 +492,7 @@ export function ClientDetailSheet({
 
               <ClientLifetimeValuePanel lifetimeValue={client.lifetimeValue} />
 
-              <ClientFinancialSummaryPanel summary={financialSummary} />
+              <ClientFinancialSummaryPanel projects={client.projects} />
 
               <section className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">

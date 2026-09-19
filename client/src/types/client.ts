@@ -66,8 +66,9 @@ export interface ClientListItem extends Client {
   lifetimeValue: ClientLifetimeValue
 }
 
-/** Linked project on client detail, including derived services estimate when present. */
+/** Linked project on client detail, including services estimate when attached. */
 export interface ClientLinkedProject extends Project {
+  /** Total services estimate when at least one service is attached. */
   servicesEstimate?: number
 }
 
