@@ -1,0 +1,19 @@
+title: Show and tell
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share how your studio runs Playblast — deploy setup, review workflow wins, or lessons learned.
+        No fabricated metrics; honest soft-RC experiences welcome.
+  - type: textarea
+    id: story
+    attributes:
+      label: What did you try?
+      description: Deploy target, team size, and what worked (or didn't).
+    validations:
+      required: true
+  - type: textarea
+    id: takeaway
+    attributes:
+      label: Takeaway for other studios
+      placeholder: e.g. bind mounts made Hyper Backup straightforward; proofing role kept client reviewers focused...
