@@ -62,6 +62,7 @@ Until a daemon-capable host re-runs the smoke locally, the dated host-health sig
 | Dependency audit | `npm audit --omit=dev --audit-level=high` | No |
 | Secret scan | `npm run verify:secrets` | No |
 | Backup/restore | `npm run verify:backup-restore` | No |
+| T9 backup + SMTP recovery evidence | [soft-rc-evidence-t9-backup-smtp-recovery.md](./soft-rc-evidence-t9-backup-smtp-recovery.md) | No |
 | Deployment config | `npm run verify:deployment-config` | No |
 | Compose render | `npm run verify:docker-compose` | Yes |
 | Docker smoke | `npm run verify:docker-deployment` | Yes |

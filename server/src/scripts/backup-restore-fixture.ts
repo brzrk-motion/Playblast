@@ -4,6 +4,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import Database from "better-sqlite3"
+import { encryptSecret } from "../identity/secret-crypto.js"
 import { closeDatabase, getDb, initDatabase } from "../storage/db.js"
 
 export type BackupRestoreFixture = {
@@ -108,6 +109,29 @@ export function seedBackupRestoreFixture(
     now,
   )
 
+  db.prepare(
+    `INSERT INTO studio_smtp_settings (
+      studio_id, host, port, username, password_encrypted, from_email, tls_mode,
+      instance_url, test_verified_at, last_test_status, last_test_at, last_test_error,
+      created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    studioId,
+    "smtp.backup.example.com",
+    587,
+    "backup-smtp-user",
+    encryptSecret("backup-smtp-password"),
+    "noreply@backup.example.test",
+    "starttls",
+    "https://playblast.backup.example.test",
+    now,
+    "success",
+    now,
+    null,
+    now,
+    now,
+  )
+
   closeDatabase()
 
   return {
@@ -173,6 +197,19 @@ export function verifyBackupRestoreFixture(fixture: BackupRestoreFixture): void 
     ) as { count: number }
   ).count
   assert.equal(sessionCount, 1, "restored session row is missing")
+
+  const smtp = db
+    .prepare(
+      `SELECT host, test_verified_at, last_test_status
+       FROM studio_smtp_settings WHERE studio_id = ?`,
+    )
+    .get(fixture.studioId) as
+    | { host: string; test_verified_at: string | null; last_test_status: string }
+    | undefined
+  assert.ok(smtp, "restored SMTP settings row is missing")
+  assert.equal(smtp.host, "smtp.backup.example.com")
+  assert.ok(smtp.test_verified_at, "restored SMTP test_verified_at is missing")
+  assert.equal(smtp.last_test_status, "success")
 
   db.close()
 }
