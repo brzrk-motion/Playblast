@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS leads (
   notes TEXT,
   lastContactedAt TEXT,
   replied INTEGER NOT NULL DEFAULT 0,
+  assignedToUserId TEXT,
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL
 );
@@ -135,6 +136,7 @@ CREATE TABLE IF NOT EXISTS comments (
 
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
+CREATE INDEX IF NOT EXISTS idx_leads_assignedToUserId ON leads(assignedToUserId);
 CREATE INDEX IF NOT EXISTS idx_contact_log_leadId ON contact_log(leadId);
 CREATE INDEX IF NOT EXISTS idx_clients_convertedFromLeadId ON clients(convertedFromLeadId);
 -- idx_projects_clientId is created by the migration runner (see migrations/001 and db.ts):

@@ -19,7 +19,9 @@ import {
   type SetupStatusResponse,
   type SmtpSettingsResponse,
   type SmtpTlsMode,
+  type StudioPreferencesResponse,
   type StudioProfileResponse,
+  type UpdateStudioPreferencesRequest,
   type TestSmtpRequest,
   type TestSmtpResponse,
   type UpdateSmtpSettingsRequest,
@@ -175,6 +177,19 @@ export async function updateStudioProfile(
   input: UpdateStudioRequest,
 ): Promise<StudioProfileResponse> {
   return apiFetch<StudioProfileResponse>("/api/studio", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  })
+}
+
+export async function fetchStudioPreferences(): Promise<StudioPreferencesResponse> {
+  return apiFetch<StudioPreferencesResponse>("/api/studio/preferences")
+}
+
+export async function updateStudioPreferences(
+  input: UpdateStudioPreferencesRequest,
+): Promise<StudioPreferencesResponse> {
+  return apiFetch<StudioPreferencesResponse>("/api/studio/preferences", {
     method: "PATCH",
     body: JSON.stringify(input),
   })

@@ -780,6 +780,23 @@ describe("SQLite data store", () => {
     assert.equal(listLeads(STUDIO_ID,{ replied: false }).length, 1)
     assert.equal(listLeads(STUDIO_ID,{ replied: true }).length, 1)
 
+    const ownedLead = createLead({
+      studioId: STUDIO_ID,
+      name: "Owned Lead",
+      email: "owned@example.com",
+      assignedToUserId: "ae-user-1",
+    })
+    assert.equal(ownedLead.assignedToUserId, "ae-user-1")
+    assert.equal(
+      listLeads(STUDIO_ID, { assignedToUserId: "ae-user-1" }).length,
+      1,
+    )
+
+    const reassigned = updateLead(ownedLead.id, {
+      assignedToUserId: "ae-user-2",
+    })
+    assert.equal(reassigned?.assignedToUserId, "ae-user-2")
+
     const entry = createContactLog({
       leadId: lead.id,
       type: "email",

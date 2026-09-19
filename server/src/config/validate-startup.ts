@@ -2,6 +2,10 @@ import fs from "node:fs"
 import path from "node:path"
 import { authConfig } from "../auth/config.js"
 import { config, isProduction } from "./env.js"
+import {
+  assertProductionSmtpNotCatcher,
+  isEmailCatcherEnabled,
+} from "./smtp-catcher.js"
 
 export type StartupValidationResult =
   | { ok: true }
@@ -47,6 +51,30 @@ export function validateStartup(): StartupValidationResult {
 
     ensureWritableDirectory(config.uploadDir, "UPLOAD_DIR")
     ensureWritableDirectory(path.dirname(config.dbPath), "DB_PATH parent directory")
+
+    if (isProduction()) {
+      if (isEmailCatcherEnabled("production")) {
+        return {
+          ok: false,
+          code: "SMTP_CATCHER_FORBIDDEN",
+          message:
+            "PLAYBLAST_EMAIL_CATCHER is dev/CI-only and must not be enabled in production.",
+        }
+      }
+
+      const smtp = config.smtpFromEnv
+      if (smtp) {
+        try {
+          assertProductionSmtpNotCatcher(smtp.host, smtp.port)
+        } catch (error) {
+          return {
+            ok: false,
+            code: "SMTP_CATCHER_FORBIDDEN",
+            message: error instanceof Error ? error.message : "Invalid SMTP configuration.",
+          }
+        }
+      }
+    }
 
     return { ok: true }
   } catch (error) {

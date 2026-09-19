@@ -80,6 +80,7 @@ describe("client management schema", () => {
     assert.ok(tables.includes("clients"))
     assert.ok(__testOnly_tableHasColumn(db, "projects", "clientId"))
     assert.ok(__testOnly_tableHasColumn(db, "projects", "notes"))
+    assert.ok(__testOnly_tableHasColumn(db, "leads", "assignedToUserId"))
     db.close()
     closeDatabase()
   })
