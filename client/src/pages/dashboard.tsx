@@ -31,6 +31,7 @@ import {
   budgetHealth,
   formatCurrency,
 } from "@/lib/budget"
+import { summarizeFinancials } from "@/lib/financial-summary"
 import {
   countDeliverablesInReview,
   countProjectsByStatus,
@@ -44,6 +45,7 @@ import {
 } from "@/lib/review-feedback"
 import { toast } from "sonner"
 import { humanizeApiError } from "@/lib/toast"
+import { cn } from "@/lib/utils"
 import { useCapability } from "@/hooks/use-capability"
 import type { ProjectSummary } from "@/types/project"
 
@@ -73,17 +75,29 @@ interface StatCardProps {
   value: number | string
   description: string
   to?: string
+  className?: string
+  valueClassName?: string
 }
 
-function StatCard({ title, icon, value, description, to }: StatCardProps) {
+function StatCard({
+  title,
+  icon,
+  value,
+  description,
+  to,
+  className,
+  valueClassName,
+}: StatCardProps) {
   const card = (
-    <Card className="interactive-card h-full">
+    <Card className={cn("interactive-card h-full", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         {icon}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className={cn("text-2xl font-bold tabular-nums", valueClassName)}>
+          {value}
+        </div>
         <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
@@ -256,6 +270,11 @@ export function DashboardPage() {
     [activeProjects],
   )
 
+  const financialSummary = useMemo(
+    () => summarizeFinancials(activeProjects),
+    [activeProjects],
+  )
+
   const upcomingDeadlines = useMemo<Deadline[]>(() => {
     const today = new Date().toISOString().slice(0, 10)
     const deadlines: Deadline[] = []
@@ -355,6 +374,53 @@ export function DashboardPage() {
           />
         ) : null}
       </div>
+
+      {canViewBusiness ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard
+            title="Active Estimate"
+            icon={<Wallet className="size-4 text-muted-foreground" />}
+            value={formatCurrency(
+              financialSummary.activeEstimate,
+              financialSummary.currency,
+            )}
+            description="Service estimates across active work"
+          />
+          <StatCard
+            title="Budgeted"
+            icon={<Wallet className="size-4 text-muted-foreground" />}
+            value={formatCurrency(
+              financialSummary.budgetCommitted,
+              financialSummary.currency,
+            )}
+            description="Committed budgets on active projects"
+          />
+          <StatCard
+            title="Over Budget"
+            icon={
+              <AlertTriangle
+                className={cn(
+                  "size-4",
+                  financialSummary.overBudgetCount > 0
+                    ? "text-destructive"
+                    : "text-muted-foreground",
+                )}
+              />
+            }
+            value={financialSummary.overBudgetCount}
+            description="Active projects where estimate exceeds budget"
+            to="/projects?filter=over_budget"
+            className={
+              financialSummary.overBudgetCount > 0
+                ? "border-destructive/40 bg-destructive/10"
+                : undefined
+            }
+            valueClassName={
+              financialSummary.overBudgetCount > 0 ? "text-destructive" : undefined
+            }
+          />
+        </div>
+      ) : null}
 
       {canViewBusiness ? (
         <Suspense

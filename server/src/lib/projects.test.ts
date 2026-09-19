@@ -61,6 +61,7 @@ const projects: ProjectSummary[] = [
 
 test("parseDashboardFilter accepts open comments and project status values", () => {
   assert.deepEqual(parseDashboardFilter("open_comments"), { type: "open_comments" })
+  assert.deepEqual(parseDashboardFilter("over_budget"), { type: "over_budget" })
   assert.deepEqual(parseDashboardFilter("active"), {
     type: "status",
     status: "active",
@@ -72,6 +73,7 @@ test("parseDashboardFilter accepts open comments and project status values", () 
 
 test("dashboardFilterToParam round-trips filter values", () => {
   assert.equal(dashboardFilterToParam({ type: "open_comments" }), "open_comments")
+  assert.equal(dashboardFilterToParam({ type: "over_budget" }), "over_budget")
   assert.equal(
     dashboardFilterToParam({ type: "status", status: "on_hold" }),
     "on_hold",
@@ -100,6 +102,35 @@ test("filterProjectsByDashboardFilter filters by status", () => {
   assert.deepEqual(
     filtered.map((project) => project.id),
     ["2"],
+  )
+})
+
+test("filterProjectsByDashboardFilter filters over-budget active projects", () => {
+  const portfolio: ProjectSummary[] = [
+    ...projects,
+    {
+      id: "4",
+      name: "Over budget",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      status: "active",
+      deliverableCount: 0,
+      versionCount: 0,
+      updatedAt: "2026-03-01T00:00:00.000Z",
+      openCommentCount: 0,
+      deliverableStatusCounts: emptyStatusCounts(),
+      nextMilestone: null,
+      servicesEstimate: 5000,
+      budget: { total: 4000, currency: "USD" },
+    },
+  ]
+
+  const filtered = filterProjectsByDashboardFilter(portfolio, {
+    type: "over_budget",
+  })
+
+  assert.deepEqual(
+    filtered.map((project) => project.id),
+    ["4"],
   )
 })
 

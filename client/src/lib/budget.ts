@@ -94,6 +94,13 @@ export function estimateBudgetStatus(
   return "healthy"
 }
 
+export function isEstimateOverBudget(
+  budgetTotal: number | undefined | null,
+  estimate: number,
+): boolean {
+  return estimateBudgetStatus(budgetTotal, estimate) === "over"
+}
+
 export const ESTIMATE_BUDGET_STATUS_LABELS: Record<EstimateBudgetStatus, string> = {
   healthy: "Under budget",
   warning: "Near budget",
