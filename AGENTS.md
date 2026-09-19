@@ -90,6 +90,7 @@ npm run start -w server    # Run compiled server (after build)
 - `scripts/validate-upload-volume.sh` smoke-tests Docker volume persistence (requires Docker).
 - `scripts/validate-backup-restore.sh` (`npm run verify:backup-restore`) verifies filesystem backup → wipe → restore of `data/` + `uploads/` without Docker; does not exercise Hyper Backup or container volumes.
 - `scripts/verify-pilot-browser.sh` (`npm run verify:pilot-browser`) auth-boundary curl smoke (local stub by default; live via `PLAYBLAST_PILOT_URL` + auth env); does not drive the browser UI.
+- `scripts/verify-sponsor-program.sh` (`npm run verify:sponsor-program`) sponsor program ready-check (BRZ-228): repo sponsor docs + soft `/fund` surface; James gate for GitHub Sponsors enable.
 
 ### Notes
 
