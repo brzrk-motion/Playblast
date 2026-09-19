@@ -1,0 +1,29 @@
+title: Idea
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Suggest improvements to the proofing workflow (versions, comments, annotations, compare, approvals).
+        Playblast stays self-hosted and one-studio-per-instance — see the MVP scope in `docs/Playblast-MVP-Audit.md`.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Workflow pain
+      description: What proofing problem does this solve for motion/CGI review?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed direction
+      description: How might Playblast address it?
+    validations:
+      required: true
+  - type: checkboxes
+    id: roles
+    attributes:
+      label: Primary roles affected
+      options:
+        - label: Admin
+        - label: Creative
+        - label: Proofing

@@ -1,0 +1,31 @@
+title: Q&A
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask install, operator, or proofing-workflow questions. Playblast is self-hosted — include your deploy target (Docker, Synology NAS, etc.) when relevant.
+        Do not post secrets, client media, or security vulnerability details here.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What are you trying to do, and where are you stuck?
+      placeholder: e.g. Synology Container Manager — container restarts after first upload...
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: Your role (if applicable)
+      options:
+        - Operator / host admin
+        - Studio Admin
+        - Creative
+        - Proofing
+        - Evaluating adoption
+        - Other
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit (optional)
+      placeholder: e.g. main @ abc1234 or playblast:latest from 2026-09-18
