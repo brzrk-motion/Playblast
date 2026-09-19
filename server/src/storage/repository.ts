@@ -2118,11 +2118,24 @@ export function getClient(id: string): Client | undefined {
   return row ? rowToClient(row) : undefined
 }
 
+function enrichClientLinkedProject(project: Project): ClientWithProjects["projects"][number] {
+  const projectServices = listProjectServices(project.id)
+  const servicesEstimate =
+    projectServices.length > 0
+      ? calculateProjectServicesEstimate(projectServices)
+      : undefined
+
+  return {
+    ...project,
+    ...(servicesEstimate !== undefined ? { servicesEstimate } : {}),
+  }
+}
+
 export function listProjectsByClientId(
   studioId: string,
   clientId: string,
   options?: ListProjectsOptions,
-): Project[] {
+): ClientWithProjects["projects"] {
   const { clause, params } = buildProjectArchiveClause(studioId, options)
   const rows = getDb()
     .prepare(
@@ -2132,7 +2145,7 @@ export function listProjectsByClientId(
     )
     .all(...params, clientId) as ProjectRow[]
 
-  return rows.map(rowToProject)
+  return rows.map((row) => enrichClientLinkedProject(rowToProject(row)))
 }
 
 export function getClientWithProjects(
