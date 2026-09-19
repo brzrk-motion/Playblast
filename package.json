@@ -37,10 +37,12 @@
     "docs:preview": "npm --prefix docs-site run preview"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.0",
-    "concurrently": "^9.2.1"
+    "@playwright/test": "^1.63.0",
+    "concurrently": "^9.2.4",
+    "esbuild": "^0.25.12"
   },
   "overrides": {
-    "qs": "6.16.0"
+    "qs": "6.16.0",
+    "esbuild": "$esbuild"
   }
 }
