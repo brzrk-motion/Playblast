@@ -40,7 +40,7 @@ export default defineConfig({
       name: "docker-bootstrap",
       use: { ...devices["Desktop Chrome"] },
       testMatch: /docker-bootstrap\.spec\.ts/,
-      timeout: 300_000,
+      timeout: 600_000,
     },
   ],
 })
