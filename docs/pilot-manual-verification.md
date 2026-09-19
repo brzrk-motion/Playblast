@@ -70,7 +70,7 @@ npm run verify:deployment-config
 
 - [ ] Cross-browser desktop QA (Firefox, Safari, Edge) on a clean instance.
 - [ ] Clean-machine install from [deployment docs](deployment/index.md) only.
-- [ ] Live SMTP invitation delivery to a real mailbox (operator relay).
+- [ ] Live SMTP invitation delivery to a real mailbox (operator relay). Record outcome in [soft-rc/t6-live-mailbox-invite-evidence.md](soft-rc/t6-live-mailbox-invite-evidence.md) (BRZ-238). Mailpit/CI does not substitute.
 
 ---
 
@@ -127,6 +127,6 @@ Use a private/incognito window per role. Complete steps in order.
 | Creative walkthrough | | | |
 | Proofing walkthrough | | | |
 | Cross-browser manual | | | |
-| Live SMTP delivery | | | |
+| Live SMTP delivery (T6) | | | See [soft-rc/t6-live-mailbox-invite-evidence.md](soft-rc/t6-live-mailbox-invite-evidence.md) |
 
 Do not record passwords, tokens, or SMTP secrets in this log.
