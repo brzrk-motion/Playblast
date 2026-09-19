@@ -60,6 +60,23 @@ Image-only rollback (no DB restore) is safe **only** if logs show no migration a
 - [ ] Periodic restore drill (even a dry-run extract + integrity check).
 - [ ] Never restore only the DB or only uploads — broken media references either way.
 
+## After restore
+
+Use when recovering from backup (disaster, failed upgrade, or volume loss). Full detail: [backup and restore](./backup-restore.md#after-restore--operator-checklist) and [roles, SMTP, and recovery](./roles-smtp-recovery.md#post-restore-smtp-recovery).
+
+- [ ] Stop container → restore **both** `data/` and `uploads/` from the same backup → restore/confirm `.env` (`SESSION_SECRET`, recovery token, `SMTP_*` if used).
+- [ ] Start container; `curl -fsS http://127.0.0.1:3000/health` → `"status":"ok"`.
+- [ ] Admin signs in (all users may need fresh login after session/secret changes).
+- [ ] **Team** → re-run SMTP **Test delivery** or **Send test email** until delivery is confirmed (required before new invites).
+- [ ] Smoke one proofing path (open project, playback, comment).
+- [ ] If admin password unknown: `/recover-admin` with `PLAYBLAST_ADMIN_RECOVERY_TOKEN` (operator-held).
+
+Optional automated gate after restore on a dev machine:
+
+```bash
+npm run verify:backup-restore
+```
+
 ## Related guides
 
 | Guide | Use when |

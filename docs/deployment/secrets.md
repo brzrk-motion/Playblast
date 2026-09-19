@@ -41,7 +41,14 @@ If enabled without `PLAYBLAST_AUTH_USER` and `PLAYBLAST_AUTH_PASSWORD`, producti
 
 ## SMTP credentials
 
-Admins configure SMTP in the Team UI. Values are stored in the local SQLite database. Include the database backup when protecting SMTP configuration. Do not commit SMTP passwords to compose files or git.
+Two configuration paths exist (see [roles, SMTP, and recovery](./roles-smtp-recovery.md)):
+
+| Path | Secret storage | Backup |
+|------|----------------|--------|
+| **Team UI** | Encrypted in SQLite (`studio_smtp_settings`) | Include `data/` in filesystem backup |
+| **Environment** | `SMTP_PASS` and related vars in host `.env` | Include `.env` in secure operator backup; not in DB |
+
+Do not commit SMTP passwords to compose files or git. After restore, re-run SMTP test delivery from **Team** regardless of path.
 
 ## File permissions
 
@@ -64,7 +71,8 @@ Admins configure SMTP in the Team UI. Values are stored in the local SQLite data
 |--------|----------------------|---------------------------|
 | `SESSION_SECRET` | No (not in DB) | Yes |
 | Recovery token | No | Yes |
-| SMTP password | Yes (in DB) | No (configured in app) |
+| SMTP password (Team UI) | Yes (encrypted in DB) | No |
+| SMTP password (env path) | No | Yes (`SMTP_PASS` in `.env`) |
 | User passwords | Hashed in DB only | N/A |
 
 After restoring an old database while using a **new** `SESSION_SECRET`, existing session cookies become invalid.

@@ -49,6 +49,7 @@ See [roles, SMTP, and recovery](./roles-smtp-recovery.md) for capability details
 | Corrupt database | Operator | Restore `data/` from backup |
 | Lost videos | Operator | Restore `uploads/` from backup |
 | SMTP misconfigured | Admin | Team → SMTP settings and test delivery |
+| After backup restore | Operator + Admin | Restore volumes + `.env`; Admin re-runs SMTP test on **Team** ([checklist](./operator-checklist.md#after-restore)) |
 | Container won't start | Operator | Check env, logs, volume permissions |
 
 ## No-support boundary
