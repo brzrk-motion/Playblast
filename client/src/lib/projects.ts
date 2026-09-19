@@ -111,6 +111,14 @@ export type DashboardProjectFilter =
   | { type: "archived" }
 
 const DASHBOARD_FILTER_PARAM = "filter"
+const CLIENT_FILTER_PARAM = "client"
+
+export function parseClientFilterFromSearchParams(
+  searchParams: URLSearchParams,
+): string | null {
+  const value = searchParams.get(CLIENT_FILTER_PARAM)?.trim()
+  return value || null
+}
 
 function isProjectStatusValue(value: string): value is ProjectStatus {
   return (PROJECT_STATUS_ORDER as string[]).includes(value)
@@ -195,4 +203,4 @@ export function filterProjectsByDashboardFilter(
   return projects.filter((project) => project.status === filter.status)
 }
 
-export { DASHBOARD_FILTER_PARAM, isProjectArchived }
+export { CLIENT_FILTER_PARAM, DASHBOARD_FILTER_PARAM, isProjectArchived }

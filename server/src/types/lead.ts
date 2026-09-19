@@ -34,6 +34,8 @@ export interface Lead {
   /** ISO timestamp of most recent outreach. */
   lastContactedAt?: string
   replied: boolean
+  /** Studio user who owns this lead in the AE pipeline. */
+  assignedToUserId?: string
   createdAt: string
   updatedAt: string
 }
@@ -49,6 +51,7 @@ export interface CreateLeadInput {
   notes?: string
   lastContactedAt?: string
   replied?: boolean
+  assignedToUserId?: string
 }
 
 export interface UpdateLeadInput {
@@ -61,6 +64,7 @@ export interface UpdateLeadInput {
   notes?: string | null
   lastContactedAt?: string | null
   replied?: boolean
+  assignedToUserId?: string | null
 }
 
 export interface LeadWithContactLog extends Lead {

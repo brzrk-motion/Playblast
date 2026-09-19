@@ -41,7 +41,17 @@ If enabled without `PLAYBLAST_AUTH_USER` and `PLAYBLAST_AUTH_PASSWORD`, producti
 
 ## SMTP credentials
 
-Admins configure SMTP in the Team UI. Values are stored in the local SQLite database. Include the database backup when protecting SMTP configuration. Do not commit SMTP passwords to compose files or git.
+SMTP can be configured in three ways:
+
+| Method | Storage | Team UI |
+|--------|---------|---------|
+| Environment (`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`) | Host environment | Read-only delivery card |
+| Team settings (Admin) | Local SQLite database | Editable form |
+| Mailpit dev (`MAILPIT_URL` in development only) | Not stored; routes to local catcher | Read-only delivery card |
+
+Include the database backup when protecting UI-configured SMTP. Do not commit SMTP passwords to compose files or git.
+
+Local Mailpit workflow: [mailpit-dev.md](mailpit-dev.md).
 
 ## File permissions
 

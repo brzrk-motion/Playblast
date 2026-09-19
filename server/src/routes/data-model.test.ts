@@ -23,6 +23,8 @@ let studioId = ""
 before(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "playblast-api-"))
   dbPath = path.join(tempDir, "test.db")
+  process.env.UPLOAD_DIR = path.join(tempDir, "uploads")
+  fs.mkdirSync(process.env.UPLOAD_DIR, { recursive: true })
   process.env.DB_PATH = dbPath
   initDatabase(dbPath)
 
@@ -54,6 +56,7 @@ after(async () => {
   })
 
   delete process.env.DB_PATH
+  delete process.env.UPLOAD_DIR
   closeDatabase()
   fs.rmSync(tempDir, { recursive: true, force: true })
 })
@@ -803,10 +806,14 @@ describe("projects, deliverables, milestones, versions, and comments API", () =>
   })
 
   it("returns 404 when uploading to a non-existent deliverable", async () => {
-    const response = await authenticatedFetch(
-      `${baseUrl}/api/deliverables/does-not-exist/versions/v1/upload`,
-      { method: "POST" },
-    )
+    const response = await authenticatedFetch(`${baseUrl}/api/uploads/tus`, {
+      method: "POST",
+      headers: {
+        "Tus-Resumable": "1.0.0",
+        "Upload-Length": "8",
+        "Upload-Metadata": `deliverableId ${Buffer.from("does-not-exist").toString("base64")},version ${Buffer.from("v1").toString("base64")},filename ${Buffer.from("missing.mp4").toString("base64")},filetype ${Buffer.from("video/mp4").toString("base64")}`,
+      },
+    })
 
     assert.equal(response.status, 404)
   })

@@ -284,7 +284,7 @@ test.describe("Proofing review", () => {
         body: { serviceId, quantity: 1 },
       },
       {
-        path: `/api/deliverables/${deliverableId}/versions/proofing/upload`,
+        path: "/api/uploads/tus",
         method: "POST",
       },
     ]

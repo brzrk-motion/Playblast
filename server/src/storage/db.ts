@@ -235,6 +235,15 @@ function runMigrations(db: Database.Database): void {
       upgradeStudioOwnershipColumns(db)
     }
 
+    if (id === "009_lead_assignment" && tableExists(db, "leads")) {
+      if (!tableHasColumn(db, "leads", "assignedToUserId")) {
+        db.exec("ALTER TABLE leads ADD COLUMN assignedToUserId TEXT")
+      }
+      db.exec(
+        "CREATE INDEX IF NOT EXISTS idx_leads_assignedToUserId ON leads(assignedToUserId)",
+      )
+    }
+
     recordMigration(db, id)
   }
 }

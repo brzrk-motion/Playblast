@@ -22,6 +22,7 @@ function clearSmtpEnv(): void {
   delete process.env.SMTP_FROM
   delete process.env.SMTP_REPLY_TO
   delete process.env.MAILPIT_URL
+  delete process.env.PLAYBLAST_EMAIL_CATCHER
 }
 
 afterEach(() => {
@@ -159,5 +160,35 @@ describe("SMTP env contract", () => {
     process.env.MAILPIT_URL = "http://localhost:8025"
 
     assert.equal(config.mailpitUrl, undefined)
+  })
+
+  it("defaults SMTP_HOST to mailpit in development when other SMTP vars are set", () => {
+    clearSmtpEnv()
+    process.env.NODE_ENV = "development"
+    Object.assign(process.env, {
+      SMTP_PORT: "1025",
+      SMTP_SECURE: "false",
+      SMTP_USER: "dev",
+      SMTP_PASS: "dev",
+      SMTP_FROM: "noreply@playblast.local",
+    })
+
+    assert.equal(config.smtpConfiguredFromEnv, true)
+    assert.equal(config.smtpFromEnv?.host, "mailpit")
+  })
+
+  it("does not default SMTP_HOST in production", () => {
+    clearSmtpEnv()
+    process.env.NODE_ENV = "production"
+    Object.assign(process.env, {
+      SMTP_PORT: "1025",
+      SMTP_SECURE: "false",
+      SMTP_USER: "dev",
+      SMTP_PASS: "dev",
+      SMTP_FROM: "noreply@playblast.local",
+    })
+
+    assert.equal(config.smtpConfiguredFromEnv, false)
+    assert.equal(config.smtpFromEnv, null)
   })
 })
