@@ -8,6 +8,7 @@ import {
   type LoginRequest,
   type RecoverAdminRequest,
   type RoleCapabilitiesResponse,
+  type UpdateStudioPreferencesRequest,
   type UpdateStudioRequest,
 } from "@playblast/shared"
 import { sendApiError } from "../lib/api-response.js"
@@ -25,6 +26,11 @@ import {
   listInvitations,
   listUsers,
 } from "../identity/repository.js"
+import {
+  StudioPreferencesServiceError,
+  getStudioPreferences,
+  updateStudioPreferences,
+} from "../identity/studio-preferences-service.js"
 import {
   StudioServiceError,
   completeStudioSetup,
@@ -64,6 +70,18 @@ function handleStudioServiceError(
   response: Parameters<typeof sendApiError>[0],
 ): boolean {
   if (!(error instanceof StudioServiceError)) {
+    return false
+  }
+
+  sendApiError(response, error.code, error.message, error.details)
+  return true
+}
+
+function handleStudioPreferencesServiceError(
+  error: unknown,
+  response: Parameters<typeof sendApiError>[0],
+): boolean {
+  if (!(error instanceof StudioPreferencesServiceError)) {
     return false
   }
 
@@ -198,6 +216,46 @@ identityRouter.get("/studio", requireAuthenticatedSession(), (_req, res) => {
 
   res.json(studio)
 })
+
+identityRouter.get(
+  "/studio/preferences",
+  requireAuthenticatedSession(),
+  requireCapability("business.manage"),
+  (req, res) => {
+    try {
+      const preferences = getStudioPreferences(
+        req.currentSession!.studio.id,
+        req.currentSession!.user.role,
+      )
+      res.json(preferences)
+    } catch (error) {
+      if (!handleStudioPreferencesServiceError(error, res)) {
+        throw error
+      }
+    }
+  },
+)
+
+identityRouter.patch(
+  "/studio/preferences",
+  requireCsrfProtection(),
+  requireAuthenticatedSession(),
+  requireCapability("business.manage"),
+  (req, res) => {
+    try {
+      const preferences = updateStudioPreferences(
+        req.currentSession!.studio.id,
+        req.currentSession!.user.role,
+        req.body as UpdateStudioPreferencesRequest,
+      )
+      res.json(preferences)
+    } catch (error) {
+      if (!handleStudioPreferencesServiceError(error, res)) {
+        throw error
+      }
+    }
+  },
+)
 
 identityRouter.patch(
   "/studio",

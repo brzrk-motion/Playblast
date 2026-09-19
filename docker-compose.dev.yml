@@ -2,9 +2,27 @@ services:
   playblast:
     environment:
       NODE_ENV: development
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_SECURE: "false"
+      SMTP_USER: dev
+      SMTP_PASS: dev
+      SMTP_FROM: noreply@playblast.local
+      MAILPIT_URL: http://mailpit:8025
+      PLAYBLAST_INSTANCE_URL: http://localhost:3000
+    depends_on:
+      mailpit:
+        condition: service_started
     volumes:
       - playblast_demo_uploads:/app/uploads
       - playblast_demo_data:/app/data
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    restart: unless-stopped
 
 volumes:
   playblast_demo_uploads:
