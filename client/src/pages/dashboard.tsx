@@ -32,11 +32,17 @@ import {
   formatCurrency,
 } from "@/lib/budget"
 import {
+  countProjectsOverBudget,
+  totalActiveEstimate,
+  totalBudgetCommitted,
+} from "@/lib/financial-summary"
+import {
   countDeliverablesInReview,
   countProjectsByStatus,
   recentlyUpdatedProjects,
   totalOpenComments,
 } from "@/lib/projects"
+import { cn } from "@/lib/utils"
 import {
   resolveAsyncViewState,
   reviewEmptyCopy,
@@ -73,11 +79,17 @@ interface StatCardProps {
   value: number | string
   description: string
   to?: string
+  alert?: boolean
 }
 
-function StatCard({ title, icon, value, description, to }: StatCardProps) {
+function StatCard({ title, icon, value, description, to, alert = false }: StatCardProps) {
   const card = (
-    <Card className="interactive-card h-full">
+    <Card
+      className={cn(
+        "interactive-card h-full",
+        alert && "border-destructive/40 bg-destructive/5",
+      )}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         {icon}
@@ -255,6 +267,18 @@ export function DashboardPage() {
       }),
     [activeProjects],
   )
+  const activeEstimateTotal = useMemo(
+    () => totalActiveEstimate(activeProjects),
+    [activeProjects],
+  )
+  const budgetCommittedTotal = useMemo(
+    () => totalBudgetCommitted(activeProjects),
+    [activeProjects],
+  )
+  const overBudgetCount = useMemo(
+    () => countProjectsOverBudget(activeProjects),
+    [activeProjects],
+  )
 
   const upcomingDeadlines = useMemo<Deadline[]>(() => {
     const today = new Date().toISOString().slice(0, 10)
@@ -355,6 +379,31 @@ export function DashboardPage() {
           />
         ) : null}
       </div>
+
+      {canViewBusiness ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard
+            title="Active Estimate"
+            icon={<Wallet className="size-4 text-muted-foreground" />}
+            value={formatCurrency(activeEstimateTotal)}
+            description="Services estimate across active work"
+          />
+          <StatCard
+            title="Budgeted"
+            icon={<Wallet className="size-4 text-muted-foreground" />}
+            value={formatCurrency(budgetCommittedTotal)}
+            description="Committed budget on active projects"
+          />
+          <StatCard
+            title="Over Budget"
+            icon={<AlertTriangle className="size-4 text-destructive" />}
+            value={overBudgetCount}
+            description="Active projects over estimate"
+            to="/projects?filter=over_budget"
+            alert={overBudgetCount > 0}
+          />
+        </div>
+      ) : null}
 
       {canViewBusiness ? (
         <Suspense
