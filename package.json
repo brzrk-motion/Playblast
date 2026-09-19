@@ -15,6 +15,7 @@
     "verify:backup-restore": "bash scripts/validate-backup-restore.sh",
     "verify:pilot-browser": "bash scripts/verify-pilot-browser.sh",
     "verify:sponsor-program": "bash scripts/verify-sponsor-program.sh",
+    "verify:fund-cta-gate": "bash scripts/verify-fund-cta-gate.sh",
     "migrate": "npm run migrate -w server"
   },
   "devDependencies": {
